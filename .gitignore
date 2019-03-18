@@ -1,0 +1,12 @@
+.DS_Store
+
+libs/
+obj/
+
+build/
+.gradle/
+.idea/
+*.iml
+*.log
+*.so
+local.properties

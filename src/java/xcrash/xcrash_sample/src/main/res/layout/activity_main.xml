@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <Button
+        android:id="@+id/testNativeCrashInCurrentThreadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:padding="20dp"
+        android:onClick="testNativeCrashInCurrentThread_onClick"
+        android:text="force a native crash&#10;(in current thread)"
+        tools:ignore="HardcodedText" />
+
+    <Button
+        android:id="@+id/testNativeCrashInNewThreadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:padding="20dp"
+        android:onClick="testNativeCrashInNewThread_onClick"
+        android:text="force a native crash&#10;(in new thread)"
+        tools:ignore="HardcodedText" />
+
+    <Button
+        android:id="@+id/testJavaCrashInCurrentThreadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:padding="20dp"
+        android:onClick="testJavaCrashInCurrentThread_onClick"
+        android:text="force a java crash&#10;(in current thread)"
+        tools:ignore="HardcodedText" />
+
+    <Button
+        android:id="@+id/testJavaCrashInNewThreadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:padding="20dp"
+        android:onClick="testJavaCrashInNewThread_onClick"
+        android:text="force a java crash&#10;(in new thread)"
+        tools:ignore="HardcodedText" />
+
+</LinearLayout>

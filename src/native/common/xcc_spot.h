@@ -1,0 +1,66 @@
+// Copyright (c) 2019-present, iQIYI, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
+// Created by caikelun on 2019-03-07.
+
+#ifndef XCC_SPOT_H
+#define XCC_SPOT_H 1
+
+#include <stdint.h>
+#include <sys/types.h>
+#include <ucontext.h>
+#include <signal.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct
+{
+    //set when crashed
+    pid_t        crash_pid;
+    pid_t        crash_tid;
+    siginfo_t    siginfo;
+    ucontext_t   ucontext;
+    uint64_t     crash_time;
+
+    //set when inited
+    uint64_t     start_time;
+    unsigned int logcat_system_lines;
+    unsigned int logcat_events_lines;
+    unsigned int logcat_main_lines;
+    int          dump_map;
+    int          dump_fds;
+    int          dump_all_threads;
+    int          dump_all_threads_count_max;
+
+    //set when inited, content lenghts after this struct
+    size_t       log_pathname_len;
+    size_t       app_id_len;
+    size_t       app_version_len;
+    size_t       dump_all_threads_whitelist_len;
+} xcc_spot_t;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
