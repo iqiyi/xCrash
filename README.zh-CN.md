@@ -13,7 +13,7 @@ xCrash 是一个安卓平台的崩溃捕获库。它支持捕获 native 崩溃�
 xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件相同）。并且，不需要 root 权限或任何系统权限。
 
 
-# 特征
+## 特征
 
 * 支持 Android 4.0 - 9.0（API level 14 - 28）。
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
@@ -21,12 +21,12 @@ xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombsto
 * 不需要 root 权限或任何系统权限。
 
 
-# 捕获 native 崩溃
+## 捕获 native 崩溃
 
 <p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="75%"></p>
 
 
-# 使用
+## 使用
 
 * 在 APP Project 的 `build.gradle` 中，添加 JCenter 仓库。
 
@@ -86,7 +86,7 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 在 `src/java/xcrash_sample` 文件夹中，有一个更实际和复杂的示例 APP。
 
-# 构建
+## 构建
 
 如果你想编译 xCrash 的源码。请看这里：
 
@@ -108,12 +108,12 @@ cd ./src/java/xcrash/
 ```
 
 
-# 贡献
+## 贡献
 
 请阅读：[xCrash Contributing Guide](CONTRIBUTING.md)。
 
 
-# 许可证
+## 许可证
 
 xCrash 使用 [MIT 许可证](LICENSE)。
 

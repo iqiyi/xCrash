@@ -13,7 +13,7 @@ xCrash is a crash reporting library for Android. It support catching native cras
 xCrash can generate a tombstone file (the same format as Android system's tombstone file) in the directory you specified when the App process crashes. And, no root permission or any system permissions are required.
 
 
-# Features
+## Features
 
 * Support Android 4.0 - 9.0 (API level 14 - 28).
 * Support armeabi, armeabi-v7a, arm64-v8a, x86 and x86_64.
@@ -21,12 +21,12 @@ xCrash can generate a tombstone file (the same format as Android system's tombst
 * Does not require root permission or any system permissions.
 
 
-# Catching Native Crash
+## Catching Native Crash
 
 <p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="75%"></p>
 
 
-# Usage
+## Usage
 
 * Declaring JCenter repository in Project's `build.gradle`.
 
@@ -87,7 +87,7 @@ Tombstone files will be written to `Context#getFilesDir() + "/tombstones"` direc
 There is a more practical and complex sample APP in the `src/java/xcrash_sample` folder.
 
 
-# Build
+## Build
 
 If you want to build xCrash from source code. Follow this guide:
 
@@ -109,12 +109,12 @@ cd ./src/java/xcrash/
 ```
 
 
-# Contributing
+## Contributing
 
 See: [xCrash Contributing Guide](CONTRIBUTING.md).
 
 
-# License
+## License
 
 xCrash is MIT licensed, as found in the [LICENSE](LICENSE) file.
 
