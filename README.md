@@ -1,10 +1,10 @@
 # xCrash
 
-![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-![release version](https://img.shields.io/badge/release-2.0.4-red.svg)
-![Android](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg)
-![arch](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg)
+![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
+![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
+![](https://img.shields.io/badge/release-2.0.4-red.svg?style=flat)
+![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
+![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
 [README 中文版](README.zh-CN.md)
 

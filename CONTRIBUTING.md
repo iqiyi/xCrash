@@ -17,12 +17,13 @@ There are 2 main branches:
 1. `master` branch
 
     * It's the latest (pre-)release branch. We use `master` for tags.
-    * **Do NOT submit any PR on `master` branch.**
+    * **Please do NOT submit any PR on `master` branch.**
 
 2. `dev` branch
 
     * It's our stable developing branch.
-    * **Please always submit PR on `dev` branch.** Once `dev` has passed iQIYI's internal tests, it will be merged to `master` branch for the next release.
+    * Once `dev` has passed iQIYI's internal tests, it will be merged to `master` branch for the next release.
+    * **Please always submit PR on `dev` branch.**
 
 
 ## Pull Requests
@@ -35,7 +36,6 @@ Please make sure the following is done when submitting a pull request:
 4. Check your Java code lints and checkstyles.
 5. Try your best to test your code.
 6. Squash all of your commits into one meaningful commit.
-7. Now, you can submit your pull request on `dev` branch.
 
 
 ## Code Style Guide
