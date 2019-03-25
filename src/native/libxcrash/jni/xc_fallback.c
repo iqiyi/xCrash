@@ -153,34 +153,6 @@ static int xc_fallback_get_system_mem(char *buf, size_t len)
     return used;
 }
 
-static int xc_fallback_get_process_mem(char *buf, size_t len, pid_t pid)
-{
-    int     fd = -1;
-    char    path[64];
-    char    line[256];
-    int     val;
-    size_t  total_rss = 0;
-    size_t  total_pss = 0;
-    int     used = 0;
-
-    xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/smaps", pid);
-    if((fd = TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_CLOEXEC))) < 0) goto end;
-    
-    while(NULL != xcc_util_gets(line, sizeof(line), fd))
-    {
-        if((val = xc_fallback_parse_kb(line, "Rss:")) >= 0)
-            total_rss += (size_t)val;
-        else if((val = xc_fallback_parse_kb(line, "Pss:")) >= 0)
-            total_pss += (size_t)val;
-    }
-    
- end:
-    if(fd >= 0) close(fd);
-    used += xcc_fmt_snprintf(buf + used, len - used, "Process memory RSS: '%zu kB'\n", total_rss);
-    used += xcc_fmt_snprintf(buf + used, len - used, "Process memory PSS: '%zu kB'\n", total_pss);
-    return used;
-}
-
 static size_t xc_fallback_get_number_of_threads(pid_t pid)
 {
     int                   fd = -1;
@@ -556,7 +528,6 @@ int xc_fallback_get_emergency(siginfo_t *si,
     used += xcc_fmt_snprintf(buf + used, len - used, "App version: '%s'\n", app_version);
     used += xc_fallback_get_cpu(buf + used, len - used);
     used += xc_fallback_get_system_mem(buf + used, len - used);
-    used += xc_fallback_get_process_mem(buf + used, len - used, pid);
     used += xcc_fmt_snprintf(buf + used, len - used, "Number of threads: '%zu'\n", xc_fallback_get_number_of_threads(pid));
     used += xcc_fmt_snprintf(buf + used, len - used, "Rooted: '%s'\n", xcc_util_is_root() ? "Yes" : "No");
     used += xcc_fmt_snprintf(buf + used, len - used, "API level: '%d'\n", api_level);

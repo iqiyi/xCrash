@@ -19,13 +19,23 @@
 // SOFTWARE.
 //
 
-// Created by caikelun on 2019-03-07.
-package xcrash;
+// Created by caikelun on 2019-03-22.
 
-class Version {
+#ifndef XCD_MEMINFO_H
+#define XCD_MEMINFO_H 1
 
-    private Version() {
-    }
+#include <stdint.h>
+#include <sys/types.h>
+#include "xcd_recorder.h"
 
-    static final String fullVersion = "xCrash 2.0.5";
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

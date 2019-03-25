@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-int xcd_sys_record(xcd_recorder_t *recorder, pid_t pid, uint64_t start_time, uint64_t crash_time,
+int xcd_sys_record(xcd_recorder_t *recorder, uint64_t start_time, uint64_t crash_time,
                    const char *app_id, const char *app_version, xcc_util_build_prop_t *props, size_t nthds);
 
 #ifdef __cplusplus

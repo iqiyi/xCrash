@@ -66,9 +66,6 @@ public class MyCustomApplication extends Application {
             }
         };
 
-        //Only to dump a part of threads we care about in the "other threads" section.
-        //String[] threadNameWhiteList = new String[]{"^xcrash\\.sample$", ".*(R|r)ender.*", "^Binder:.*"};
-
         //Initialize xCrash.
         XCrash.init(this, new XCrash.InitParameters()
                 .setAppVersion("1.2.3-beta456-patch789")

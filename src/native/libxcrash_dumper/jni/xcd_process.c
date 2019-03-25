@@ -48,6 +48,7 @@
 #include "xcd_regs.h"
 #include "xcd_util.h"
 #include "xcd_sys.h"
+#include "xcd_meminfo.h"
 
 typedef struct xcd_thread_info
 {
@@ -276,7 +277,7 @@ static int xcd_process_record_logcat_buffer(xcd_process_t *self, xcd_recorder_t 
 
     //Since Android 7.0 Nougat (API level 24), logcat has --pid filter option.
     with_pid = (api_level >= 24 ? 1 : 0);
-        
+
     if(with_pid)
     {
         //API level >= 24, filtered by --pid option
@@ -374,7 +375,7 @@ static regex_t *xcd_process_build_whitelist_regex(char *dump_all_threads_whiteli
     return re;
 }
 
-int xcd_process_if_need_dump(char *tname, regex_t *re, size_t re_cnt)
+static int xcd_process_if_need_dump(char *tname, regex_t *re, size_t re_cnt)
 {
     if(NULL == re || 0 == re_cnt) return 1;
 
@@ -416,6 +417,8 @@ int xcd_process_record(xcd_process_t *self, xcd_recorder_t *recorder,
             if(dump_map) if(0 != (r = xcd_maps_record(self->maps, recorder))) return r;
             if(0 != (r = xcd_process_record_logcat(self, recorder, logcat_system_lines, logcat_events_lines, logcat_main_lines, api_level))) return r;
             if(dump_fds) if(0 != (r = xcd_process_record_fds(self, recorder))) return r;
+            if(0 != (r = xcd_meminfo_record(recorder, self->pid))) return r;
+
             break;
         }
     }

@@ -111,42 +111,7 @@ static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
     return 0;
 }
 
-static int xcd_sys_record_process_mem(xcd_recorder_t *recorder, pid_t pid)
-{
-    FILE   *f = NULL;
-    char    buf[64];
-    char    line[256];
-    size_t  total_rss = 0;
-    size_t  total_pss = 0;
-    size_t  v;
-    int     r;
-
-    snprintf(buf, sizeof(buf), "/proc/%d/smaps", pid);
-    
-    if(NULL == (f = fopen(buf, "r"))) goto end;
-    
-    while(NULL != fgets(line, sizeof(line), f))
-    {
-        if(0 == memcmp(line, "Rss:", 4))
-        {
-            if(0 == sscanf(line, "Rss: %zu kB", &v)) goto end;
-            total_rss += v;
-        }
-        else if(0 == memcmp(line, "Pss:", 4))
-        {
-            if(0 == sscanf(line, "Pss: %zu kB", &v)) goto end;
-            total_pss += v;
-        }
-    }
-    
- end:
-    if(NULL != f) fclose(f);
-    if(0 != (r = xcd_recorder_print(recorder, "Process memory RSS: '%zu kB'\n", total_rss))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Process memory PSS: '%zu kB'\n", total_pss))) return r;
-    return 0;
-}
-
-int xcd_sys_record(xcd_recorder_t *recorder, pid_t pid, uint64_t start_time, uint64_t crash_time,
+int xcd_sys_record(xcd_recorder_t *recorder, uint64_t start_time, uint64_t crash_time,
                    const char *app_id, const char *app_version, xcc_util_build_prop_t *props, size_t nthds)
 {
     int r;
@@ -162,7 +127,6 @@ int xcd_sys_record(xcd_recorder_t *recorder, pid_t pid, uint64_t start_time, uin
     
     if(0 != (r = xcd_sys_record_cpu(recorder))) return r;
     if(0 != (r = xcd_sys_record_system_mem(recorder))) return r;
-    if(0 != (r = xcd_sys_record_process_mem(recorder, pid))) return r;
     
     if(0 != (r = xcd_recorder_print(recorder, "Number of threads: '%zu'\n", nthds))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "Rooted: '%s'\n",             xcc_util_is_root() ? "Yes" : "No"))) return r;

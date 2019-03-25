@@ -31,11 +31,10 @@ There are 2 main branches:
 Please make sure the following is done when submitting a pull request:
 
 1. Fork the repo and create your branch from `master`.
-2. Don't break the backward compatibility of public APIs.
-3. Add the copyright notice to the top of any new files you've added.
-4. Check your Java code lints and checkstyles.
-5. Try your best to test your code.
-6. Squash all of your commits into one meaningful commit.
+2. Add the copyright notice to the top of any new files you've added.
+3. Check your Java code lints and checkstyles.
+4. Try your best to test your code.
+5. Squash all of your commits into one meaningful commit.
 
 
 ## Code Style Guide

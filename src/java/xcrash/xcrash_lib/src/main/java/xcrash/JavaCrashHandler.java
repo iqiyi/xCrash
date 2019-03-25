@@ -23,6 +23,7 @@
 package xcrash;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
@@ -122,32 +123,40 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
         //write info to log file
         if (logPath != null) {
-            FileWriter fw = null;
+            BufferedWriter writer = null;
             try {
-                fw = new FileWriter(logPath, false);
+                writer = new BufferedWriter(new FileWriter(logPath, false));
 
                 //write & flush emergency info
-                fw.write(emergency);
-                fw.flush();
+                writer.write(emergency);
+                writer.flush();
 
                 //If we wrote the emergency info successfully, we don't need to return it from callback again.
                 emergency = null;
 
                 //write logcat
                 if (logcatMainLines > 0 || logcatSystemLines > 0 || logcatEventsLines > 0) {
-                    fw.write(getLogcat(pid));
+                    writer.write(getLogcat(pid));
+                    writer.flush();
                 }
+
+                //write memory info
+                writer.write("memory info:\n");
+                writer.write(Util.getMemoryInfo());
+                writer.write("\n");
+                writer.flush();
 
                 //write other threads info
                 if (dumpAllThreads) {
-                    fw.write(getOtherThreadsInfo(thread));
+                    writer.write(getOtherThreadsInfo(thread));
+                    writer.flush();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                if (fw != null) {
+                if (writer != null) {
                     try {
-                        fw.close();
+                        writer.close();
                     } catch (Exception ignored) {
                     }
                 }
@@ -230,7 +239,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 + "CPU offline: '" + Util.readFileLine("/sys/devices/system/cpu/offline") + "'\n"
                 + "System memory total: '" + mi.systemMemoryTotalKb + " kB'\n"
                 + "System memory used: '" + mi.systemMemoryUsedKb + " kB'\n"
-                + "Process memory PSS: '" + mi.processMemoryPssKb + " kB'\n"
                 + "Number of threads: '" + Util.getNumberOfThreads(pid) + "'\n"
                 + "Rooted: '" + (Util.isRoot() ? "Yes" : "No") + "'\n"
                 + "API level: '" + Build.VERSION.SDK_INT + "'\n"

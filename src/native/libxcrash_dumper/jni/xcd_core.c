@@ -226,7 +226,6 @@ int main(int argc, char** argv)
 
     //record system info
     if(0 != xcd_sys_record(xcd_core_recorder,
-                           xcd_core_spot.crash_pid,
                            xcd_core_spot.start_time,
                            xcd_core_spot.crash_time,
                            xcd_core_app_id,

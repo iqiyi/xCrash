@@ -24,6 +24,7 @@ package xcrash;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.text.TextUtils;
 
 
 /**
@@ -99,6 +100,11 @@ class NativeCrashHandler {
     // do NOT obfuscate this method
     @SuppressWarnings("unused")
     private static void callback(String logPath, String emergency) {
+
+        if(!TextUtils.isEmpty(logPath)) {
+            TombstoneManager.appendSection(logPath, "memory info", Util.getMemoryInfo());
+        }
+
         ICrashCallback callback = NativeCrashHandler.getInstance().callback;
         if (callback != null) {
             try {

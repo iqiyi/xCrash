@@ -113,18 +113,6 @@ public class TombstoneParser {
     public static final String keySystemMemoryUsed = "System memory used";
 
     /**
-     * Resident set size(RSS) used by the current process. (From: /proc/PID/smaps)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyProcessMemoryRss = "Process memory RSS";
-
-    /**
-     * Proportional set size(PSS) used by the current process. (From: /proc/PID/smaps)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyProcessMemoryPss = "Process memory PSS";
-
-    /**
      * The number of threads in the current process. (From: /proc/PID/task)
      */
     @SuppressWarnings("WeakerAccess")
@@ -281,6 +269,12 @@ public class TombstoneParser {
     public static final String keyOpenFiles = "open files";
 
     /**
+     * Memory info. (From: /proc/PID/smaps)
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static final String keyMemoryInfo = "memory info";
+
+    /**
      * Native crash other threads information.
      */
     @SuppressWarnings("WeakerAccess")
@@ -310,42 +304,40 @@ public class TombstoneParser {
     private static final Pattern patAppVersionProcessName = Pattern.compile("^_(\\d{20})_(.*)__(.*)$");
 
     private static final Set<String> keyHeadItems = new HashSet<String>(Arrays.asList(
-            keyTombstoneMaker,
-            keyCrashType,
-            keyStartTime,
-            keyCrashTime,
-            keyAppId,
-            keyAppVersion,
-            keyCpuLoadavg,
-            keyCpuOnline,
-            keyCpuOffline,
-            keySystemMemoryTotal,
-            keySystemMemoryUsed,
-            keyProcessMemoryRss,
-            keyProcessMemoryPss,
-            keyNumberOfThreads,
-            keyRooted,
-            keyApiLevel,
-            keyOsVersion,
-            keyAbiList,
-            keyManufacturer,
-            keyBrand,
-            keyModel,
-            keyBuildFingerprint,
-            keyRevision,
-            keyAbi
+        keyTombstoneMaker,
+        keyCrashType,
+        keyStartTime,
+        keyCrashTime,
+        keyAppId,
+        keyAppVersion,
+        keyCpuLoadavg,
+        keyCpuOnline,
+        keyCpuOffline,
+        keySystemMemoryTotal,
+        keySystemMemoryUsed,
+        keyNumberOfThreads,
+        keyRooted,
+        keyApiLevel,
+        keyOsVersion,
+        keyAbiList,
+        keyManufacturer,
+        keyBrand,
+        keyModel,
+        keyBuildFingerprint,
+        keyRevision,
+        keyAbi
     ));
 
     private static final Set<String> keySections = new HashSet<String>(Arrays.asList(
-            keyBacktrace,
-            keyBuildId,
-            keyStack,
-            keyMemoryMap,
-            keyLogcat,
-            keyOpenFiles,
-            keyJavaStacktrace,
-            keyXCrashError,
-            keyXCrashErrorDebug
+        keyBacktrace,
+        keyBuildId,
+        keyStack,
+        keyMemoryMap,
+        keyLogcat,
+        keyOpenFiles,
+        keyJavaStacktrace,
+        keyXCrashError,
+        keyXCrashErrorDebug
     ));
 
     private enum Status {
@@ -584,13 +576,16 @@ public class TombstoneParser {
                         sectionContentEnding = "";
                         if (keySections.contains(sectionTitle)) {
                             sectionContentOutdent = (sectionTitle.equals(keyBacktrace)
-                                    || sectionTitle.equals(keyBuildId)
-                                    || sectionTitle.equals(keyStack)
-                                    || sectionTitle.equals(keyMemoryMap)
-                                    || sectionTitle.equals(keyOpenFiles)
-                                    || sectionTitle.equals(keyJavaStacktrace)
-                                    || sectionTitle.equals(keyXCrashErrorDebug));
+                                || sectionTitle.equals(keyBuildId)
+                                || sectionTitle.equals(keyStack)
+                                || sectionTitle.equals(keyMemoryMap)
+                                || sectionTitle.equals(keyOpenFiles)
+                                || sectionTitle.equals(keyJavaStacktrace)
+                                || sectionTitle.equals(keyXCrashErrorDebug));
                             sectionContentAppend = sectionTitle.equals(keyXCrashError);
+                        } else if (sectionTitle.equals(keyMemoryInfo)) {
+                            sectionContentOutdent = false;
+                            sectionContentAppend = true;
                         } else if (sectionTitle.startsWith("memory near ")) {
                             //special case
                             sectionTitle = keyMemoryNear;

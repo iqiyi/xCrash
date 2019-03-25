@@ -47,6 +47,8 @@ class Util {
     }
 
     static final DateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US);
+    private static final String memInfoFmt = "%21s %8s\n";
+    private static final String memInfoFmt2 = "%21s %8s %21s %8s\n";
 
     static final String sepHead = "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***";
     static final String sepOtherThreads = "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---";
@@ -83,11 +85,9 @@ class Util {
         MemoryInfo() {
             systemMemoryTotalKb = 0;
             systemMemoryUsedKb = 0;
-            processMemoryPssKb = 0;
         }
         long systemMemoryTotalKb;
         long systemMemoryUsedKb;
-        long processMemoryPssKb;
     }
 
     @SuppressWarnings("TryFinallyCanBeTryWithResources")
@@ -152,14 +152,6 @@ class Util {
                     }
                 }
             }
-        }
-
-        //get process PSS
-        try {
-            Debug.MemoryInfo pmi = new Debug.MemoryInfo();
-            Debug.getMemoryInfo(pmi);
-            memoryInfo.processMemoryPssKb = pmi.getTotalPss();
-        } catch (Exception ignored) {
         }
 
         return memoryInfo;
@@ -251,4 +243,40 @@ class Util {
         return appVersion;
     }
 
+    static String getMemoryInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(" App Summary (From: android.os.Debug.MemoryInfo)\n");
+        sb.append(String.format(Locale.US, memInfoFmt, "", "Pss(KB)"));
+        sb.append(String.format(Locale.US, memInfoFmt, "", "------"));
+
+        try {
+            Debug.MemoryInfo mi = new Debug.MemoryInfo();
+            Debug.getMemoryInfo(mi);
+
+            if (Build.VERSION.SDK_INT >= 23) {
+                sb.append(String.format(Locale.US, memInfoFmt, "Java Heap:", mi.getMemoryStat("summary.java-heap")));
+                sb.append(String.format(Locale.US, memInfoFmt, "Native Heap:", mi.getMemoryStat("summary.native-heap")));
+                sb.append(String.format(Locale.US, memInfoFmt, "Code:", mi.getMemoryStat("summary.code")));
+                sb.append(String.format(Locale.US, memInfoFmt, "Stack:", mi.getMemoryStat("summary.stack")));
+                sb.append(String.format(Locale.US, memInfoFmt, "Graphics:", mi.getMemoryStat("summary.graphics")));
+                sb.append(String.format(Locale.US, memInfoFmt, "Private Other:", mi.getMemoryStat("summary.private-other")));
+                sb.append(String.format(Locale.US, memInfoFmt, "System:", mi.getMemoryStat("summary.system")));
+                sb.append(String.format(Locale.US, memInfoFmt2, "TOTAL:", mi.getMemoryStat("summary.total-pss"), "TOTAL SWAP:", mi.getMemoryStat("summary.total-swap")));
+            } else {
+                sb.append(String.format(Locale.US, memInfoFmt, "Java Heap:", "~ " + String.valueOf(mi.dalvikPrivateDirty)));
+                sb.append(String.format(Locale.US, memInfoFmt, "Native Heap:", String.valueOf(mi.nativePrivateDirty)));
+                sb.append(String.format(Locale.US, memInfoFmt, "Private Other:", "~ " + String.valueOf(mi.otherPrivateDirty)));
+                if (Build.VERSION.SDK_INT >= 19) {
+                    sb.append(String.format(Locale.US, memInfoFmt, "System:", String.valueOf(mi.getTotalPss() - mi.getTotalPrivateDirty() - mi.getTotalPrivateClean())));
+                } else {
+                    sb.append(String.format(Locale.US, memInfoFmt, "System:", "~ " + String.valueOf(mi.getTotalPss() - mi.getTotalPrivateDirty())));
+                }
+                sb.append(String.format(Locale.US, memInfoFmt, "TOTAL:", String.valueOf(mi.getTotalPss())));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return sb.toString();
+    }
 }
