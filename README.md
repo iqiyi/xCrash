@@ -120,7 +120,7 @@ cd ./src/java/xcrash/
 
 ## Contributing
 
-See: [xCrash Contributing Guide](CONTRIBUTING.md).
+See [xCrash Contributing Guide](CONTRIBUTING.md).
 
 
 ## License

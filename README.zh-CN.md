@@ -19,7 +19,7 @@ xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombsto
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
 * 支持捕获 native 崩溃和 Java 异常。
 * 不需要 root 权限或任何系统权限。
-* 相对于 Android 系统的 tombstone，xCrash 具有丰富的特性：
+* 相对于 Android 系统的 tombstone，xCrash 具有更丰富的特性：
     * 更多的硬件和操作系统信息。
     * 检查设备是否已被 root。
     * 崩溃线程 backtrace 中所有 ELF 的 Build-Id 列表（来自于 `.note.gnu.build-id`）。
@@ -119,7 +119,7 @@ cd ./src/java/xcrash/
 
 ## 贡献
 
-请阅读：[xCrash Contributing Guide](CONTRIBUTING.md)。
+请阅读 [xCrash Contributing Guide](CONTRIBUTING.md)。
 
 
 ## 许可证
