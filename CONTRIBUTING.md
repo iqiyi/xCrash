@@ -46,5 +46,4 @@ Please make sure the following is done when submitting a pull request:
 
 ## License
 
-By contributing to xCrash, you agree that your contributions will be licensed
-under its [MIT LICENSE](LICENSE).
+By contributing to xCrash, you agree that your contributions will be licensed under its [MIT LICENSE](LICENSE).

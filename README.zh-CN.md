@@ -12,22 +12,17 @@ xCrash 是一个安卓平台的崩溃捕获库。它支持捕获 native 崩溃�
 
 xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。并且，不需要 root 权限或任何系统权限。
 
+xCrash 已经在爱奇艺公司的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
+
 
 ## 特征
 
 * 支持 Android 4.0 - 9.0（API level 14 - 28）。
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
-* 支持捕获 native 崩溃和 Java 异常。
+* 捕获 native 崩溃和 Java 异常。
+* 通过正则表达式设置需要获取哪些线程的信息。
+* 获取详细的内存使用统计信息。
 * 不需要 root 权限或任何系统权限。
-* 相对于 Android 系统的 tombstone，xCrash 具有更丰富的特性：
-    * 更多的硬件和操作系统信息。
-    * 检查设备是否已被 root。
-    * 崩溃线程 backtrace 中所有 ELF 的 Build-Id 列表（来自于 `.note.gnu.build-id`）。
-    * 详细的内存使用统计信息。（类似于 `dumpsys meminfo`)
-    * 通过一组正则表达式来设置哪些线程的信息需要被导出。
-    * 用户附加更多用户自定义信息的回调接口。
-    * Tombstone 文件解析器。（解析成 `Map<String, String>`）
-    * Tombstone 文件管理器。
 
 
 ## 捕获 native 崩溃
