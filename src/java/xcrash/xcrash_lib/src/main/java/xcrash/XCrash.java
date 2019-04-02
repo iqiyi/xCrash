@@ -484,6 +484,8 @@ public final class XCrash {
          * <p>Note: This option is only useful when "NativeDumpAllThreads" is enabled by calling {@link InitParameters#enableNativeDumpAllThreads()}.
          *
          * <p>Warning: The regular expression used here only supports POSIX ERE (Extended Regular Expression).
+         * Android bionic's regular expression is different from Linux libc's regular expression.
+         * See: https://android.googlesource.com/platform/bionic/+/refs/heads/master/libc/include/regex.h .
          *
          * @param whiteList A thread name (regular expression) whitelist.
          * @return The InitParameters object.

@@ -71,7 +71,7 @@ public class MyCustomApplication extends Application {
                 .setAppVersion("1.2.3-beta456-patch789")
                 .setJavaDumpAllThreadsWhiteList(new String[]{"^main$", "^Binder:.*", ".*Finalizer.*"})
                 .setJavaDumpAllThreadsCountMax(10)
-                .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Binder:.*", ".*(R|r)ender.*"})
+                .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*"})
                 .setNativeDumpAllThreadsCountMax(10)
                 .setJavaCallback(callback)
                 .setNativeCallback(callback));
