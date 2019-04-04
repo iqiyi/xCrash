@@ -12,6 +12,9 @@ buildscript {
 
 allprojects {
     repositories {
+        //maven {
+        //    url = 'https://dl.bintray.com/xcrash/maven/'
+        //}
         google()
         jcenter()
     }

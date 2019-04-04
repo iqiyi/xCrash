@@ -6,13 +6,13 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-[README 中文版](README.zh-CN.md)
-
 xCrash is a crash reporting library for Android. It support catching native crash and Java exception.
 
 xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the App process crashes. And, no root permission or any system permissions are required.
 
 xCrash is used in a variety of Android APPs (including iQIYI Video) from iQIYI for many years.
+
+[README 中文版](README.zh-CN.md)
 
 
 ## Features
@@ -32,7 +32,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from iQIYI f
 
 ## Usage
 
-* Declaring JCenter repository in Project's `build.gradle`.
+* Declaring JCenter repo or xCrash's bintray repo in Project's `build.gradle`.
 
 ```Gradle
 allprojects {
@@ -41,6 +41,21 @@ allprojects {
     }
 }
 ```
+
+or
+
+```Gradle
+allprojects {
+    repositories {
+        maven {
+            url = 'https://dl.bintray.com/xcrash/maven/'
+        }
+    }
+}
+```
+
+**NOTICE: We have already applied to add xCrash to JCenter and are currently awaiting approval. So if downloading xCrash from JCenter fails, please use the bintray repo above.**
+
 
 * Declaring a dependency in Module's `build.gradle`.
 

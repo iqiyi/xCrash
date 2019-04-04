@@ -6,13 +6,13 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-[README English Version](README.md)
-
 xCrash 是一个安卓平台的崩溃捕获库。它支持捕获 native 崩溃和 Java 异常。
 
 xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。并且，不需要 root 权限或任何系统权限。
 
 xCrash 已经在爱奇艺公司的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
+
+[README English Version](README.md)
 
 
 ## 特征
@@ -32,7 +32,7 @@ xCrash 已经在爱奇艺公司的很多安卓 APP（包括爱奇艺视频）中
 
 ## 使用
 
-* 在 APP Project 的 `build.gradle` 中，添加 JCenter 仓库。
+* 在 APP Project 的 `build.gradle` 中，添加 JCenter 仓库或者 xCrash 的 bintray 仓库。
 
 ```Gradle
 allprojects {
@@ -41,6 +41,21 @@ allprojects {
     }
 }
 ```
+
+或者
+
+```Gradle
+allprojects {
+    repositories {
+        maven {
+            url = 'https://dl.bintray.com/xcrash/maven/'
+        }
+    }
+}
+```
+
+**注意: 我们已经申请将 xCrash 添加到 JCenter 中，目前正在等待 JCenter 的审批。所以如果从 JCenter 下载 xCrash 失败，请使用上面的 bintray 仓库。**
+
 
 * 在 APP Module 的 `build.gradle` 中，添加依赖。
 
