@@ -6,11 +6,11 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash 是一个安卓平台的崩溃捕获库。它支持捕获 native 崩溃和 Java 异常。
+xCrash 是一个安卓 APP 的崩溃捕获库。它支持捕获 native 崩溃和 Java 异常。
 
 xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。并且，不需要 root 权限或任何系统权限。
 
-xCrash 已经在爱奇艺公司的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
+xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
 
 [README English Version](README.md)
 
@@ -32,32 +32,7 @@ xCrash 已经在爱奇艺公司的很多安卓 APP（包括爱奇艺视频）中
 
 ## 使用
 
-* 在 APP Project 的 `build.gradle` 中，添加 JCenter 仓库或者 xCrash 的 bintray 仓库。
-
-```Gradle
-allprojects {
-    repositories {
-        jcenter()
-    }
-}
-```
-
-或者
-
-```Gradle
-allprojects {
-    repositories {
-        maven {
-            url = 'https://dl.bintray.com/xcrash/maven/'
-        }
-    }
-}
-```
-
-**注意: 我们已经申请将 xCrash 添加到 JCenter 中，目前正在等待 JCenter 的审批。所以如果从 JCenter 下载 xCrash 失败，请使用上面的 bintray 仓库。**
-
-
-* 在 APP Module 的 `build.gradle` 中，添加依赖。
+#### 1. 增加依赖。
 
 ```Gradle
 dependencies {
@@ -65,18 +40,19 @@ dependencies {
 }
 ```
 
-* 在 APP Module 的 `build.gradle` 中，指定一个或多个你想要的 ABI 支持。
+#### 2. 指定你需要的 ABI(s)。
 
 ```Gradle
 android {
     defaultConfig {
-    ndk {
-        abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        ndk {
+            abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
     }
 }
 ```
 
-* 在 `proguard-rules.pro` 中，添加规则。
+#### 3. 增加 ProGuard 规则。
 
 ```
 -keep class xcrash.NativeCrashHandler {
@@ -85,7 +61,7 @@ android {
 }
 ```
 
-* 在 `Application#attachBaseContext()` 中初始化 xCrash。
+#### 4. 在 `Application#attachBaseContext()` 中初始化 xCrash。
 
 ```Java
 public class MyCustomApplication extends Application {
@@ -99,19 +75,16 @@ public class MyCustomApplication extends Application {
 }
 ```
 
-* 完成。
-
 Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` 目录。（通常在： `/data/data/<APP_PACKAGE_NAME>/files/tombstones`）
 
-在 `src/java/xcrash_sample` 文件夹中，有一个更实际和复杂的示例 APP。
+在 [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) 文件夹中，有一个更实际和复杂的示例 APP。
+
 
 ## 构建
 
-如果你想编译 xCrash 的源码。请看这里：
+#### 1. 下载 [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。
 
-* 下载 [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。（对 armeabi 的支持，从 r17 版本开始被移除了）
-
-* 编译和安装 native 库。
+#### 2. 编译和安装 native 库。
 
 ```
 cd ./src/native/
@@ -119,7 +92,7 @@ cd ./src/native/
 ./install.sh
 ```
 
-* 编译 AAR 库。
+#### 3. 编译 AAR 库。
 
 ```
 cd ./src/java/xcrash/
