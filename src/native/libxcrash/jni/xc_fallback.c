@@ -487,6 +487,7 @@ int xc_fallback_get_emergency(siginfo_t *si,
                               const char *app_version,
                               int api_level,
                               const char *os_version,
+                              const char *kernel_version,
                               const char *abi_list,
                               const char *manufacturer,
                               const char *brand,
@@ -532,6 +533,7 @@ int xc_fallback_get_emergency(siginfo_t *si,
     used += xcc_fmt_snprintf(buf + used, len - used, "Rooted: '%s'\n", xcc_util_is_root() ? "Yes" : "No");
     used += xcc_fmt_snprintf(buf + used, len - used, "API level: '%d'\n", api_level);
     used += xcc_fmt_snprintf(buf + used, len - used, "OS version: '%s'\n", os_version);
+    used += xcc_fmt_snprintf(buf + used, len - used, "Kernel version: '%s'\n", kernel_version);
     used += xcc_fmt_snprintf(buf + used, len - used, "ABI list: '%s'\n", abi_list);
     used += xcc_fmt_snprintf(buf + used, len - used, "Manufacturer: '%s'\n", manufacturer);
     used += xcc_fmt_snprintf(buf + used, len - used, "Brand: '%s'\n", brand);

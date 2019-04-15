@@ -111,6 +111,7 @@ int xcc_util_read_file_line(const char *path, char *buf, size_t len);
 int xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
 int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
 int xcc_util_is_root();
+void xcc_util_get_kernel_version(char *buf, size_t len);
 
 #ifdef __cplusplus
 }

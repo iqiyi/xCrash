@@ -243,7 +243,7 @@ char *xc_recorder_get_log_pathname(xc_recorder_t *self)
     return self->log_pathname;
 }
 
-int xc_recorder_log_err(xc_recorder_t *self, const char *errmsg, int errnum)
+int xc_recorder_log_err(xc_recorder_t *self, const char *msg, int errnum)
 {
     int fd;
     int r;
@@ -251,7 +251,21 @@ int xc_recorder_log_err(xc_recorder_t *self, const char *errmsg, int errnum)
     if(NULL == self->log_pathname || !self->create_log_ok) return XCC_ERRNO_STATE;
 
     if((fd = open(self->log_pathname, O_WRONLY | O_CLOEXEC | O_APPEND, 0644)) < 0) return XCC_ERRNO_SYS;
-    r = xcc_util_write_format(fd, "\nxcrash error:\n%s, errnum=%d\n\n", errmsg, errnum);
+    r = xcc_util_write_format(fd, "\nxcrash error:\n%s, errnum=%d\n\n", msg, errnum);
+    close(fd);
+    
+    return r;
+}
+
+int xc_recorder_log_err_msg(xc_recorder_t *self, const char *msg, int errnum, const char *errmsg)
+{
+    int fd;
+    int r;
+    
+    if(NULL == self->log_pathname || !self->create_log_ok) return XCC_ERRNO_STATE;
+
+    if((fd = open(self->log_pathname, O_WRONLY | O_CLOEXEC | O_APPEND, 0644)) < 0) return XCC_ERRNO_SYS;
+    r = xcc_util_write_format(fd, "\nxcrash error:\n%s, errnum=%d, errmsg=%s\n\n", msg, errnum, errmsg);
     close(fd);
     
     return r;

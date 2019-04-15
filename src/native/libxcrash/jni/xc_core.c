@@ -61,6 +61,7 @@ static char                  *xc_core_emergency;
 static xcc_util_build_prop_t  xc_core_build_prop;
 static xc_recorder_t         *xc_core_recorder;
 static long                   xc_core_timezone;
+static char                  *xc_core_kernel_version;
 
 static xcc_spot_t             xc_core_spot;
 static char                  *xc_core_log_pathname;
@@ -137,7 +138,7 @@ static void xc_core_exec_dumper()
     errno = 0;
     execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
     
-    xc_recorder_log_err(xc_core_recorder, "execl failed", errno);
+    xc_recorder_log_err_msg(xc_core_recorder, "execl failed", errno, xc_core_dumper_pathname);
     _exit(7);
 }
 
@@ -253,7 +254,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         if(WIFEXITED(status) && 0 != WEXITSTATUS(status))
         {
             //terminated normally, but return / exit / _exit NON-zero
-            xc_recorder_log_err(xc_core_recorder, "dumper exit status non-zero", WEXITSTATUS(status));
+            xc_recorder_log_err_msg(xc_core_recorder, "dumper exit status non-zero", WEXITSTATUS(status), xc_core_dumper_pathname);
             goto end;
         }
         else if(WIFSIGNALED(status))
@@ -264,7 +265,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         }
         else
         {
-            xc_recorder_log_err(xc_core_recorder, "other status", status);
+            xc_recorder_log_err_msg(xc_core_recorder, "other status", status, xc_core_dumper_pathname);
             goto end;
         }
     }
@@ -295,6 +296,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
                                   xc_core_app_version,
                                   xc_core_build_prop.api_level,
                                   xc_core_build_prop.os_version,
+                                  xc_core_kernel_version,
                                   xc_core_build_prop.abi_list,
                                   xc_core_build_prop.manufacturer,
                                   xc_core_build_prop.brand,
@@ -411,6 +413,7 @@ int xc_core_init(int restore_signal_handler,
     struct tm       tm;
     uint64_t        start_time;
     int             r;
+    char            buf[256];
 
 #if 0
     __android_log_print(ANDROID_LOG_DEBUG, "xcrash",
@@ -477,6 +480,10 @@ int xc_core_init(int restore_signal_handler,
 
     //get system property
     xcc_util_load_build_prop(&xc_core_build_prop);
+
+    //get kernel version
+    xcc_util_get_kernel_version(buf, sizeof(buf));
+    if(NULL == (xc_core_kernel_version = strdup(buf))) return XCC_ERRNO_NOMEM;
 
     //init the tombstone file recorder
     if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, log_prefix, log_suffix, (size_t)log_count_max))) return r;

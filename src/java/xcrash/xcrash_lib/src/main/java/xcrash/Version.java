@@ -27,5 +27,5 @@ class Version {
     private Version() {
     }
 
-    static final String fullVersion = "xCrash 2.0.5";
+    static final String fullVersion = "xCrash 2.0.6";
 }

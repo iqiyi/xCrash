@@ -27,6 +27,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include "xcc_util.h"
 #include "xcd_meminfo.h"
 #include "xcd_recorder.h"
 
@@ -441,6 +442,58 @@ static void xcd_meminfo_load(FILE *fp, xcd_meminfo_t *stats, int *found_swap_pss
     }
 }
 
+static int xcd_meminfo_record_sys(xcd_recorder_t *recorder)
+{
+    FILE *fp = NULL;
+    char  line[512];
+    char *p;
+    int   r = 0;
+
+    if(NULL == (fp = fopen("/proc/meminfo", "r"))) goto end;
+    
+    if(0 != (r = xcd_recorder_write(recorder, " System Summary (From: /proc/meminfo)\n"))) goto end;
+    while(NULL != fgets(line, sizeof(line), fp))
+    {
+        p = xcc_util_trim(line);
+        if(strlen(p) > 0)
+        {
+            if(0 != (r = xcd_recorder_print(recorder, "  %s\n", line))) goto end;
+        }
+    }
+    if(0 != (r = xcd_recorder_write(recorder, "-\n"))) goto end;
+
+ end:
+    if(NULL != fp) fclose(fp);
+    return r;
+}
+
+static int xcd_meminfo_record_proc_status(xcd_recorder_t *recorder, pid_t pid)
+{
+    char  path[64];
+    FILE *fp = NULL;
+    char  line[512];
+    char *p;
+    int   r = 0;
+
+    snprintf(path, sizeof(path), "/proc/%d/status", pid);
+    if(NULL == (fp = fopen(path, "r"))) goto end;
+    
+    if(0 != (r = xcd_recorder_write(recorder, " Process Status (From: /proc/PID/status)\n"))) goto end;
+    while(NULL != fgets(line, sizeof(line), fp))
+    {
+        p = xcc_util_trim(line);
+        if(strlen(p) > 0 && (0 == memcmp(p, "Vm", 2) || 0 == memcmp(p, "Rss", 3)))
+        {
+            if(0 != (r = xcd_recorder_print(recorder, "  %s\n", line))) goto end;
+        }
+    }
+    if(0 != (r = xcd_recorder_write(recorder, "-\n"))) goto end;
+
+ end:
+    if(NULL != fp) fclose(fp);
+    return r;
+}
+
 int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid)
 {
     char           path[64];
@@ -474,6 +527,9 @@ int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid)
 
     //dump
     if(0 != (r = xcd_recorder_write(recorder, "memory info:\n"))) return r;
+    if(0 != (r = xcd_meminfo_record_sys(recorder))) return r;
+    if(0 != (r = xcd_meminfo_record_proc_status(recorder, pid))) return r;
+    if(0 != (r = xcd_recorder_write(recorder, " Process Details (From: /proc/PID/smaps)\n"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_HEAD_FMT, "", "Pss", "Pss", "Shared", "Private", "Shared", "Private", found_swap_pss ? "SwapPss" : "Swap"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_HEAD_FMT, "", "Total", "Clean", "Dirty", "Dirty", "Clean", "Clean", "Dirty"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_HEAD_FMT, "", "------", "------", "------", "------", "------", "------", "------"))) return r;
@@ -502,7 +558,7 @@ int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid)
                                     total.shared_clean,
                                     total.private_clean,
                                     found_swap_pss ? total.swapped_out_pss : total.swapped_out))) return r;
-    if(0 != (r = xcd_recorder_write(recorder, "-\n Dalvik Details\n"))) return r;
+    if(0 != (r = xcd_recorder_write(recorder, "-\n Process Dalvik Details (From: /proc/PID/smaps)\n"))) return r;
     for(i = _NUM_EXCLUSIVE_HEAP; i < _NUM_HEAP; i++)
     {
         if(0 != stats[i].pss || 0 != stats[i].swappable_pss || 0 != stats[i].shared_dirty ||
@@ -519,7 +575,7 @@ int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid)
                                             found_swap_pss ? stats[i].swapped_out_pss : stats[i].swapped_out))) return r;
         }
     }
-    if(0 != (r = xcd_recorder_write(recorder, "-\n App Summary (From: /proc/PID/smaps)\n"))) return r;
+    if(0 != (r = xcd_recorder_write(recorder, "-\n Process Summary (From: /proc/PID/smaps)\n"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_SUM_HEAD_FMT, "", "Pss(KB)"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_SUM_HEAD_FMT, "", "------"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, XCD_MEMINFO_SUM_DATA_FMT, "Java Heap:",
@@ -562,7 +618,7 @@ int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid)
                                         "TOTAL SWAP:",
                                         total.swapped_out))) return r;
     }
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcd_recorder_write(recorder, "-\n\n"))) return r;
     
     return 0;
 }

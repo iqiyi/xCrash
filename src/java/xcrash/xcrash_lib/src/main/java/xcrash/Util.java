@@ -245,7 +245,7 @@ class Util {
 
     static String getMemoryInfo() {
         StringBuilder sb = new StringBuilder();
-        sb.append(" App Summary (From: android.os.Debug.MemoryInfo)\n");
+        sb.append(" Process Summary (From: android.os.Debug.MemoryInfo)\n");
         sb.append(String.format(Locale.US, memInfoFmt, "", "Pss(KB)"));
         sb.append(String.format(Locale.US, memInfoFmt, "", "------"));
 

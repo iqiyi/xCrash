@@ -137,6 +137,12 @@ public class TombstoneParser {
     public static final String keyOsVersion = "OS version";
 
     /**
+     * Linux kernel version.
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static final String keyKernelVersion = "Kernel version";
+
+    /**
      * Supported ABI list. (From: {@link android.os.Build#SUPPORTED_ABIS})
      */
     @SuppressWarnings("WeakerAccess")
@@ -319,6 +325,7 @@ public class TombstoneParser {
         keyRooted,
         keyApiLevel,
         keyOsVersion,
+        keyKernelVersion,
         keyAbiList,
         keyManufacturer,
         keyBrand,

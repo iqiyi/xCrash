@@ -72,6 +72,15 @@ static int xcd_sys_record_cpu(xcd_recorder_t *recorder)
     return 0;
 }
 
+static int xcd_sys_record_kernel_version(xcd_recorder_t *recorder)
+{
+    char buf[256];
+    
+    xcc_util_get_kernel_version(buf, sizeof(buf));
+
+    return xcd_recorder_print(recorder, "Kernel version: '%s'\n", buf);
+}
+
 static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
 {
     FILE   *f = NULL;
@@ -80,6 +89,10 @@ static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
     size_t  mfree = 0;
     size_t  mbuffers = 0;
     size_t  mcached = 0;
+    size_t  mtotal_found = 0;
+    size_t  mfree_found = 0;
+    size_t  mbuffers_found = 0;
+    size_t  mcached_found = 0;
     int     r;
 
     if(NULL == (f = fopen("/proc/meminfo", "r"))) goto end;
@@ -89,19 +102,25 @@ static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
         if(0 == memcmp(line, "MemTotal:", 9))
         {
             if(0 == sscanf(line, "MemTotal: %zu kB", &mtotal)) goto end;
+            mtotal_found = 1;
         }
         else if(0 == memcmp(line, "MemFree:", 8))
         {
             if(0 == sscanf(line, "MemFree: %zu kB", &mfree)) goto end;
+            mfree_found = 1;
         }
         else if(0 == memcmp(line, "Buffers:", 8))
         {
             if(0 == sscanf(line, "Buffers: %zu kB", &mbuffers)) goto end;
+            mbuffers_found = 1;
         }
         else if(0 == memcmp(line, "Cached:", 7))
         {
             if(0 == sscanf(line, "Cached: %zu kB", &mcached)) goto end;
+            mcached_found = 1;
         }
+
+        if(1 == mtotal_found && 1 == mfree_found && 1 == mbuffers_found && 1 == mcached_found) break;
     }
     
  end:
@@ -132,6 +151,7 @@ int xcd_sys_record(xcd_recorder_t *recorder, uint64_t start_time, uint64_t crash
     if(0 != (r = xcd_recorder_print(recorder, "Rooted: '%s'\n",             xcc_util_is_root() ? "Yes" : "No"))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "API level: '%d'\n",          props->api_level))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "OS version: '%s'\n",         props->os_version))) return r;
+    if(0 != (r = xcd_sys_record_kernel_version(recorder))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "ABI list: '%s'\n",           props->abi_list))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "Manufacturer: '%s'\n",       props->manufacturer))) return r;
     if(0 != (r = xcd_recorder_print(recorder, "Brand: '%s'\n",              props->brand))) return r;

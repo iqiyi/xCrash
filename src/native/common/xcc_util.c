@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <sys/system_properties.h>
 #include "xcc_errno.h"
 #include "xcc_fmt.h"
@@ -463,4 +464,18 @@ void xcc_util_load_build_prop(xcc_util_build_prop_t *prop)
 
     if(NULL != abi)  free(abi);
     if(NULL != abi2) free(abi2);
+}
+
+void xcc_util_get_kernel_version(char *buf, size_t len)
+{
+    struct utsname uts;
+
+    if(0 != uname(&uts))
+    {
+        strncpy(buf, "unknown", len);
+        buf[len - 1] = '\0';
+        return;
+    }
+
+    snprintf(buf, len, "%s version %s %s (%s)", uts.sysname, uts.release, uts.version, uts.machine);
 }

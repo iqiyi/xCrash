@@ -42,7 +42,8 @@ int xc_recorder_create_log(xc_recorder_t *self);
 int xc_recorder_create_log_ok(xc_recorder_t *self);
 char *xc_recorder_get_log_pathname(xc_recorder_t *self);
 
-int xc_recorder_log_err(xc_recorder_t *self, const char *errmsg, int errnum);
+int xc_recorder_log_err(xc_recorder_t *self, const char *msg, int errnum);
+int xc_recorder_log_err_msg(xc_recorder_t *self, const char *msg, int errnum, const char *errmsg);
 
 int xc_recorder_open(xc_recorder_t *self, int *fd);
 void xc_recorder_close(xc_recorder_t *self, int fd);
