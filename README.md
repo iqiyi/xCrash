@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.0.6-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.0.7-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -36,7 +36,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.6'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.7'
 }
 ```
 

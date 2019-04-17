@@ -24,6 +24,6 @@
 #ifndef XCC_VERSION_H
 #define XCC_VERSION_H 1
 
-#define XCC_VERSION_STR "xCrash 2.0.6"
+#define XCC_VERSION_STR "xCrash 2.0.7"
 
 #endif
