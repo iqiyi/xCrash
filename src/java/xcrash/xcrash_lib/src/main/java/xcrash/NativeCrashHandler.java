@@ -101,7 +101,7 @@ class NativeCrashHandler {
     @SuppressWarnings("unused")
     private static void callback(String logPath, String emergency) {
 
-        if(!TextUtils.isEmpty(logPath)) {
+        if (!TextUtils.isEmpty(logPath)) {
             TombstoneManager.appendSection(logPath, "memory info", Util.getMemoryInfo());
         }
 

@@ -286,8 +286,8 @@ static int xc_fallback_get_regs(char *buf, size_t len, ucontext_t *uc)
                             uc->uc_mcontext.regs[27],
                             uc->uc_mcontext.regs[28],
                             uc->uc_mcontext.regs[29],
-                            uc->uc_mcontext.regs[30],
                             uc->uc_mcontext.sp,
+                            uc->uc_mcontext.regs[30], //lr
                             uc->uc_mcontext.pc);
 #elif defined(__i386__)
     return xcc_fmt_snprintf(buf, len, 

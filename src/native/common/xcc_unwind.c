@@ -123,7 +123,7 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
     uintptr_t           sig_pc = 0;
     uintptr_t           pc_buf[XCC_UNWIND_FRAMES_MAX];
     uintptr_t           sp_buf[XCC_UNWIND_FRAMES_MAX];
-    size_t              i, j;
+    size_t              i = 0, j;
     uintptr_t           rel_pc;
     const char         *name;
     const char         *symbol;
@@ -138,10 +138,14 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
 
     if(NULL == buf || 0 == buf_len) return 0;
 
+    //Trying to get LR for x86 and x86_64 on local unwind is usually
+    //leads to access unmapped memory, which will crash the process immediately.
 #if defined(__arm__)
     sig_pc = uc->uc_mcontext.arm_pc;
+    if(0 == sig_pc) sig_pc = uc->uc_mcontext.arm_lr;
 #elif defined(__aarch64__)
     sig_pc = uc->uc_mcontext.pc;
+    if(0 == sig_pc) sig_pc = uc->uc_mcontext.regs[30];
 #elif defined(__i386__)
     sig_pc = uc->uc_mcontext.gregs[REG_EIP];
 #elif defined(__x86_64__)
@@ -153,12 +157,15 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
     _Unwind_Backtrace(xcc_unwind_callback, &state);
 
     //find the signal frame
-    for(i = 0; i < state.cnt; i++)
+    if(sig_pc > 0)
     {
-        if(pc_buf[i] < sig_pc + sizeof(uintptr_t) && pc_buf[i] > sig_pc - sizeof(uintptr_t))
+        for(i = 0; i < state.cnt; i++)
         {
-            need_ignore = 0;
-            break;
+            if(pc_buf[i] < sig_pc + sizeof(uintptr_t) && pc_buf[i] > sig_pc - sizeof(uintptr_t))
+            {
+                need_ignore = 0;
+                break;
+            }
         }
     }
     if(i >= state.cnt) i = 0; //failed, record all frames
