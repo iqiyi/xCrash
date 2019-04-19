@@ -44,7 +44,7 @@ int xcd_map_init(xcd_map_t *self, uintptr_t start, uintptr_t end, size_t offset,
     if(flags[1] == 'w') self->flags |= PROT_WRITE;
     if(flags[2] == 'x') self->flags |= PROT_EXEC;
     
-    if(NULL == name)
+    if(NULL == name || '\0' == name[0])
     {
         self->name = NULL;
     }
@@ -67,45 +67,6 @@ void xcd_map_uninit(xcd_map_t *self)
 {
     free(self->name);
     self->name = NULL;
-}
-
-int xcd_map_record(xcd_map_t *self, xcd_recorder_t *recorder)
-{
-    uintptr_t  load_bias = 0;
-    char       load_bias_buf[64] = "\0";
-    uint8_t    build_id[64];
-    size_t     build_id_len = 0;
-    char       build_id_buf[64 * 2 + 64] = "\0";
-    size_t     offset = 0;
-    size_t     i;
-
-    if(NULL != self->elf)
-    {
-        //get load_bias
-        if(0 != (load_bias = xcd_elf_get_load_bias(self->elf)))
-            snprintf(load_bias_buf, sizeof(load_bias_buf), " (load base 0x%"PRIxPTR")", load_bias);
-
-        //get build ID
-        if(0 == xcd_elf_get_build_id(self->elf, build_id, sizeof(build_id), &build_id_len))
-        {
-            offset = snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%s", " (BuildId: ");
-            for(i = 0; i < build_id_len; i++)
-                offset += snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02x", build_id[i]);
-            snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%s", ")");
-        }
-    }
-    
-    return xcd_recorder_print(recorder,
-                              "    %0"XCC_UTIL_FMT_ADDR"-%0"XCC_UTIL_FMT_ADDR" %c%c%c  %"XCC_UTIL_FMT_ADDR"  %"XCC_UTIL_FMT_ADDR"  %s%s%s\n",
-                              self->start, self->end - 1,
-                              self->flags & PROT_READ ? 'r' : '-',
-                              self->flags & PROT_WRITE ? 'w' : '-',
-                              self->flags & PROT_EXEC ? 'x' : '-',
-                              self->offset,
-                              self->end - self->start,
-                              (NULL == self->name ? "" : self->name),
-                              load_bias_buf,
-                              build_id_buf);
 }
 
 xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid)

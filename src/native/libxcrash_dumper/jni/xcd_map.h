@@ -56,8 +56,6 @@ void xcd_map_uninit(xcd_map_t *self);
 xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid);
 uintptr_t xcd_map_get_rel_pc(xcd_map_t *self, uintptr_t pc, pid_t pid);
 
-int xcd_map_record(xcd_map_t *self, xcd_recorder_t *recorder);
-
 #ifdef __cplusplus
 }
 #endif
