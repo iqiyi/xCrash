@@ -87,13 +87,13 @@ static int xcc_unwind_check_ignore_lib(const char *name, const char *ignore_lib)
 
 static void xcc_unwind_parse_name_from_maps(uintptr_t pc, const char **name, char *name_buf, size_t name_buf_len)
 {
-    char path[64];
-    int  fd = -1;
-    char line[512];
+    char       path[64];
+    int        fd = -1;
+    char       line[512];
     uintptr_t  start;
     uintptr_t  end;
     int        pos;
-    char *p;
+    char      *p;
 
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/maps", getpid());
 
@@ -121,6 +121,7 @@ static void xcc_unwind_parse_name_from_maps(uintptr_t pc, const char **name, cha
 int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf_len)
 {
     uintptr_t           sig_pc = 0;
+    uintptr_t           sig_lr = 0;
     uintptr_t           pc_buf[XCC_UNWIND_FRAMES_MAX];
     uintptr_t           sp_buf[XCC_UNWIND_FRAMES_MAX];
     size_t              i = 0, j;
@@ -135,6 +136,7 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
     size_t              len;
     int                 need_ignore = (ignore_lib ? 1 : 0);
     size_t              buf_used = 0;
+    int                 use_pc_from_signal = 0;
 
     if(NULL == buf || 0 == buf_len) return 0;
 
@@ -142,10 +144,10 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
     //leads to access unmapped memory, which will crash the process immediately.
 #if defined(__arm__)
     sig_pc = uc->uc_mcontext.arm_pc;
-    if(0 == sig_pc) sig_pc = uc->uc_mcontext.arm_lr;
+    sig_lr = uc->uc_mcontext.arm_lr;
 #elif defined(__aarch64__)
     sig_pc = uc->uc_mcontext.pc;
-    if(0 == sig_pc) sig_pc = uc->uc_mcontext.regs[30];
+    sig_lr = uc->uc_mcontext.regs[30];
 #elif defined(__i386__)
     sig_pc = uc->uc_mcontext.gregs[REG_EIP];
 #elif defined(__x86_64__)
@@ -177,6 +179,7 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
         state.cnt = 1;
         pc_buf[0] = sig_pc;
         need_ignore = 0;
+        use_pc_from_signal = 1;
     }
 
     for(j = 0; i < state.cnt; i++, j++)
@@ -199,8 +202,18 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
         }
         if(0 == j && (i + 1) >= state.cnt)
         {
-            //This is the only PC we have, try to find the dli_fname ourself.
+            //This is the only PC we have, try our best to find the dli_fname ourself.
             xcc_unwind_parse_name_from_maps(pc_buf[i], &name, name_buf, sizeof(name_buf));
+            if(NULL == name && 0 != sig_lr && 1 == use_pc_from_signal)
+            {
+                //This is the only PC from signal, try again using LR.
+                xcc_unwind_parse_name_from_maps(sig_lr, &name, name_buf, sizeof(name_buf));
+                if(NULL != name)
+                {
+                    pc_buf[i] = sig_lr;
+                    rel_pc = sig_lr;
+                }
+            }
         }
         if(NULL == name)
         {
