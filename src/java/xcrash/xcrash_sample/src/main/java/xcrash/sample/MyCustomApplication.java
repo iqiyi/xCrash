@@ -76,7 +76,7 @@ public class MyCustomApplication extends Application {
                 .setJavaCallback(callback)
                 .setNativeCallback(callback));
 
-        //Send all padding crash log files.
+        //Send all pending crash log files.
         new Thread(new Runnable() {
             @Override
             public void run() {

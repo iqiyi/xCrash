@@ -63,6 +63,8 @@ android {
 
 #### 4. Initialize xCrash in `Application#attachBaseContext()`.
 
+> Java
+
 ```Java
 public class MyCustomApplication extends Application {
 
@@ -71,6 +73,19 @@ public class MyCustomApplication extends Application {
         super.attachBaseContext(base);
         
         xcrash.XCrash.init(this);
+    }
+}
+```
+
+> Kotlin
+
+```Kotlin
+class MyCustomApplication : Application() {
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+
+        xcrash.XCrash.init(this)
     }
 }
 ```
