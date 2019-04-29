@@ -57,8 +57,9 @@ int xcd_map_init(xcd_map_t *self, uintptr_t start, uintptr_t end, size_t offset,
     }
 
     self->elf = NULL;
-    self->elf_offset = 0;
     self->elf_loaded = 0;
+    self->elf_offset = 0;
+    self->elf_start_offset = 0;
 
     return 0;
 }
@@ -69,7 +70,7 @@ void xcd_map_uninit(xcd_map_t *self)
     self->name = NULL;
 }
 
-xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid)
+xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid, void *maps_obj)
 {
     xcd_memory_t *memory = NULL;
     xcd_elf_t    *elf = NULL;
@@ -78,7 +79,7 @@ xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid)
     {
         self->elf_loaded = 1;
         
-        if(0 != xcd_memory_create(&memory, self, pid)) return NULL;
+        if(0 != xcd_memory_create(&memory, self, pid, maps_obj)) return NULL;
 
         if(0 != xcd_elf_create(&elf, pid, memory)) return NULL;
         
@@ -88,12 +89,10 @@ xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid)
     return self->elf;
 }
 
-uintptr_t xcd_map_get_rel_pc(xcd_map_t *self, uintptr_t pc, pid_t pid)
+uintptr_t xcd_map_get_rel_pc(xcd_map_t *self, uintptr_t pc, pid_t pid, void *maps_obj)
 {
-    xcd_elf_t *elf = xcd_map_get_elf(self, pid);
+    xcd_elf_t *elf = xcd_map_get_elf(self, pid, maps_obj);
     uintptr_t load_bias = (NULL == elf ? 0 : xcd_elf_get_load_bias(elf));
     
-    uintptr_t load_base = self->start - self->elf_offset;
-
-    return pc - (load_base - load_bias);
+    return pc - self->start + load_bias + self->elf_offset;
 }

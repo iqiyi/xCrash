@@ -41,10 +41,9 @@ struct xcd_memory_remote
     size_t    length;
 };
 
-int xcd_memory_remote_create(void **obj, void *map_obj, pid_t pid)
+int xcd_memory_remote_create(void **obj, xcd_map_t *map, pid_t pid)
 {
     xcd_memory_remote_t **self = (xcd_memory_remote_t **)obj;
-    xcd_map_t *map = (xcd_map_t *)map_obj;
     
     if(NULL == (*self = malloc(sizeof(xcd_memory_remote_t)))) return XCC_ERRNO_NOMEM;
     (*self)->pid = pid;

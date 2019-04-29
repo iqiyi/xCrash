@@ -47,4 +47,11 @@
         android:text="force a java crash&#10;(in new thread)"
         tools:ignore="HardcodedText" />
 
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        />
+
 </LinearLayout>

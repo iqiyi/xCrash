@@ -120,6 +120,16 @@ xcd_map_t *xcd_maps_find(xcd_maps_t *self, uintptr_t pc)
     return NULL;
 }
 
+xcd_map_t *xcd_maps_get_prev_map(xcd_maps_t *self, xcd_map_t *cur_map)
+{
+    (void)self;
+
+    xcd_maps_item_t *cur_mi = (xcd_maps_item_t *)cur_map;
+    xcd_maps_item_t *prev_mi = TAILQ_PREV(cur_mi, xcd_maps_item_queue, link);
+
+    return (NULL == prev_mi ? NULL : &(prev_mi->map));
+}
+
 int xcd_maps_record(xcd_maps_t *self, xcd_recorder_t *recorder)
 {
     int              r;

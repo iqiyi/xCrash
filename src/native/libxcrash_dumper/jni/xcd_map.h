@@ -46,15 +46,17 @@ typedef struct xcd_map
 
     //ELF
     xcd_elf_t *elf;
-    size_t     elf_offset;
     int        elf_loaded;
+    size_t     elf_offset;
+    size_t     elf_start_offset;
 } xcd_map_t;
 
-int xcd_map_init(xcd_map_t *self, uintptr_t start, uintptr_t end, size_t offset, const char * flags, const char *name);
+int xcd_map_init(xcd_map_t *self, uintptr_t start, uintptr_t end, size_t offset,
+                 const char * flags, const char *name);
 void xcd_map_uninit(xcd_map_t *self);
 
-xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid);
-uintptr_t xcd_map_get_rel_pc(xcd_map_t *self, uintptr_t pc, pid_t pid);
+xcd_elf_t *xcd_map_get_elf(xcd_map_t *self, pid_t pid, void *maps_obj);
+uintptr_t xcd_map_get_rel_pc(xcd_map_t *self, uintptr_t pc, pid_t pid, void *maps_obj);
 
 #ifdef __cplusplus
 }

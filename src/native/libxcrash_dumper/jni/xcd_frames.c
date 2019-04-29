@@ -95,10 +95,10 @@ static void xcd_frames_load(xcd_frames_t *self)
         //get relative pc
         if(NULL != (map = xcd_maps_find(self->maps, cur_pc)))
         {
-            rel_pc = xcd_map_get_rel_pc(map, step_pc, self->pid);
+            rel_pc = xcd_map_get_rel_pc(map, step_pc, self->pid, (void *)self->maps);
             step_pc = rel_pc;
 
-            elf = xcd_map_get_elf(map, self->pid);
+            elf = xcd_map_get_elf(map, self->pid, (void *)self->maps);
             if(NULL != elf)
             {
                 load_bias = xcd_elf_get_load_bias(elf);
@@ -218,8 +218,10 @@ int xcd_frames_create(xcd_frames_t **self, xcd_regs_t *regs, xcd_maps_t *maps, p
 int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
 {
     xcd_frame_t *frame;
+    xcd_elf_t   *elf;
     char        *name;
-    char         name_buf[256];
+    char         name_buf[512];
+    char        *name_embedded;
     char        *offset;
     char         offset_buf[64];
     char        *func;
@@ -231,6 +233,7 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
         //name
+        name = NULL;
         if(NULL == frame->map)
         {
             name = "<unknown>";
@@ -242,13 +245,26 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
         }
         else
         {
-            name = frame->map->name;
+            if(0 != frame->map->elf_start_offset)
+            {
+                elf = xcd_map_get_elf(frame->map, self->pid, (void *)self->maps);
+                if(NULL != elf)
+                {
+                    name_embedded = xcd_elf_get_so_name(elf);
+                    if(NULL != name_embedded && strlen(name_embedded) > 0)
+                    {
+                        snprintf(name_buf, sizeof(name_buf), "%s!%s", frame->map->name, name_embedded);
+                        name = name_buf;
+                    }
+                }
+            }
+            if(NULL == name) name = frame->map->name;
         }
 
         //offset
-        if(NULL != frame->map && 0 != frame->map->offset)
+        if(NULL != frame->map && 0 != frame->map->elf_start_offset)
         {
-            snprintf(offset_buf, sizeof(offset_buf), " (offset 0x%"PRIxPTR")", frame->map->offset);
+            snprintf(offset_buf, sizeof(offset_buf), " (offset 0x%"PRIxPTR")", frame->map->elf_start_offset);
             offset = offset_buf;
         }
         else
@@ -318,13 +334,13 @@ int xcd_frames_record_buildid(xcd_frames_t *self, xcd_recorder_t *recorder)
         if(repeated) continue;
 
         //get elf
-        if(NULL == (elf = xcd_map_get_elf(frame->map, self->pid))) continue;
+        if(NULL == (elf = xcd_map_get_elf(frame->map, self->pid, (void *)self->maps))) continue;
         
         //get build id
         if(0 != xcd_elf_get_build_id(elf, build_id, sizeof(build_id), &build_id_len)) continue;
         offset = 0;
         for(i = 0; i < build_id_len; i++)
-            offset += snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02x", build_id[i]);
+            offset += snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
 
         //dump
         if(0 != (r = xcd_recorder_print(recorder, "    %s (BuildId: %s)\n", name, build_id_buf))) return r;
@@ -346,6 +362,7 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, xcd_recorder_t *r
     xcd_map_t *map;
     xcd_elf_t *elf;
     uintptr_t  rel_pc;
+    char      *name_embedded;
     char      *func_name;
     size_t     func_offset;
     int        r;
@@ -377,9 +394,18 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, xcd_recorder_t *r
             line_len += snprintf(line + line_len, sizeof(line) - line_len,
                                  "  %s", map->name);
 
-            if(NULL != (elf = xcd_map_get_elf(map, self->pid)))
+            if(NULL != (elf = xcd_map_get_elf(map, self->pid, (void *)self->maps)))
             {
-                rel_pc = xcd_map_get_rel_pc(map, stack_data[i], self->pid);
+                if(0 != map->elf_start_offset)
+                {
+                    name_embedded = xcd_elf_get_so_name(elf);
+                    if(NULL != name_embedded && strlen(name_embedded) > 0)
+                    {
+                        line_len += snprintf(line + line_len, sizeof(line) - line_len, "!%s", name_embedded);
+                    }
+                }
+
+                rel_pc = xcd_map_get_rel_pc(map, stack_data[i], self->pid, (void *)self->maps);
                 
                 func_name = NULL;
                 func_offset = 0;

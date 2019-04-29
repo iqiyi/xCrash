@@ -39,7 +39,7 @@ typedef struct
     size_t (*read)(void *self, uintptr_t addr, void *dst, size_t size);
 } xcd_memory_handlers_t;
 
-int xcd_memory_create(xcd_memory_t **self, void *map_obj, pid_t pid);
+int xcd_memory_create(xcd_memory_t **self, void *map_obj, pid_t pid, void *maps_obj);
 int xcd_memory_create_from_buf(xcd_memory_t **self, uint8_t *buf, size_t len);
 void xcd_memory_destroy(xcd_memory_t **self);
 

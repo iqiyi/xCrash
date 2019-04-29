@@ -42,9 +42,10 @@ struct xcd_memory
     const xcd_memory_handlers_t *handlers;
 };
 
-int xcd_memory_create(xcd_memory_t **self, void *map_obj, pid_t pid)
+int xcd_memory_create(xcd_memory_t **self, void *map_obj, pid_t pid, void *maps_obj)
 {
-    xcd_map_t *map = (xcd_map_t *)map_obj;
+    xcd_map_t  *map  = (xcd_map_t *)map_obj;
+    xcd_maps_t *maps = (xcd_maps_t *)maps_obj;
     
     if(map->end <= map->start) return XCC_ERRNO_INVAL;
     if(map->flags & XCD_MAP_PORT_DEVICE) return XCC_ERRNO_DEV;
@@ -53,7 +54,7 @@ int xcd_memory_create(xcd_memory_t **self, void *map_obj, pid_t pid)
     
     //try memory from file
     (*self)->handlers = &xcd_memory_file_handlers;
-    if(0 == xcd_memory_file_create(&((*self)->obj), *self, map)) return 0;
+    if(0 == xcd_memory_file_create(&((*self)->obj), *self, map, maps)) return 0;
 
     //try memory from remote ptrace
     //Sometimes, data only exists in the remote process's memory such as vdso data on x86.

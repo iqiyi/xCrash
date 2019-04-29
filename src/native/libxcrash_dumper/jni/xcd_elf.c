@@ -164,3 +164,8 @@ int xcd_elf_get_build_id(xcd_elf_t *self, uint8_t *build_id, size_t build_id_len
 {
     return xcd_elf_interface_get_build_id(self->interface, build_id, build_id_len, build_id_len_ret);
 }
+
+char *xcd_elf_get_so_name(xcd_elf_t *self)
+{
+    return xcd_elf_interface_get_so_name(self->interface);
+}

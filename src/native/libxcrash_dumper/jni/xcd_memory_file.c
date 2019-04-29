@@ -45,8 +45,21 @@ struct xcd_memory_file
     size_t        size;
 };
 
+static void xcd_memory_file_uninit(xcd_memory_file_t *self)
+{
+    if(NULL != self->data)
+    {
+        munmap(self->data - self->offset, self->size + self->offset);
+        self->data = NULL;
+        self->offset = 0;
+        self->size = 0;
+    }
+}
+
 static int xcd_memory_file_init(xcd_memory_file_t *self, size_t size, size_t offset, uint64_t file_size)
 {
+    xcd_memory_file_uninit(self);
+
     if(offset >= (size_t)file_size) return XCC_ERRNO_RANGE;
 
     size_t aligned_offset = offset & ~(getpagesize() - 1);
@@ -68,20 +81,12 @@ static int xcd_memory_file_init(xcd_memory_file_t *self, size_t size, size_t off
     return 0;
 }
 
-static void xcd_memory_file_uninit(xcd_memory_file_t *self)
+int xcd_memory_file_create(void **obj, xcd_memory_t *base, xcd_map_t *map, xcd_maps_t *maps)
 {
-    munmap(self->data - self->offset, self->size + self->offset);
-    self->data = NULL;
-    self->offset = 0;
-    self->size = 0;
-}
-
-int xcd_memory_file_create(void **obj, xcd_memory_t *base, void *map_obj)
-{
-
     xcd_memory_file_t **self = (xcd_memory_file_t **)obj;
-    xcd_map_t          *map = (xcd_map_t *)map_obj;
     size_t              map_size = map->end - map->start;
+    xcd_map_t          *prev_map;
+    size_t              prev_map_size;
     struct stat         st;
     uint64_t            file_size;
     size_t              max_size;
@@ -111,6 +116,13 @@ int xcd_memory_file_create(void **obj, xcd_memory_t *base, void *map_obj)
     }
     file_size = (uint64_t)st.st_size;
 
+    //CASE 1: Offset is zero.
+    //        The whole file is an ELF?
+    //
+    // -->    d9b9c000-d9bb6000 r-xp 00000000 fd:00 2666  /system/lib/libjavacrypto.so
+    //        d9bb6000-d9bb7000 r--p 00019000 fd:00 2666  /system/lib/libjavacrypto.so
+    //        d9bb7000-d9bb8000 rw-p 0001a000 fd:00 2666  /system/lib/libjavacrypto.so
+    //
     if(0 == map->offset)
     {
         if(0 != (r = xcd_memory_file_init(*self, SIZE_MAX, 0, file_size))) goto err;
@@ -119,44 +131,83 @@ int xcd_memory_file_create(void **obj, xcd_memory_t *base, void *map_obj)
             r = XCC_ERRNO_MEM;
             goto err;
         }
-        return 0; //(1) the whole file is an elf (elf_file_offset_in_current_map == 0)
+        return 0;
     }
 
+    //CASE 2: Offset is not zero.
+    //        The start of this map is an ELF header? (ELF embedded in another file)
+    //
+    //        cc2aa000-ce2aa000 rw-p 00000000 00:01 3811616  /dev/ashmem/dalvik-data-code-cache (deleted)
+    //        ce2aa000-d02aa000 r-xp 00000000 00:01 3811617  /dev/ashmem/dalvik-jit-code-cache (deleted)
+    // -->    d02aa000-d286d000 r-xp 048b3000 fd:00 623      /system/app/WebViewGoogle/WebViewGoogle.apk
+    //        d286d000-d286e000 ---p 00000000 00:00 0
+    //
     if(0 != (r = xcd_memory_file_init(*self, map_size, map->offset, file_size))) goto err;
-    if(!xcd_elf_is_valid(base))
+    if(xcd_elf_is_valid(base))
     {
-        //the whole file is an elf?
-        xcd_memory_file_uninit(*self);
-        if(0 != (r = xcd_memory_file_init(*self, SIZE_MAX, 0, file_size))) goto err;
-        if(!xcd_elf_is_valid(base))
-        {
-            r = XCC_ERRNO_MEM;
-            goto err;
-        }
+        map->elf_start_offset = map->offset;
         
-        map->elf_offset = map->offset; //save the elf file offset in the current map info
-        return 0; //(2) the whole file is an elf (elf_file_offset_in_current_map != 0)
-    }
-    else
-    {
-        //elf file embedded in another file
         max_size = xcd_elf_get_max_size(base);
         if(max_size > map_size)
         {
             //try to map the whole file
-            xcd_memory_file_uninit(*self);
             if(0 != xcd_memory_file_init(*self, max_size, map->offset, file_size))
             {
                 //rollback
                 if(0 != (r = xcd_memory_file_init(*self, map_size, map->offset, file_size))) goto err;
             }
         }
-            
-        return 0; //(3) elf file embedded in another file (elf_file_offset_in_current_map == 0)
+        return 0;
+    }
+
+    //CASE 3: Offset is not zero.
+    //        No ELF header at the start of this map.
+    //        The whole file is an ELF? (this map is part of an ELF file)
+    //
+    //        72a12000-72a1e000 r--p 00000000 fd:00 1955  /system/framework/arm/boot-apache-xml.oat
+    // -->    72a1e000-72a36000 r-xp 0000c000 fd:00 1955  /system/framework/arm/boot-apache-xml.oat
+    //        72a36000-72a37000 r--p 00024000 fd:00 1955  /system/framework/arm/boot-apache-xml.oat
+    //        72a37000-72a38000 rw-p 00025000 fd:00 1955  /system/framework/arm/boot-apache-xml.oat
+    //
+    if(0 != (r = xcd_memory_file_init(*self, SIZE_MAX, 0, file_size))) goto err;
+    if(xcd_elf_is_valid(base))
+    {
+        map->elf_offset = map->offset;
+        return 0;
+    }
+
+    //CASE 4: Offset is not zero.
+    //        No ELF header at the start of this map.
+    //        The whole file is not an ELF.
+    //        The start of the previous map is an ELF header? (this map is part of an ELF which embedded in another file)
+    //
+    //        d1ea6000-d256d000 r--p 0095b000 fc:00 1158  /system/app/Chrome/Chrome.apk
+    // -->    d256d000-d5ff0000 r-xp 01022000 fc:00 1158  /system/app/Chrome/Chrome.apk
+    //        d5ff0000-d6009000 rw-p 04aa5000 fc:00 1158  /system/app/Chrome/Chrome.apk
+    //
+    prev_map = xcd_maps_get_prev_map(maps, map);
+    if(NULL != prev_map && PROT_READ == prev_map->flags && map->offset > prev_map->offset &&
+       NULL != prev_map->name && 0 == strcmp(prev_map->name, map->name))
+    {
+        prev_map_size = prev_map->end - prev_map->start;
+        if(0 != (r = xcd_memory_file_init(*self, prev_map_size, prev_map->offset, file_size))) goto err;
+        if(xcd_elf_is_valid(base))
+        {
+            max_size = xcd_elf_get_max_size(base);
+            if(max_size > prev_map_size)
+            {
+                if(0 != (r = xcd_memory_file_init(*self, max_size, prev_map->offset, file_size))) goto err;
+                map->elf_offset = map->offset - prev_map->offset;
+                map->elf_start_offset = prev_map->offset;
+                return 0;
+            }
+        }
     }
     
  err:
-    if(NULL != (*self)->data) xcd_memory_file_uninit(*self);
+    map->elf_offset = 0;
+    map->elf_start_offset = 0;
+    xcd_memory_file_uninit(*self);
     if((*self)->fd < 0) close((*self)->fd);
     free(*self);
     *self = NULL;
