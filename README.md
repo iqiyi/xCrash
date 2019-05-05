@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-[![](https://img.shields.io/badge/release-2.0.11-red.svg?style=flat)](https://bintray.com/xcrash)
+[![](https://img.shields.io/badge/release-2.0.12-red.svg?style=flat)](https://bintray.com/xcrash)
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -25,9 +25,15 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 * Do not require root permission or any system permissions.
 
 
-## Catching Native Crash
+## Overview Maps
 
-<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="75%"></p>
+### Architecture
+
+<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="80%"></p>
+
+### Catching Native Crash
+
+<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="80%"></p>
 
 
 ## Usage
@@ -36,7 +42,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.11'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.12'
 }
 ```
 

@@ -203,6 +203,16 @@ int xcd_memory_file_create(void **obj, xcd_memory_t *base, xcd_map_t *map, xcd_m
             }
         }
     }
+
+    //CASE 5: ELF not found.
+    //
+    // -->    eaa6d000-eaab9000 r--s 00000000 fd:00 1178 /system/fonts/Roboto-Thin.ttf
+    // -->    eaabd000-eaabe000 rw-p 00000000 00:00 0    [anon:.bss]
+    // -->    eaffc000-eb037000 r--s 00000000 07:08 18   /apex/com.android.tzdata/etc/icu/icu_tzdata.dat
+    // -->    eb466000-eb486000 rw-p 00000000 00:00 0    [anon:dalvik-LinearAlloc]
+    // -->    ......
+    //
+    r = XCC_ERRNO_NOTFND;
     
  err:
     map->elf_offset = 0;
