@@ -74,6 +74,7 @@ static void xcd_frames_load(xcd_frames_t *self)
     int           in_device_map;
     int           return_address_attempt = 0;
     int           finished;
+    int           sigreturn;
     uintptr_t     load_bias;
     xcd_memory_t *memory;
     xcd_regs_t    regs_copy = *(self->regs);
@@ -91,6 +92,8 @@ static void xcd_frames_load(xcd_frames_t *self)
         pc_adjustment = 0;
         in_device_map = 0;
         load_bias = 0;
+        finished = 0;
+        sigreturn = 0;
 
         //get relative pc
         if(NULL != (map = xcd_maps_find(self->maps, cur_pc)))
@@ -138,7 +141,7 @@ static void xcd_frames_load(xcd_frames_t *self)
             stepped = 0;
             in_device_map = 1;
         }
-        else if((NULL != (map_sp = xcd_maps_find(self->maps, cur_pc))) &&
+        else if((NULL != (map_sp = xcd_maps_find(self->maps, cur_sp))) &&
                 (map_sp->flags & XCD_MAP_PORT_DEVICE))
         {
             //sp in device map
@@ -156,10 +159,18 @@ static void xcd_frames_load(xcd_frames_t *self)
 #if XCD_FRAMES_DEBUG
             XCD_LOG_DEBUG("FRAMES: step, rel_pc=%"PRIxPTR", step_pc=%"PRIxPTR", ELF=%s", rel_pc, step_pc, frame->map->name);
 #endif
-            if(0 == xcd_elf_step(elf, rel_pc, step_pc, &regs_copy, &finished))
+            if(0 == xcd_elf_step(elf, rel_pc, step_pc, &regs_copy, &finished, &sigreturn))
                 stepped = 1;
             else
                 stepped = 0;
+
+            //sigreturn PC should not be adjusted
+            if(sigreturn)
+            {
+                frame->pc += pc_adjustment;
+                frame->rel_pc += pc_adjustment;
+                step_pc += pc_adjustment;
+            }
 
             //finished gracefully
             if(stepped && finished)
@@ -171,12 +182,18 @@ static void xcd_frames_load(xcd_frames_t *self)
             }
         }
 
-        //for stepping failed
         if(0 == stepped)
         {
+            //step failed
             if(return_address_attempt)
             {
-                TAILQ_REMOVE(&(self->frames), frame, link);
+                if(self->frames_num > 2 || (self->frames_num > 0 && NULL != xcd_maps_find(self->maps, TAILQ_FIRST(&(self->frames))->pc)))
+                {
+                    TAILQ_REMOVE(&(self->frames), frame, link);
+                    self->frames_num--;
+                    if(frame->func_name) free(frame->func_name);
+                    free(frame);
+                }
                 break;
             }
             else if(in_device_map)
@@ -192,6 +209,7 @@ static void xcd_frames_load(xcd_frames_t *self)
         }
         else
         {
+            //step OK
             return_address_attempt = 0;        
         }
 

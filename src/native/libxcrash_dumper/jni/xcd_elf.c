@@ -102,12 +102,16 @@ xcd_memory_t *xcd_elf_get_memory(xcd_elf_t *self)
     return self->memory;
 }
 
-int xcd_elf_step(xcd_elf_t *self, uintptr_t rel_pc, uintptr_t step_pc, xcd_regs_t *regs, int *finished)
+int xcd_elf_step(xcd_elf_t *self, uintptr_t rel_pc, uintptr_t step_pc, xcd_regs_t *regs, int *finished, int *sigreturn)
 {
+    *finished = 0;
+    *sigreturn = 0;
+    
     //try sigreturn
     if(0 == xcd_regs_try_step_sigreturn(regs, rel_pc, self->memory, self->pid))
     {
         *finished = 0;
+        *sigreturn = 1;
 #if XCD_ELF_DEBUG
         XCD_LOG_DEBUG("ELF: step by sigreturn OK, rel_pc=%"PRIxPTR", finished=0", rel_pc);
 #endif
