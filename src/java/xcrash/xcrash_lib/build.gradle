@@ -6,6 +6,7 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 28
+        consumerProguardFiles 'proguard-rules.pro'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_6

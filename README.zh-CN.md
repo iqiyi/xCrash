@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-[![](https://img.shields.io/badge/release-2.0.13-red.svg?style=flat)](https://bintray.com/xcrash)
+[![](https://img.shields.io/badge/release-2.0.14-red.svg?style=flat)](https://bintray.com/xcrash/maven)
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -29,11 +29,11 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ### 架构
 
-<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="80%"></p>
+<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="90%"></p>
 
 ### 捕获 native 崩溃
 
-<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="80%"></p>
+<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="75%"></p>
 
 
 ## 使用
@@ -42,7 +42,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.13'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.0.14'
 }
 ```
 
@@ -58,16 +58,7 @@ android {
 }
 ```
 
-#### 3. 增加 ProGuard 规则。
-
-```
--keep class xcrash.NativeCrashHandler {
-    native <methods>;
-    void callback(...);
-}
-```
-
-#### 4. 在 `Application#attachBaseContext()` 中初始化 xCrash。
+#### 3. 在 `Application#attachBaseContext()` 中初始化 xCrash。
 
 > Java
 
