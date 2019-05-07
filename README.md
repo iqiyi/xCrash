@@ -38,7 +38,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ## Usage
 
-#### 1. Adding dependency.
+#### 1. Add dependency.
 
 ```Gradle
 dependencies {
@@ -46,7 +46,7 @@ dependencies {
 }
 ```
 
-#### 2. Specifying ABI(s) you need.
+#### 2. Specify one or more ABI(s) you need.
 
 ```Gradle
 android {
@@ -58,7 +58,7 @@ android {
 }
 ```
 
-#### 3. Initialize xCrash in `Application#attachBaseContext()`.
+#### 3. Initialize xCrash.
 
 > Java
 
@@ -93,6 +93,8 @@ There is a more practical and complex sample APP in the [src/java/xcrash/xcrash_
 
 
 ## Build
+
+If you want to build xCrash from source code. Follow this guide:
 
 #### 1. Download [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html), set PATH environment. 
 

@@ -46,7 +46,7 @@ dependencies {
 }
 ```
 
-#### 2. 指定你需要的 ABI(s)。
+#### 2. 指定一个或多个你需要的 ABI。
 
 ```Gradle
 android {
@@ -58,7 +58,7 @@ android {
 }
 ```
 
-#### 3. 在 `Application#attachBaseContext()` 中初始化 xCrash。
+#### 3. 初始化 xCrash。
 
 > Java
 
@@ -93,6 +93,8 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 
 ## 构建
+
+如果你想编译 xCrash 的源码。请按以下步骤进行：
 
 #### 1. 下载 [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。
 
