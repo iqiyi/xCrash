@@ -30,10 +30,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -454,7 +457,8 @@ public class TombstoneParser {
 
         //add crash time
         if (TextUtils.isEmpty(map.get(keyCrashTime))) {
-            map.put(keyCrashTime, Util.timeFormatter.format(new Date(new File(logPath).lastModified())));
+            DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+            map.put(keyCrashTime, timeFormatter.format(new Date(new File(logPath).lastModified())));
         }
 
         String startTime = map.get(keyStartTime);
@@ -496,7 +500,8 @@ public class TombstoneParser {
                 if (matcher.find() && matcher.groupCount() == 3) {
                     if (TextUtils.isEmpty(startTime)) {
                         long crashTimeLong = Long.parseLong(matcher.group(1), 10) / 1000;
-                        map.put(keyStartTime, Util.timeFormatter.format(new Date(crashTimeLong)));
+                        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+                        map.put(keyStartTime, timeFormatter.format(new Date(crashTimeLong)));
                     }
                     if (TextUtils.isEmpty(appVersion)) {
                         map.put(keyAppVersion, matcher.group(2));

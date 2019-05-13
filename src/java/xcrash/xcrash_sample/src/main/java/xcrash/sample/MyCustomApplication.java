@@ -69,11 +69,13 @@ public class MyCustomApplication extends Application {
         //Initialize xCrash.
         XCrash.init(this, new XCrash.InitParameters()
                 .setAppVersion("1.2.3-beta456-patch789")
+                .setJavaRethrow(true)
                 .setJavaDumpAllThreadsWhiteList(new String[]{"^main$", "^Binder:.*", ".*Finalizer.*"})
                 .setJavaDumpAllThreadsCountMax(10)
+                .setJavaCallback(callback)
+                .setNativeRethrow(true)
                 .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
                 .setNativeDumpAllThreadsCountMax(10)
-                .setJavaCallback(callback)
                 .setNativeCallback(callback));
 
         //Send all pending crash log files.

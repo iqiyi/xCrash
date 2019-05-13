@@ -46,13 +46,14 @@ class Util {
     private Util() {
     }
 
-    static final DateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US);
     private static final String memInfoFmt = "%21s %8s\n";
     private static final String memInfoFmt2 = "%21s %8s %21s %8s\n";
 
     static final String sepHead = "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***";
     static final String sepOtherThreads = "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---";
     static final String sepOtherThreadsEnding = "+++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++";
+
+    static final String timeFormatterStr = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
     static final String logPrefix = "tombstone";
     static final String javaLogSuffix = ".java.xcrash";

@@ -102,6 +102,7 @@ public final class XCrash {
                     appId,
                     params.appVersion,
                     params.logDir,
+                    params.javaRethrow,
                     params.javaLogCountMax,
                     params.javaLogcatSystemLines,
                     params.javaLogcatEventsLines,
@@ -117,6 +118,7 @@ public final class XCrash {
             return NativeCrashHandler.getInstance().initialize(ctx,
                     params.appVersion,
                     params.logDir,
+                    params.nativeRethrow,
                     params.nativeLogCountMax,
                     params.nativeLogcatSystemLines,
                     params.nativeLogcatEventsLines,
@@ -168,6 +170,7 @@ public final class XCrash {
 
         //java
         boolean        enableJavaCrashHandler      = true;
+        boolean        javaRethrow                 = true;
         int            javaLogCountMax             = 10;
         int            javaLogcatSystemLines       = 50;
         int            javaLogcatEventsLines       = 50;
@@ -196,6 +199,19 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters disableJavaCrashHandler() {
             this.enableJavaCrashHandler = false;
+            return this;
+        }
+
+        /**
+         * Set whether xCrash should rethrow the Java exception to system
+         * after it has been handled. (Default: true)
+         *
+         * @param rethrow If <code>true</code>, the Java exception will be rethrown to Android System.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setJavaRethrow(boolean rethrow) {
+            this.javaRethrow = rethrow;
             return this;
         }
 
@@ -314,6 +330,7 @@ public final class XCrash {
 
         //native
         boolean        enableNativeCrashHandler      = true;
+        boolean        nativeRethrow                 = true;
         int            nativeLogCountMax             = 10;
         int            nativeLogcatSystemLines       = 50;
         int            nativeLogcatEventsLines       = 50;
@@ -344,6 +361,19 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters disableNativeCrashHandler() {
             this.enableNativeCrashHandler = false;
+            return this;
+        }
+
+        /**
+         * Set whether xCrash should rethrow the native signal to system
+         * after it has been handled. (Default: true)
+         *
+         * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setNativeRethrow(boolean rethrow) {
+            this.nativeRethrow = rethrow;
             return this;
         }
 

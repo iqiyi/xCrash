@@ -22,6 +22,7 @@
 // Created by caikelun on 2019-03-07.
 package xcrash.sample;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -36,19 +37,27 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
 
-    public void testNativeCrashInCurrentThread_onClick(View view) {
+    public void testNativeCrashInMainThread_onClick(View view) {
         XCrash.testNativeCrash(false);
     }
 
-    public void testNativeCrashInNewThread_onClick(View view) {
+    public void testNativeCrashInAnotherThread_onClick(View view) {
         XCrash.testNativeCrash(true);
     }
 
-    public void testJavaCrashInCurrentThread_onClick(View view) {
+    public void testNativeCrashInAnotherProcess_onClick(View view) {
+        startService(new Intent(this, MyService.class).putExtra("type", "native"));
+    }
+
+    public void testJavaCrashInMainThread_onClick(View view) {
         XCrash.testJavaCrash(false);
     }
 
-    public void testJavaCrashInNewThread_onClick(View view) {
+    public void testJavaCrashInAnotherThread_onClick(View view) {
         XCrash.testJavaCrash(true);
+    }
+
+    public void testJavaCrashInAnotherProcess_onClick(View view) {
+        startService(new Intent(this, MyService.class).putExtra("type", "java"));
     }
 }

@@ -32,6 +32,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -57,6 +59,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private String processName;
     private String appId;
     private String appVersion;
+    private boolean rethrow;
     private String logDir;
     private int logCountMax;
     private int logcatSystemLines;
@@ -75,7 +78,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         return instance;
     }
 
-    void initialize(Context ctx, String appId, String appVersion, String logDir, int logCountMax,
+    void initialize(Context ctx, String appId, String appVersion, String logDir, boolean rethrow, int logCountMax,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
@@ -84,6 +87,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         this.processName = Util.getProcessName(ctx, this.pid);
         this.appId = appId;
         this.appVersion = appVersion;
+        this.rethrow = rethrow;
         this.logDir = logDir;
         this.logCountMax = (logCountMax <= 0 ? 10 : logCountMax);
         this.logcatSystemLines = logcatSystemLines;
@@ -106,8 +110,10 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     public void uncaughtException(Thread thread, Throwable throwable) {
         handleException(thread, throwable);
 
-        if (defaultHandler != null) {
+        if (this.rethrow && defaultHandler != null) {
             defaultHandler.uncaughtException(thread, throwable);
+        } else {
+            android.os.Process.killProcess(this.pid);
         }
     }
 
@@ -227,11 +233,13 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         throwable.printStackTrace(pw);
         String stacktrace = sw.toString();
 
+        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+
         return Util.sepHead + "\n"
                 + "Tombstone maker: '" + Version.fullVersion + "'\n"
                 + "Crash type: '" + Util.javaCrashType + "'\n"
-                + "Start time: '" + Util.timeFormatter.format(startTime) + "'\n"
-                + "Crash time: '" + Util.timeFormatter.format(crashTime) + "'\n"
+                + "Start time: '" + timeFormatter.format(startTime) + "'\n"
+                + "Crash time: '" + timeFormatter.format(crashTime) + "'\n"
                 + "App ID: '" + appId + "'\n"
                 + "App version: '" + appVersion + "'\n"
                 + "CPU loadavg: '" + Util.readFileLine("/proc/loadavg") + "'\n"
