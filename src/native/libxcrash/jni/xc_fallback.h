@@ -53,7 +53,7 @@ int xc_fallback_get_emergency(siginfo_t *si,
                               char *emergency,
                               size_t emergency_len);
 
-int xc_fallback_record(xc_recorder_t *recorder,
+int xc_fallback_record(int log_fd,
                        char *emergency,
                        pid_t pid,
                        int api_level,

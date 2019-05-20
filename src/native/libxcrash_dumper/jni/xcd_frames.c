@@ -233,7 +233,7 @@ int xcd_frames_create(xcd_frames_t **self, xcd_regs_t *regs, xcd_maps_t *maps, p
     return 0;
 }
 
-int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
+int xcd_frames_record_backtrace(xcd_frames_t *self, int log_fd)
 {
     xcd_frame_t *frame;
     xcd_elf_t   *elf;
@@ -246,7 +246,7 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
     char         func_buf[512];
     int          r;
 
-    if(0 != (r = xcd_recorder_write(recorder, "backtrace:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "backtrace:\n"))) return r;
     
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
@@ -304,16 +304,16 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, xcd_recorder_t *recorder)
             func = "";
         }
 
-        if(0 != (r = xcd_recorder_print(recorder, "    #%02zu pc %0"XCC_UTIL_FMT_ADDR"  %s%s%s\n",
-                                        frame->num, frame->rel_pc, name, offset, func))) return r;
+        if(0 != (r = xcc_util_write_format(log_fd, "    #%02zu pc %0"XCC_UTIL_FMT_ADDR"  %s%s%s\n",
+                                           frame->num, frame->rel_pc, name, offset, func))) return r;
     }
 
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
 
     return 0;
 }
 
-int xcd_frames_record_buildid(xcd_frames_t *self, xcd_recorder_t *recorder)
+int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd)
 {
     xcd_elf_t   *elf;
     xcd_frame_t *frame, *prev_frame;
@@ -326,7 +326,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, xcd_recorder_t *recorder)
     int          r;
     int          repeated;
 
-    if(0 != (r = xcd_recorder_write(recorder, "build id:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "build id:\n"))) return r;
     
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
@@ -361,15 +361,15 @@ int xcd_frames_record_buildid(xcd_frames_t *self, xcd_recorder_t *recorder)
             offset += snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
 
         //dump
-        if(0 != (r = xcd_recorder_print(recorder, "    %s (BuildId: %s)\n", name, build_id_buf))) return r;
+        if(0 != (r = xcc_util_write_format(log_fd, "    %s (BuildId: %s)\n", name, build_id_buf))) return r;
     }
 
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
 
     return 0;
 }
 
-static int xcd_frames_record_stack_segment(xcd_frames_t *self, xcd_recorder_t *recorder,
+static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
                                            uintptr_t *sp, size_t words, int label)
 {
     uintptr_t  stack_data[XCD_FRAMES_STACK_WORDS];
@@ -443,7 +443,7 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, xcd_recorder_t *r
         if(NULL != func_name) free(func_name);
 
         snprintf(line + line_len, sizeof(line) - line_len, "\n");
-        if(0 != (r = xcd_recorder_write(recorder, line))) return r;
+        if(0 != (r = xcc_util_write_str(log_fd, line))) return r;
         
         *sp += sizeof(uintptr_t);
     }
@@ -451,7 +451,7 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, xcd_recorder_t *r
     return 0;
 }
 
-int xcd_frames_record_stack(xcd_frames_t *self, xcd_recorder_t *recorder)
+int xcd_frames_record_stack(xcd_frames_t *self, int log_fd)
 {
     int          segment_recorded = 0;
     xcd_frame_t *frame, *next_frame;
@@ -460,7 +460,7 @@ int xcd_frames_record_stack(xcd_frames_t *self, xcd_recorder_t *recorder)
     size_t       words;
     int          r;
     
-    if(0 != (r = xcd_recorder_write(recorder, "stack:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "stack:\n"))) return r;
 
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
@@ -477,12 +477,12 @@ int xcd_frames_record_stack(xcd_frames_t *self, xcd_recorder_t *recorder)
         {
             segment_recorded = 1;
             sp = frame->sp - XCD_FRAMES_STACK_WORDS * sizeof(uintptr_t);
-            xcd_frames_record_stack_segment(self, recorder, &sp, XCD_FRAMES_STACK_WORDS, -1);
+            xcd_frames_record_stack_segment(self, log_fd, &sp, XCD_FRAMES_STACK_WORDS, -1);
         }
 
         if(sp != frame->sp)
         {
-            if(0 != (r = xcd_recorder_write(recorder, "         ........  ........\n"))) return r;
+            if(0 != (r = xcc_util_write_str(log_fd, "         ........  ........\n"))) return r;
             sp = frame->sp;
         }
 
@@ -490,7 +490,7 @@ int xcd_frames_record_stack(xcd_frames_t *self, xcd_recorder_t *recorder)
         if(NULL == next_frame || 0 == next_frame->sp || next_frame->sp < frame->sp)
         {
             //the last
-            xcd_frames_record_stack_segment(self, recorder, &sp, XCD_FRAMES_STACK_WORDS, frame->num);
+            xcd_frames_record_stack_segment(self, log_fd, &sp, XCD_FRAMES_STACK_WORDS, frame->num);
         }
         else
         {
@@ -501,12 +501,12 @@ int xcd_frames_record_stack(xcd_frames_t *self, xcd_recorder_t *recorder)
                 words = 1;
             else if(words > XCD_FRAMES_STACK_WORDS)
                 words = XCD_FRAMES_STACK_WORDS;
-            xcd_frames_record_stack_segment(self, recorder, &sp, words, frame->num);
+            xcd_frames_record_stack_segment(self, log_fd, &sp, words, frame->num);
         }
         
     }
 
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
 
     return 0;
 }

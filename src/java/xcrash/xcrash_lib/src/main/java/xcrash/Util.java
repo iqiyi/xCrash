@@ -33,8 +33,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,13 +53,13 @@ class Util {
 
     static final String timeFormatterStr = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
-    static final String logPrefix = "tombstone";
-    static final String javaLogSuffix = ".java.xcrash";
-    static final String nativeLogSuffix = ".native.xcrash";
     static final String javaCrashType = "java";
     static final String nativeCrashType = "native";
 
-    @SuppressWarnings("TryFinallyCanBeTryWithResources")
+    static final String logPrefix = "tombstone";
+    static final String javaLogSuffix = ".java.xcrash";
+    static final String nativeLogSuffix = ".native.xcrash";
+
     static String readFileLine(String path) {
         BufferedReader br = null;
         try {
@@ -91,7 +89,6 @@ class Util {
         long systemMemoryUsedKb;
     }
 
-    @SuppressWarnings("TryFinallyCanBeTryWithResources")
     static MemoryInfo getMemoryInfo(Context ctx) {
         Util.MemoryInfo memoryInfo = new Util.MemoryInfo();
 
@@ -264,13 +261,13 @@ class Util {
                 sb.append(String.format(Locale.US, memInfoFmt, "System:", mi.getMemoryStat("summary.system")));
                 sb.append(String.format(Locale.US, memInfoFmt2, "TOTAL:", mi.getMemoryStat("summary.total-pss"), "TOTAL SWAP:", mi.getMemoryStat("summary.total-swap")));
             } else {
-                sb.append(String.format(Locale.US, memInfoFmt, "Java Heap:", "~ " + String.valueOf(mi.dalvikPrivateDirty)));
+                sb.append(String.format(Locale.US, memInfoFmt, "Java Heap:", "~ " + mi.dalvikPrivateDirty));
                 sb.append(String.format(Locale.US, memInfoFmt, "Native Heap:", String.valueOf(mi.nativePrivateDirty)));
-                sb.append(String.format(Locale.US, memInfoFmt, "Private Other:", "~ " + String.valueOf(mi.otherPrivateDirty)));
+                sb.append(String.format(Locale.US, memInfoFmt, "Private Other:", "~ " + mi.otherPrivateDirty));
                 if (Build.VERSION.SDK_INT >= 19) {
                     sb.append(String.format(Locale.US, memInfoFmt, "System:", String.valueOf(mi.getTotalPss() - mi.getTotalPrivateDirty() - mi.getTotalPrivateClean())));
                 } else {
-                    sb.append(String.format(Locale.US, memInfoFmt, "System:", "~ " + String.valueOf(mi.getTotalPss() - mi.getTotalPrivateDirty())));
+                    sb.append(String.format(Locale.US, memInfoFmt, "System:", "~ " + (mi.getTotalPss() - mi.getTotalPrivateDirty())));
                 }
                 sb.append(String.format(Locale.US, memInfoFmt, "TOTAL:", String.valueOf(mi.getTotalPss())));
             }
@@ -279,5 +276,20 @@ class Util {
         }
 
         return sb.toString();
+    }
+
+    @SuppressWarnings({"ResultOfMethodCallIgnored", "BooleanMethodIsAlwaysInverted"})
+    static boolean checkAndCreateDir(String path) {
+        File dir = new File(path);
+        try {
+            if (!dir.exists()) {
+                dir.mkdirs();
+                return dir.exists() && dir.isDirectory();
+            } else {
+                return dir.isDirectory();
+            }
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 }

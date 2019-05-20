@@ -26,7 +26,6 @@
 #include <sys/mman.h>
 #include "xcc_errno.h"
 #include "xcd_map.h"
-#include "xcd_recorder.h"
 #include "xcd_memory.h"
 #include "xcd_memory_file.h"
 #include "xcd_memory_buf.h"

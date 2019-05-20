@@ -175,7 +175,7 @@ int xcd_process_load_info(xcd_process_t *self)
     return 0;
 }
 
-static int xcd_process_record_signal_info(xcd_process_t *self, xcd_recorder_t *recorder)
+static int xcd_process_record_signal_info(xcd_process_t *self, int log_fd)
 {
     //fault addr
     char addr_desc[64];
@@ -205,13 +205,13 @@ static int xcd_process_record_signal_info(xcd_process_t *self, xcd_recorder_t *r
         snprintf(sender_desc, sizeof(sender_desc), " from pid %d, uid %d", self->si->si_pid, self->si->si_uid);
     }
 
-    return xcd_recorder_print(recorder, "signal %d (%s), code %d (%s%s), fault addr %s\n",
-                              self->si->si_signo, xcc_util_get_signame(self->si),
-                              self->si->si_code, xcc_util_get_sigcodename(self->si),
-                              sender_desc, addr_desc);
+    return xcc_util_write_format(log_fd, "signal %d (%s), code %d (%s%s), fault addr %s\n",
+                                 self->si->si_signo, xcc_util_get_signame(self->si),
+                                 self->si->si_code, xcc_util_get_sigcodename(self->si),
+                                 sender_desc, addr_desc);
 }
 
-static int xcd_process_record_fds(xcd_process_t *self, xcd_recorder_t *recorder)
+static int xcd_process_record_fds(xcd_process_t *self, int log_fd)
 {
     char             buf[128];
     char             path[512];
@@ -222,7 +222,7 @@ static int xcd_process_record_fds(xcd_process_t *self, xcd_recorder_t *recorder)
     size_t           total = 0;
     int              r = 0;
 
-    if(0 != (r = xcd_recorder_write(recorder, "open files:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "open files:\n"))) return r;
 
     snprintf(buf, sizeof(buf), "/proc/%d/fd", self->pid);
     if(NULL == (dir = opendir(buf))) goto end;
@@ -249,21 +249,20 @@ static int xcd_process_record_fds(xcd_process_t *self, xcd_recorder_t *recorder)
             path[len] = '\0';
 
         //dump
-        if(0 != (r = xcd_recorder_print(recorder, "    fd %d: %s\n", fd, path))) goto clean;
+        if(0 != (r = xcc_util_write_format(log_fd, "    fd %d: %s\n", fd, path))) goto clean;
     }
 
  end:
     if(total > 1024)
-        if(0 != (r = xcd_recorder_write(recorder, "    ......\n"))) goto clean;
-    if(0 != (r = xcd_recorder_print(recorder, "    (number of FDs: %zu)\n", total))) goto clean;
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) goto clean;
+        if(0 != (r = xcc_util_write_str(log_fd, "    ......\n"))) goto clean;
+    if(0 != (r = xcc_util_write_format(log_fd, "    (number of FDs: %zu)\n\n", total))) goto clean;
     
  clean:
     if(NULL != dir) closedir(dir);
     return r;
 }
 
-static int xcd_process_record_logcat_buffer(xcd_process_t *self, xcd_recorder_t *recorder,
+static int xcd_process_record_logcat_buffer(xcd_process_t *self, int log_fd,
                                             const char *buffer, unsigned int lines, char priority,
                                             int api_level)
 {
@@ -293,21 +292,21 @@ static int xcd_process_record_logcat_buffer(xcd_process_t *self, xcd_recorder_t 
     snprintf(cmd, sizeof(cmd), "/system/bin/logcat -b %s -d -v threadtime -t %u %s*:%c",
              buffer, lines, pid_filter, priority);
 
-    if(0 != (r = xcd_recorder_print(recorder, "--------- tail end of log %s (%s)\n", buffer, cmd))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "--------- tail end of log %s (%s)\n", buffer, cmd))) return r;
 
     if(NULL != (fp = popen(cmd, "r")))
     {
         buf[sizeof(buf) - 1] = '\0';
         while(NULL != fgets(buf, sizeof(buf) - 1, fp))
             if(with_pid || NULL != strstr(buf, pid_label))
-                if(0 != (r = xcd_recorder_write(recorder, buf))) break;
+                if(0 != (r = xcc_util_write_str(log_fd, buf))) break;
         pclose(fp);
     }
     
     return r;
 }
 
-static int xcd_process_record_logcat(xcd_process_t *self, xcd_recorder_t *recorder,
+static int xcd_process_record_logcat(xcd_process_t *self, int log_fd,
                                      unsigned int logcat_system_lines,
                                      unsigned int logcat_events_lines,
                                      unsigned int logcat_main_lines,
@@ -317,18 +316,18 @@ static int xcd_process_record_logcat(xcd_process_t *self, xcd_recorder_t *record
     
     if(0 == logcat_system_lines && 0 == logcat_events_lines && 0 == logcat_main_lines) return 0;
     
-    if(0 != (r = xcd_recorder_write(recorder, "logcat:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "logcat:\n"))) return r;
 
     if(logcat_main_lines > 0)
-        if(0 != (r = xcd_process_record_logcat_buffer(self, recorder, "main", logcat_main_lines, 'D', api_level))) return r;
+        if(0 != (r = xcd_process_record_logcat_buffer(self, log_fd, "main", logcat_main_lines, 'D', api_level))) return r;
     
     if(logcat_system_lines > 0)
-        if(0 != (r = xcd_process_record_logcat_buffer(self, recorder, "system", logcat_system_lines, 'W', api_level))) return r;
+        if(0 != (r = xcd_process_record_logcat_buffer(self, log_fd, "system", logcat_system_lines, 'W', api_level))) return r;
 
     if(logcat_events_lines > 0)
-        if(0 != (r = xcd_process_record_logcat_buffer(self, recorder, "events", logcat_events_lines, 'I', api_level))) return r;
+        if(0 != (r = xcd_process_record_logcat_buffer(self, log_fd, "events", logcat_events_lines, 'I', api_level))) return r;
 
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
 
     return 0;
 }
@@ -386,7 +385,7 @@ static int xcd_process_if_need_dump(char *tname, regex_t *re, size_t re_cnt)
     return 0;
 }
 
-int xcd_process_record(xcd_process_t *self, xcd_recorder_t *recorder,
+int xcd_process_record(xcd_process_t *self, int log_fd,
                        unsigned int logcat_system_lines, unsigned int logcat_events_lines, unsigned int logcat_main_lines,
                        int dump_map, int dump_fds, int dump_all_threads,
                        int dump_all_threads_count_max, char *dump_all_threads_whitelist,
@@ -404,20 +403,20 @@ int xcd_process_record(xcd_process_t *self, xcd_recorder_t *recorder,
     {
         if(thd->t.tid == self->crash_tid)
         {
-            if(0 != (r = xcd_thread_record_info(&(thd->t), recorder, self->pname))) return r;
-            if(0 != (r = xcd_process_record_signal_info(self, recorder))) return r;
-            if(0 != (r = xcd_thread_record_regs(&(thd->t), recorder))) return r;
+            if(0 != (r = xcd_thread_record_info(&(thd->t), log_fd, self->pname))) return r;
+            if(0 != (r = xcd_process_record_signal_info(self, log_fd))) return r;
+            if(0 != (r = xcd_thread_record_regs(&(thd->t), log_fd))) return r;
             if(0 == xcd_thread_load_frames(&(thd->t), self->maps))
             {
-                if(0 != (r = xcd_thread_record_backtrace(&(thd->t), recorder))) return r;
-                if(0 != (r = xcd_thread_record_buildid(&(thd->t), recorder))) return r;
-                if(0 != (r = xcd_thread_record_stack(&(thd->t), recorder))) return r;
-                if(0 != (r = xcd_thread_record_memory(&(thd->t), recorder))) return r;
+                if(0 != (r = xcd_thread_record_backtrace(&(thd->t), log_fd))) return r;
+                if(0 != (r = xcd_thread_record_buildid(&(thd->t), log_fd))) return r;
+                if(0 != (r = xcd_thread_record_stack(&(thd->t), log_fd))) return r;
+                if(0 != (r = xcd_thread_record_memory(&(thd->t), log_fd))) return r;
             }
-            if(dump_map) if(0 != (r = xcd_maps_record(self->maps, recorder))) return r;
-            if(0 != (r = xcd_process_record_logcat(self, recorder, logcat_system_lines, logcat_events_lines, logcat_main_lines, api_level))) return r;
-            if(dump_fds) if(0 != (r = xcd_process_record_fds(self, recorder))) return r;
-            if(0 != (r = xcd_meminfo_record(recorder, self->pid))) return r;
+            if(dump_map) if(0 != (r = xcd_maps_record(self->maps, log_fd))) return r;
+            if(0 != (r = xcd_process_record_logcat(self, log_fd, logcat_system_lines, logcat_events_lines, logcat_main_lines, api_level))) return r;
+            if(dump_fds) if(0 != (r = xcd_process_record_fds(self, log_fd))) return r;
+            if(0 != (r = xcd_meminfo_record(log_fd, self->pid))) return r;
 
             break;
         }
@@ -445,13 +444,13 @@ int xcd_process_record(xcd_process_t *self, xcd_recorder_t *recorder,
                 continue;
             }
 
-            if(0 != (r = xcd_recorder_write(recorder, XCC_UTIL_THREAD_SEP))) goto end;
-            if(0 != (r = xcd_thread_record_info(&(thd->t), recorder, self->pname))) goto end;
-            if(0 != (r = xcd_thread_record_regs(&(thd->t), recorder))) goto end;
+            if(0 != (r = xcc_util_write_str(log_fd, XCC_UTIL_THREAD_SEP))) goto end;
+            if(0 != (r = xcd_thread_record_info(&(thd->t), log_fd, self->pname))) goto end;
+            if(0 != (r = xcd_thread_record_regs(&(thd->t), log_fd))) goto end;
             if(0 == xcd_thread_load_frames(&(thd->t), self->maps))
             {
-                if(0 != (r = xcd_thread_record_backtrace(&(thd->t), recorder))) goto end;
-                if(0 != (r = xcd_thread_record_stack(&(thd->t), recorder))) goto end;
+                if(0 != (r = xcd_thread_record_backtrace(&(thd->t), log_fd))) goto end;
+                if(0 != (r = xcd_thread_record_stack(&(thd->t), log_fd))) goto end;
             }
             thd_dumped++;
         }
@@ -461,16 +460,16 @@ int xcd_process_record(xcd_process_t *self, xcd_recorder_t *recorder,
     if(self->nthds > 1)
     {
         if(0 == thd_dumped)
-            if(0 != (r = xcd_recorder_write(recorder, XCC_UTIL_THREAD_SEP))) goto ret;
+            if(0 != (r = xcc_util_write_str(log_fd, XCC_UTIL_THREAD_SEP))) goto ret;
 
-        if(0 != (r = xcd_recorder_print(recorder, "total threads (exclude the crashed thread): %zu\n", self->nthds - 1))) goto ret;
+        if(0 != (r = xcc_util_write_format(log_fd, "total threads (exclude the crashed thread): %zu\n", self->nthds - 1))) goto ret;
         if(NULL != re && re_cnt > 0)
-            if(0 != (r = xcd_recorder_print(recorder, "threads matched whitelist: %d\n", thd_matched_regex))) goto ret;
+            if(0 != (r = xcc_util_write_format(log_fd, "threads matched whitelist: %d\n", thd_matched_regex))) goto ret;
         if(dump_all_threads_count_max > 0)
-            if(0 != (r = xcd_recorder_print(recorder, "threads ignored by max count limit: %d\n", thd_ignored_by_limit))) goto ret;
-        if(0 != (r = xcd_recorder_print(recorder, "dumped threads: %zu\n", thd_dumped))) goto ret;
+            if(0 != (r = xcc_util_write_format(log_fd, "threads ignored by max count limit: %d\n", thd_ignored_by_limit))) goto ret;
+        if(0 != (r = xcc_util_write_format(log_fd, "dumped threads: %zu\n", thd_dumped))) goto ret;
         
-        if(0 != (r = xcd_recorder_write(recorder, XCC_UTIL_THREAD_END))) goto ret;
+        if(0 != (r = xcc_util_write_str(log_fd, XCC_UTIL_THREAD_END))) goto ret;
     }
     
  ret:

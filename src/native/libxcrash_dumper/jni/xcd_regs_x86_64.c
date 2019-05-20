@@ -27,6 +27,7 @@
 #include <ucontext.h>
 #include <sys/ptrace.h>
 #include "xcc_errno.h"
+#include "xcc_util.h"
 #include "xcd_regs.h"
 #include "xcd_memory.h"
 #include "xcd_util.h"
@@ -145,19 +146,19 @@ void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_le
     self->r[XCD_REGS_RIP] = ptregs->rip;
 }
 
-int xcd_regs_record(xcd_regs_t *self, xcd_recorder_t *recorder)
+int xcd_regs_record(xcd_regs_t *self, int log_fd)
 {
-    return xcd_recorder_print(recorder,
-                              "    rax %016lx  rbx %016lx  rcx %016lx  rdx %016lx\n"
-                              "    r8  %016lx  r9  %016lx  r10 %016lx  r11 %016lx\n"
-                              "    r12 %016lx  r13 %016lx  r14 %016lx  r15 %016lx\n"
-                              "    rdi %016lx  rsi %016lx\n"
-                              "    rbp %016lx  rsp %016lx  rip %016lx\n\n",
-                              self->r[XCD_REGS_RAX], self->r[XCD_REGS_RBX], self->r[XCD_REGS_RCX], self->r[XCD_REGS_RDX],
-                              self->r[XCD_REGS_R8],  self->r[XCD_REGS_R9],  self->r[XCD_REGS_R10], self->r[XCD_REGS_R11],
-                              self->r[XCD_REGS_R12], self->r[XCD_REGS_R13], self->r[XCD_REGS_R14], self->r[XCD_REGS_R15],
-                              self->r[XCD_REGS_RDI], self->r[XCD_REGS_RSI],
-                              self->r[XCD_REGS_RBP], self->r[XCD_REGS_RSP], self->r[XCD_REGS_RIP]);
+    return xcc_util_write_format(log_fd,
+                                 "    rax %016lx  rbx %016lx  rcx %016lx  rdx %016lx\n"
+                                 "    r8  %016lx  r9  %016lx  r10 %016lx  r11 %016lx\n"
+                                 "    r12 %016lx  r13 %016lx  r14 %016lx  r15 %016lx\n"
+                                 "    rdi %016lx  rsi %016lx\n"
+                                 "    rbp %016lx  rsp %016lx  rip %016lx\n\n",
+                                 self->r[XCD_REGS_RAX], self->r[XCD_REGS_RBX], self->r[XCD_REGS_RCX], self->r[XCD_REGS_RDX],
+                                 self->r[XCD_REGS_R8],  self->r[XCD_REGS_R9],  self->r[XCD_REGS_R10], self->r[XCD_REGS_R11],
+                                 self->r[XCD_REGS_R12], self->r[XCD_REGS_R13], self->r[XCD_REGS_R14], self->r[XCD_REGS_R15],
+                                 self->r[XCD_REGS_RDI], self->r[XCD_REGS_RSI],
+                                 self->r[XCD_REGS_RBP], self->r[XCD_REGS_RSP], self->r[XCD_REGS_RIP]);
 }
 
 int xcd_regs_try_step_sigreturn(xcd_regs_t *self, uintptr_t rel_pc, xcd_memory_t *memory, pid_t pid)

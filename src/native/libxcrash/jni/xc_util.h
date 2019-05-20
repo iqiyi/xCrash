@@ -27,10 +27,32 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <time.h>
+#include <sys/syscall.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifndef __LP64__
+#define XC_UTIL_SYSCALL_GETDENTS SYS_getdents
+#else
+#define XC_UTIL_SYSCALL_GETDENTS SYS_getdents64
+#endif
+
+typedef struct
+{
+#ifndef __LP64__
+    unsigned long  d_ino;
+    unsigned long  d_off;
+    unsigned short d_reclen;
+#else
+    ino64_t        d_ino;
+    off64_t        d_off;
+    unsigned short d_reclen;
+    unsigned char  d_type;
+#endif
+    char           d_name[1];
+} xc_util_dirent_t;
 
 struct tm *xca_util_time2tm(const time_t timev, long gmtoff, struct tm *result);
 char *xc_util_strdupcat(const char *s1, const char *s2);

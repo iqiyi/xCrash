@@ -31,22 +31,24 @@
 #include "xcd_sys.h"
 #include "xcd_util.h"
 
-static int xcd_sys_record_time(xcd_recorder_t *recorder, const char *title, uint64_t time)
+static int xcd_sys_record_time(int log_fd, const char *title, uint64_t time)
 {
     time_t      sec = (time_t)(time / 1000000);
     suseconds_t usec = (time_t)(time % 1000000);
     struct tm   tm;
 
     if(NULL == localtime_r(&sec, &tm))
-        return xcd_recorder_print(recorder, "%s: 'unknown (%"PRIu64")'\n", title, time);
+        return xcc_util_write_format(log_fd, "%s: 'unknown (%"PRIu64")'\n", title, time);
     
-    return xcd_recorder_print(recorder, "%s: '%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld'\n", title,
-                              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                              tm.tm_hour, tm.tm_min, tm.tm_sec, usec / 1000,
-                              tm.tm_gmtoff < 0 ? '-' : '+', labs(tm.tm_gmtoff / 3600), labs(tm.tm_gmtoff % 3600));
+    return xcc_util_write_format(log_fd,
+                                 "%s: '%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld'\n",
+                                 title,
+                                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                                 tm.tm_hour, tm.tm_min, tm.tm_sec, usec / 1000,
+                                 tm.tm_gmtoff < 0 ? '-' : '+', labs(tm.tm_gmtoff / 3600), labs(tm.tm_gmtoff % 3600));
 }
 
-static int xcd_sys_record_file_line(xcd_recorder_t *recorder, const char *title, const char *path)
+static int xcd_sys_record_file_line(int log_fd, const char *title, const char *path)
 {
     FILE *f = NULL;
     char  buf[256];
@@ -58,30 +60,30 @@ static int xcd_sys_record_file_line(xcd_recorder_t *recorder, const char *title,
 
  end:
     if(NULL != f) fclose(f);
-    return xcd_recorder_print(recorder, "%s: '%s'\n", title, p);
+    return xcc_util_write_format(log_fd, "%s: '%s'\n", title, p);
 }
 
-static int xcd_sys_record_cpu(xcd_recorder_t *recorder)
+static int xcd_sys_record_cpu(int log_fd)
 {
     int r;
     
-    if(0 != (r = xcd_sys_record_file_line(recorder, "CPU loadavg", "/proc/loadavg"))) return r;
-    if(0 != (r = xcd_sys_record_file_line(recorder, "CPU online",  "/sys/devices/system/cpu/online"))) return r;
-    if(0 != (r = xcd_sys_record_file_line(recorder, "CPU offline", "/sys/devices/system/cpu/offline"))) return r;
+    if(0 != (r = xcd_sys_record_file_line(log_fd, "CPU loadavg", "/proc/loadavg"))) return r;
+    if(0 != (r = xcd_sys_record_file_line(log_fd, "CPU online",  "/sys/devices/system/cpu/online"))) return r;
+    if(0 != (r = xcd_sys_record_file_line(log_fd, "CPU offline", "/sys/devices/system/cpu/offline"))) return r;
 
     return 0;
 }
 
-static int xcd_sys_record_kernel_version(xcd_recorder_t *recorder)
+static int xcd_sys_record_kernel_version(int log_fd)
 {
     char buf[256];
     
     xcc_util_get_kernel_version(buf, sizeof(buf));
 
-    return xcd_recorder_print(recorder, "Kernel version: '%s'\n", buf);
+    return xcc_util_write_format(log_fd, "Kernel version: '%s'\n", buf);
 }
 
-static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
+static int xcd_sys_record_system_mem(int log_fd)
 {
     FILE   *f = NULL;
     char    line[256];
@@ -125,40 +127,43 @@ static int xcd_sys_record_system_mem(xcd_recorder_t *recorder)
     
  end:
     if(NULL != f) fclose(f);
-    if(0 != (r = xcd_recorder_print(recorder, "System memory total: '%zu kB'\n", mtotal))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "System memory used: '%zu kB'\n", mtotal - mfree - mbuffers - mcached))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "System memory total: '%zu kB'\n", mtotal))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "System memory used: '%zu kB'\n", mtotal - mfree - mbuffers - mcached))) return r;
     return 0;
 }
 
-int xcd_sys_record(xcd_recorder_t *recorder, uint64_t start_time, uint64_t crash_time,
-                   const char *app_id, const char *app_version, xcc_util_build_prop_t *props, size_t nthds)
+int xcd_sys_record(int log_fd, uint64_t start_time, uint64_t crash_time,
+                   const char *app_id, const char *app_version,
+                   xcc_util_build_prop_t *props, size_t nthds)
 {
     int r;
     
-    if(0 != (r = xcd_recorder_write(recorder, XCC_UTIL_TOMB_HEAD))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, XCC_UTIL_TOMB_HEAD))) return r;
     
-    if(0 != (r = xcd_recorder_print (recorder, "Tombstone maker: '%s'\n",    XCC_VERSION_STR))) return r;
-    if(0 != (r = xcd_recorder_print (recorder, "Crash type: '%s'\n",         XCC_UTIL_CRASH_TYPE))) return r;
-    if(0 != (r = xcd_sys_record_time(recorder, "Start time",                 start_time))) return r;
-    if(0 != (r = xcd_sys_record_time(recorder, "Crash time",                 crash_time))) return r;
-    if(0 != (r = xcd_recorder_print (recorder, "App ID: '%s'\n",             app_id))) return r;
-    if(0 != (r = xcd_recorder_print (recorder, "App version: '%s'\n",        app_version))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Tombstone maker: '%s'\n",    XCC_VERSION_STR))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Crash type: '%s'\n",         XCC_UTIL_CRASH_TYPE))) return r;
+    if(0 != (r = xcd_sys_record_time  (log_fd, "Start time",                 start_time))) return r;
+    if(0 != (r = xcd_sys_record_time  (log_fd, "Crash time",                 crash_time))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "App ID: '%s'\n",             app_id))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "App version: '%s'\n",        app_version))) return r;
     
-    if(0 != (r = xcd_sys_record_cpu(recorder))) return r;
-    if(0 != (r = xcd_sys_record_system_mem(recorder))) return r;
+    if(0 != (r = xcd_sys_record_cpu(log_fd))) return r;
+    if(0 != (r = xcd_sys_record_system_mem(log_fd))) return r;
     
-    if(0 != (r = xcd_recorder_print(recorder, "Number of threads: '%zu'\n", nthds))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Rooted: '%s'\n",             xcc_util_is_root() ? "Yes" : "No"))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "API level: '%d'\n",          props->api_level))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "OS version: '%s'\n",         props->os_version))) return r;
-    if(0 != (r = xcd_sys_record_kernel_version(recorder))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "ABI list: '%s'\n",           props->abi_list))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Manufacturer: '%s'\n",       props->manufacturer))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Brand: '%s'\n",              props->brand))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Model: '%s'\n",              props->model))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Build fingerprint: '%s'\n",  props->build_fingerprint))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "Revision: '%s'\n",           props->revision))) return r;
-    if(0 != (r = xcd_recorder_print(recorder, "ABI: '%s'\n",                XCC_UTIL_ABI_STRING))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Number of threads: '%zu'\n", nthds))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Rooted: '%s'\n",             xcc_util_is_root() ? "Yes" : "No"))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "API level: '%d'\n",          props->api_level))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "OS version: '%s'\n",         props->os_version))) return r;
+    
+    if(0 != (r = xcd_sys_record_kernel_version(log_fd))) return r;
+    
+    if(0 != (r = xcc_util_write_format(log_fd, "ABI list: '%s'\n",           props->abi_list))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Manufacturer: '%s'\n",       props->manufacturer))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Brand: '%s'\n",              props->brand))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Model: '%s'\n",              props->model))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Build fingerprint: '%s'\n",  props->build_fingerprint))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "Revision: '%s'\n",           props->revision))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "ABI: '%s'\n",                XCC_UTIL_ABI_STRING))) return r;
 
     return 0;
 }

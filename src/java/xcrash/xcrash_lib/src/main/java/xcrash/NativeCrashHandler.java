@@ -47,7 +47,7 @@ class NativeCrashHandler {
     }
 
     @SuppressLint("UnsafeDynamicallyLoadedCode")
-    int initialize(Context ctx, String appVersion, String logDir, boolean rethrow, int logCountMax,
+    int initialize(Context ctx, String appVersion, String logDir, boolean rethrow,
                    int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                    boolean dumpMap, boolean dumpFds, boolean dumpAllThreads,
                    int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
@@ -76,7 +76,6 @@ class NativeCrashHandler {
                     logDir,
                     Util.logPrefix,
                     Util.nativeLogSuffix,
-                    logCountMax,
                     logcatSystemLines,
                     logcatEventsLines,
                     logcatMainLines,
@@ -125,7 +124,6 @@ class NativeCrashHandler {
             String logDir,
             String logPrefix,
             String logSuffix,
-            int logCountMax,
             int logcatSystemLines,
             int logcatEventsLines,
             int logcatMainLines,

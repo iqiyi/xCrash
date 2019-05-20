@@ -310,7 +310,7 @@ public class TombstoneParser {
     private static final Pattern patHeadItem = Pattern.compile("^(.*):\\s'(.*?)'$");
     private static final Pattern patProcessThread = Pattern.compile("^pid:\\s(.*),\\stid:\\s(.*),\\sname:\\s(.*)\\s+>>>\\s(.*)\\s<<<$");
     private static final Pattern patSignalCode = Pattern.compile("^signal\\s(.*),\\scode\\s(.*),\\sfault\\saddr\\s(.*)$");
-    private static final Pattern patAppVersionProcessName = Pattern.compile("^_(\\d{20})_(.*)__(.*)$");
+    private static final Pattern patAppVersionProcessName = Pattern.compile("^(\\d{20})_(.*)__(.*)$");
 
     private static final Set<String> keyHeadItems = new HashSet<String>(Arrays.asList(
         keyTombstoneMaker,
@@ -393,7 +393,7 @@ public class TombstoneParser {
      * @param emergency A buffer that holds basic crash information when disk exhausted.
      * @return The parsed map.
      */
-    @SuppressWarnings({"unused", "WeakerAccess"})
+    @SuppressWarnings("unused")
     public static Map<String, String> parse(String logPath, String emergency) {
 
         Map<String, String> map = new HashMap<String, String>();
@@ -476,8 +476,8 @@ public class TombstoneParser {
             if (filename.isEmpty()) return;
 
             //ignore prefix
-            if (!filename.startsWith(Util.logPrefix)) return;
-            filename = filename.substring(Util.logPrefix.length());
+            if (!filename.startsWith(Util.logPrefix + "_")) return;
+            filename = filename.substring(Util.logPrefix.length() + 1);
 
             //ignore suffix, save crash type
             if (filename.endsWith(Util.javaLogSuffix)) {

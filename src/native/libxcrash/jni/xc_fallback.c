@@ -35,7 +35,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include "xcc_errno.h"
 #include "xcc_util.h"
 #include "xcc_unwind.h"
@@ -45,27 +44,6 @@
 #include "xc_util.h"
 
 #define XC_FALLBACK_TIME_FORMAT "%s: '%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld'\n"
-
-#ifndef __LP64__
-#define XC_FALLBACK_SYSCALL_GETDENTS SYS_getdents
-#else
-#define XC_FALLBACK_SYSCALL_GETDENTS SYS_getdents64
-#endif
-
-typedef struct
-{
-#ifndef __LP64__
-    unsigned long  d_ino;
-    unsigned long  d_off;
-    unsigned short d_reclen;
-#else
-    ino64_t        d_ino;
-    off64_t        d_off;
-    unsigned short d_reclen;
-    unsigned char  d_type;
-#endif
-    char           d_name[1];
-} xc_fallback_dirent_t;
 
 static int xc_fallback_get_file_line(char *buf, size_t len, const char *title, const char *path)
 {
@@ -155,24 +133,24 @@ static int xc_fallback_get_system_mem(char *buf, size_t len)
 
 static size_t xc_fallback_get_number_of_threads(pid_t pid)
 {
-    int                   fd = -1;
-    char                  path[64];
-    char                  buf[512];
-    int                   n, i, tid;
-    size_t                total = 0;
-    xc_fallback_dirent_t *ent;
+    int               fd = -1;
+    char              path[64];
+    char              buf[512];
+    int               n, i, tid;
+    size_t            total = 0;
+    xc_util_dirent_t *ent;
     
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/task", pid);
     if((fd = TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
     
     while(1)
     {
-        n = syscall(XC_FALLBACK_SYSCALL_GETDENTS, fd, buf, sizeof(buf));
+        n = syscall(XC_UTIL_SYSCALL_GETDENTS, fd, buf, sizeof(buf));
         if(n <= 0) goto end;
 
         for(i = 0; i < n;)
         {
-            ent = (xc_fallback_dirent_t *)(buf + i);
+            ent = (xc_util_dirent_t *)(buf + i);
             
             if(0 != memcmp(ent->d_name, ".", 1) &&
                0 != memcmp(ent->d_name, "..", 2) &&
@@ -354,12 +332,12 @@ static int xc_fallback_record_logcat_buffer(int fd, const char *pid_str,
     
     xcc_fmt_snprintf(lines_str, sizeof(lines_str), "%u", lines);
 
-    if(0 != (r = xcc_util_write_format(fd,
-                                       "--------- tail end of log %s "
-                                       "(/system/bin/logcat -b %s -d -v threadtime -t %u%s%s %s)\n",
-                                       buffer, buffer, lines, pid_str ? " --pid " : "",
-                                       pid_str ? pid_str : "", priority))) return r;
-             
+    if(0 != (r = xcc_util_write_format_safe(fd,
+                                            "--------- tail end of log %s "
+                                            "(/system/bin/logcat -b %s -d -v threadtime -t %u%s%s %s)\n",
+                                            buffer, buffer, lines, pid_str ? " --pid " : "",
+                                            pid_str ? pid_str : "", priority))) return r;
+    
     int child = fork();
     if(child < 0)
     {
@@ -369,7 +347,7 @@ static int xc_fallback_record_logcat_buffer(int fd, const char *pid_str,
     {
         //child...
         
-        alarm(5); //don't leave a zombie process
+        alarm(3); //don't leave a zombie process
         
         if(dup2(fd, STDOUT_FILENO) < 0) exit(0);
 
@@ -409,20 +387,20 @@ static int xc_fallback_record_logcat(int fd, pid_t pid, int api_level, unsigned 
 
     if(0 != (r = xcc_util_write_str(fd, "\n"))) return r;
 
-    return 1;
+    return 0;
 }
 
 static int xc_fallback_record_fds(int fd, pid_t pid)
 {
-    int                   fd2 = -1;
-    char                  path[128];
-    char                  fd_path[512];
-    char                  buf[512];
-    int                   n, i, fd_num;
-    size_t                total = 0;
-    xc_fallback_dirent_t *ent;
-    ssize_t               len;
-    int                   r = 0;
+    int               fd2 = -1;
+    char              path[128];
+    char              fd_path[512];
+    char              buf[512];
+    int               n, i, fd_num;
+    size_t            total = 0;
+    xc_util_dirent_t *ent;
+    ssize_t           len;
+    int               r = 0;
 
     if(0 != (r = xcc_util_write_str(fd, "open files:\n"))) return r;
 
@@ -431,12 +409,12 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
     
     while(1)
     {
-        n = syscall(XC_FALLBACK_SYSCALL_GETDENTS, fd2, buf, sizeof(buf));
+        n = syscall(XC_UTIL_SYSCALL_GETDENTS, fd2, buf, sizeof(buf));
         if(n <= 0) break;
 
         for(i = 0; i < n;)
         {
-            ent = (xc_fallback_dirent_t *)(buf + i);
+            ent = (xc_util_dirent_t *)(buf + i);
 
             //get the fd
             if('\0' == ent->d_name[0]) goto next;
@@ -458,7 +436,7 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
                 fd_path[len] = '\0';
             
             //dump
-            if(0 != (r = xcc_util_write_format(fd, "    fd %d: %s\n", fd_num, fd_path))) goto clean;
+            if(0 != (r = xcc_util_write_format_safe(fd, "    fd %d: %s\n", fd_num, fd_path))) goto clean;
             
         next:
             i += ent->d_reclen;
@@ -468,7 +446,7 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
  end:
     if(total > 1024)
         if(0 != (r = xcc_util_write_str(fd, "    ......\n"))) goto clean;
-    if(0 != (r = xcc_util_write_format(fd, "    (number of FDs: %zu)\n", total))) goto clean;
+    if(0 != (r = xcc_util_write_format_safe(fd, "    (number of FDs: %zu)\n", total))) goto clean;
     r = xcc_util_write_str(fd, "\n");
 
  clean:
@@ -548,7 +526,7 @@ int xc_fallback_get_emergency(siginfo_t *si,
     return used;
 }
 
-int xc_fallback_record(xc_recorder_t *recorder,
+int xc_fallback_record(int log_fd,
                        char *emergency,
                        pid_t pid,
                        int api_level,
@@ -556,19 +534,15 @@ int xc_fallback_record(xc_recorder_t *recorder,
                        unsigned int logcat_events_lines,
                        unsigned int logcat_main_lines)
 {
-    int fd = -1;
-    int r = 0;
-    
-    if(0 != (r = xc_recorder_open(recorder, &fd))) goto end;
-    if(0 != (r = xcc_util_write_str(fd, emergency))) goto end;
+    int r;
 
-    //If we wrote the emergency info successfully, we don't need to return it from callback again.
-    emergency[0] = '\0';
+    if(log_fd < 0) return XCC_ERRNO_INVAL;
     
-    if(0 != (r = xc_fallback_record_logcat(fd, pid, api_level, logcat_system_lines, logcat_events_lines, logcat_main_lines))) goto end;
-    if(0 != (r = xc_fallback_record_fds(fd, pid))) goto end;
-
- end:
-    if(fd >= 0) xc_recorder_close(recorder, fd);
-    return r;    
+    if(0 != (r = xcc_util_write_str(log_fd, emergency))) return r;
+    emergency[0] = '\0'; //If we wrote the emergency info successfully, we don't need to return it from callback again.
+    
+    if(0 != (r = xc_fallback_record_logcat(log_fd, pid, api_level, logcat_system_lines, logcat_events_lines, logcat_main_lines))) return r;
+    if(0 != (r = xc_fallback_record_fds(log_fd, pid))) return r;
+    
+    return 0;
 }

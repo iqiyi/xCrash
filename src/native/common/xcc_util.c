@@ -206,6 +206,8 @@ int xcc_util_write(int fd, const char *buf, size_t len)
     ssize_t     nwritten;
     const char *ptr;
 
+    if(fd < 0) return XCC_ERRNO_INVAL;
+
     ptr   = buf;
     nleft = len;
 
@@ -232,6 +234,8 @@ int xcc_util_write_str(int fd, const char *str)
     const char *tmp = str;
     size_t      len = 0;
 
+    if(fd < 0) return XCC_ERRNO_INVAL;
+    
     while(*tmp) tmp++;
     len = tmp - str;
     if(0 == len) return 0;
@@ -245,6 +249,24 @@ int xcc_util_write_format(int fd, const char *format, ...)
     char    buf[1024];
     ssize_t len;
 
+    if(fd < 0) return XCC_ERRNO_INVAL;
+    
+    va_start(ap, format);
+    len = vsnprintf(buf, sizeof(buf), format, ap);
+    va_end(ap);
+    if(len <= 0) return 0;
+    
+    return xcc_util_write(fd, buf, len);
+}
+
+int xcc_util_write_format_safe(int fd, const char *format, ...)
+{
+    va_list ap;
+    char    buf[1024];
+    ssize_t len;
+
+    if(fd < 0) return XCC_ERRNO_INVAL;
+    
     va_start(ap, format);
     len = xcc_fmt_vsnprintf(buf, sizeof(buf), format, ap);
     va_end(ap);

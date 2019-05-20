@@ -28,7 +28,6 @@
 #include "xcc_errno.h"
 #include "xcc_util.h"
 #include "xcd_map.h"
-#include "xcd_recorder.h"
 #include "xcd_util.h"
 #include "xcd_log.h"
 

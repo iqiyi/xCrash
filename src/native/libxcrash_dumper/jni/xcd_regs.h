@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <ucontext.h>
-#include "xcd_recorder.h"
 #include "xcd_memory.h"
 
 #ifdef __cplusplus
@@ -68,7 +67,7 @@ void xcd_regs_get_labels(xcd_regs_label_t **labels, size_t *labels_count);
 void xcd_regs_load_from_ucontext(xcd_regs_t *self, ucontext_t *uc);
 void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_len);
 
-int xcd_regs_record(xcd_regs_t *self, xcd_recorder_t *recorder);
+int xcd_regs_record(xcd_regs_t *self, int log_fd);
 
 int xcd_regs_try_step_sigreturn(xcd_regs_t *self, uintptr_t rel_pc, xcd_memory_t *memory, pid_t pid);
 

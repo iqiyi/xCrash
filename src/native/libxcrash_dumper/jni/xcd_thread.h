@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include "xcd_regs.h"
 #include "xcd_frames.h"
-#include "xcd_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,12 +62,12 @@ void xcd_thread_load_regs(xcd_thread_t *self);
 void xcd_thread_load_regs_from_ucontext(xcd_thread_t *self, ucontext_t *uc);
 int xcd_thread_load_frames(xcd_thread_t *self, xcd_maps_t *maps);
 
-int xcd_thread_record_info(xcd_thread_t *self, xcd_recorder_t *recorder, const char *pname);
-int xcd_thread_record_regs(xcd_thread_t *self, xcd_recorder_t *recorder);
-int xcd_thread_record_backtrace(xcd_thread_t *self, xcd_recorder_t *recorder);
-int xcd_thread_record_buildid(xcd_thread_t *self, xcd_recorder_t *recorder);
-int xcd_thread_record_stack(xcd_thread_t *self, xcd_recorder_t *recorder);
-int xcd_thread_record_memory(xcd_thread_t *self, xcd_recorder_t *recorder);
+int xcd_thread_record_info(xcd_thread_t *self, int log_fd, const char *pname);
+int xcd_thread_record_regs(xcd_thread_t *self, int log_fd);
+int xcd_thread_record_backtrace(xcd_thread_t *self, int log_fd);
+int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd);
+int xcd_thread_record_stack(xcd_thread_t *self, int log_fd);
+int xcd_thread_record_memory(xcd_thread_t *self, int log_fd);
 
 #ifdef __cplusplus
 }

@@ -61,7 +61,7 @@ public final class XCrash {
      * @param params An initialization parameter set.
      * @return Return zero if successful, non-zero otherwise. The error code is defined in: {@link xcrash.Errno}.
      */
-    @SuppressWarnings({"unused", "WeakerAccess"})
+    @SuppressWarnings("unused")
     public static synchronized int init(Context ctx, InitParameters params) {
         if (XCrash.initialized) {
             return Errno.OK;
@@ -78,8 +78,8 @@ public final class XCrash {
             ctx = appContext;
         }
 
-        //use default parameters
         if (params == null) {
+            //use default parameters
             params = new InitParameters();
         }
         if (TextUtils.isEmpty(params.appVersion)) {
@@ -89,6 +89,7 @@ public final class XCrash {
             params.logDir = ctx.getFilesDir() + "/tombstones";
         }
 
+        //save some common values
         XCrash.appId = ctx.getPackageName();
         if (TextUtils.isEmpty(XCrash.appId)) {
             XCrash.appId = "unknown";
@@ -96,42 +97,55 @@ public final class XCrash {
         XCrash.appVersion = params.appVersion;
         XCrash.logDir = params.logDir;
 
+        //init FileManager
+        FileManager.getInstance().initialize(
+            params.logDir,
+            params.javaLogCountMax,
+            params.nativeLogCountMax,
+            params.placeholderCountMax,
+            params.placeholderSizeKb,
+            params.logFileMaintainDelayMs);
+
         //java
         if (params.enableJavaCrashHandler) {
-            JavaCrashHandler.getInstance().initialize(ctx,
-                    appId,
-                    params.appVersion,
-                    params.logDir,
-                    params.javaRethrow,
-                    params.javaLogCountMax,
-                    params.javaLogcatSystemLines,
-                    params.javaLogcatEventsLines,
-                    params.javaLogcatMainLines,
-                    params.javaDumpAllThreads,
-                    params.javaDumpAllThreadsCountMax,
-                    params.javaDumpAllThreadsWhiteList,
-                    params.javaCallback);
+            JavaCrashHandler.getInstance().initialize(
+                ctx,
+                appId,
+                params.appVersion,
+                params.logDir,
+                params.javaRethrow,
+                params.javaLogcatSystemLines,
+                params.javaLogcatEventsLines,
+                params.javaLogcatMainLines,
+                params.javaDumpAllThreads,
+                params.javaDumpAllThreadsCountMax,
+                params.javaDumpAllThreadsWhiteList,
+                params.javaCallback);
         }
 
         //native
+        int r = Errno.OK;
         if (params.enableNativeCrashHandler) {
-            return NativeCrashHandler.getInstance().initialize(ctx,
-                    params.appVersion,
-                    params.logDir,
-                    params.nativeRethrow,
-                    params.nativeLogCountMax,
-                    params.nativeLogcatSystemLines,
-                    params.nativeLogcatEventsLines,
-                    params.nativeLogcatMainLines,
-                    params.nativeDumpMap,
-                    params.nativeDumpFds,
-                    params.nativeDumpAllThreads,
-                    params.nativeDumpAllThreadsCountMax,
-                    params.nativeDumpAllThreadsWhiteList,
-                    params.nativeCallback);
+            r = NativeCrashHandler.getInstance().initialize(
+                ctx,
+                params.appVersion,
+                params.logDir,
+                params.nativeRethrow,
+                params.nativeLogcatSystemLines,
+                params.nativeLogcatEventsLines,
+                params.nativeLogcatMainLines,
+                params.nativeDumpMap,
+                params.nativeDumpFds,
+                params.nativeDumpAllThreads,
+                params.nativeDumpAllThreadsCountMax,
+                params.nativeDumpAllThreadsWhiteList,
+                params.nativeCallback);
         }
 
-        return Errno.OK;
+        //maintain tombstone and placeholder files in a background thread with some delay
+        FileManager.getInstance().maintain();
+
+        return r;
     }
 
     /**
@@ -139,8 +153,9 @@ public final class XCrash {
      */
     public static class InitParameters {
         //common
-        String         appVersion             = null;
-        String         logDir                 = null;
+        String appVersion             = null;
+        String logDir                 = null;
+        int    logFileMaintainDelayMs = 5000;
 
         /**
          * Set App version. You can use this method to set an internal test/gray version number.
@@ -168,6 +183,48 @@ public final class XCrash {
             return this;
         }
 
+        /**
+         * Set delay in milliseconds before the log file maintain task is to be executed. (Default: 5000)
+         *
+         * @param logFileMaintainDelayMs Delay in milliseconds before the log file maintain task is to be executed.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setLogFileMaintainDelayMs(int logFileMaintainDelayMs) {
+            this.logFileMaintainDelayMs = (logFileMaintainDelayMs < 0 ? 0 : logFileMaintainDelayMs);
+            return this;
+        }
+
+        //placeholder
+        int placeholderCountMax = 0;
+        int placeholderSizeKb   = 128;
+
+        /**
+         * Set the maximum number of placeholder files in the log directory. (Default: 0)
+         *
+         * <p>Note: Set this value to 0 means disable the placeholder feature.
+         *
+         * @param countMax The maximum number of placeholder files.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setPlaceholderCountMax(int countMax) {
+            this.placeholderCountMax = (countMax < 0 ? 0 : countMax);
+            return this;
+        }
+
+        /**
+         * Set the KB of each placeholder files in the log directory. (Default: 128)
+         *
+         * @param sizeKb The KB of each placeholder files.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setPlaceholderSizeKb(int sizeKb) {
+            this.placeholderSizeKb = (sizeKb < 0 ? 0 : sizeKb);
+            return this;
+        }
+
         //java
         boolean        enableJavaCrashHandler      = true;
         boolean        javaRethrow                 = true;
@@ -181,7 +238,7 @@ public final class XCrash {
         ICrashCallback javaCallback                = null;
 
         /**
-         * Enable the Java exception capture mechanism. (Default: enable)
+         * Enable the Java exception capture feature. (Default: enable)
          *
          * @return The InitParameters object.
          */
@@ -192,7 +249,7 @@ public final class XCrash {
         }
 
         /**
-         * Disable the Java exception capture mechanism. (Default: enable)
+         * Disable the Java exception capture feature. (Default: enable)
          *
          * @return The InitParameters object.
          */
@@ -223,7 +280,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setJavaLogCountMax(int countMax) {
-            this.javaLogCountMax = countMax;
+            this.javaLogCountMax = (countMax < 1 ? 1 : countMax);
             return this;
         }
 
@@ -343,7 +400,7 @@ public final class XCrash {
         ICrashCallback nativeCallback                = null;
 
         /**
-         * Enable the native crash capture mechanism. (Default: enable)
+         * Enable the native crash capture feature. (Default: enable)
          *
          * @return The InitParameters object.
          */
@@ -354,7 +411,7 @@ public final class XCrash {
         }
 
         /**
-         * Disable the native crash capture mechanism. (Default: enable)
+         * Disable the native crash capture feature. (Default: enable)
          *
          * @return The InitParameters object.
          */
@@ -385,7 +442,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setNativeLogCountMax(int countMax) {
-            this.nativeLogCountMax = countMax;
+            this.nativeLogCountMax = (countMax < 1 ? 1 : countMax);
             return this;
         }
 

@@ -30,7 +30,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <android/log.h>
 #include "xcc_errno.h"
 #include "xcc_util.h"
 #include "xcc_fmt.h"
@@ -46,111 +45,12 @@ struct xc_recorder
 {
     char    *log_dir;
     char    *log_pathname;
-    int      create_log_ok;
-    
-    char   **obsolete_logs;
-    size_t   obsolete_logs_size;
-    size_t   obsolete_logs_capacity;
+    int      create_new_file;
 };
-
-static int xc_recorder_log_name_cmp(const void *a, const void *b)
-{
-    return strcmp(*((const char **)a), *((const char **)b));
-}
-
-static int xc_recorder_save_obsolete_logs(xc_recorder_t *self, const char *log_prefix, const char *log_suffix, size_t log_cnt_max)
-{
-    DIR            *dir = NULL;
-    struct dirent  *entry;
-    size_t          prefix_len = strlen(log_prefix);
-    size_t          suffix_len = (log_suffix ? strlen(log_suffix) : 0);
-    size_t          len;
-    size_t          i;
-    char          **logs_new;
-    size_t          logs_capacity_new;
-    int             r = 0;
-
-    //unlimited logs
-    if(0 == log_cnt_max) return 0;
-
-    //load all logs
-    if(NULL == (dir = opendir(self->log_dir))) return XCC_ERRNO_SYS;
-    while(NULL != (entry = readdir(dir)))
-    {
-        //check file type
-        if(DT_REG != entry->d_type) continue;
-
-        //check file name
-        len = strlen(entry->d_name);
-        if(len < (prefix_len + 1 + XC_RECORDER_LOG_TS_LEN + 1 + suffix_len)) continue;
-        if(0 != memcmp(entry->d_name, log_prefix, prefix_len)) continue;
-        if('_' != entry->d_name[prefix_len]) continue;
-        for(i = 0; i < XC_RECORDER_LOG_TS_LEN; i++)
-            if(entry->d_name[prefix_len + 1 + i] < '0' || entry->d_name[prefix_len + 1 + i] > '9') continue;
-        if(suffix_len > 0)
-            if(0 != memcmp(entry->d_name + (len - suffix_len), log_suffix, suffix_len)) continue;
-
-        if(self->obsolete_logs_size >= self->obsolete_logs_capacity)
-        {
-            //expand the buffer
-            logs_capacity_new = self->obsolete_logs_size + 1;
-            if(0 != logs_capacity_new % 10) logs_capacity_new += (10 - logs_capacity_new % 10);
-
-            if(NULL == (logs_new = realloc(self->obsolete_logs, sizeof(char *) * logs_capacity_new)))
-            {
-                r = XCC_ERRNO_NOMEM;
-                goto ret;
-            }
-            
-            self->obsolete_logs = logs_new;
-            self->obsolete_logs_capacity = logs_capacity_new;
-        }
-
-        //save new logs
-        if(NULL == (self->obsolete_logs[self->obsolete_logs_size] = strdup(entry->d_name))) 
-        {
-            r = XCC_ERRNO_NOMEM;
-            goto ret;
-        }
-        self->obsolete_logs_size++;
-    }
-    closedir(dir);
-    dir = NULL;
-
-    //no need to delete any log files
-    if(self->obsolete_logs_size < log_cnt_max) goto ret;
-
-    //sort
-    qsort(self->obsolete_logs, self->obsolete_logs_size, sizeof(char *), xc_recorder_log_name_cmp);
-
-    //Save obsolete log file names that need to be removed.
-    //Do NOT remove them now. Because deleting is essentially a write to the file system
-    //which may slow the APP startup process.
-    for(i = self->obsolete_logs_size - (log_cnt_max - 1); i < self->obsolete_logs_size; i++)
-        free(self->obsolete_logs[i]);
-    self->obsolete_logs_size -= (log_cnt_max - 1);
-    self->obsolete_logs_capacity = self->obsolete_logs_size;
-    self->obsolete_logs = realloc(self->obsolete_logs, sizeof(char *) * self->obsolete_logs_capacity);
-    
-    return 0;
-
- ret:
-    if(dir) closedir(dir);
-    for(i = 0; i < self->obsolete_logs_size; i++)
-        free(self->obsolete_logs[i]);
-    self->obsolete_logs_size = 0;
-    self->obsolete_logs_capacity = 0;
-    if(self->obsolete_logs)
-    {
-        free(self->obsolete_logs);
-        self->obsolete_logs = NULL;
-    }
-    return r;
-}
 
 int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *app_version,
                         const char *log_dir, const char *log_prefix, const char *log_suffix,
-                        size_t log_cnt_max)
+                        char **log_pathname)
 {
     const char *prefix = log_prefix ? log_prefix : "tombstone";
     const char *suffix = log_suffix ? log_suffix : "";
@@ -165,10 +65,7 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
         goto err;
     }
     (*self)->log_pathname           = NULL;
-    (*self)->create_log_ok          = 0;
-    (*self)->obsolete_logs          = NULL;
-    (*self)->obsolete_logs_size     = 0;
-    (*self)->obsolete_logs_capacity = 0;
+    (*self)->create_new_file        = 0;
 
     //create log dirs
     if(0 != (r = xc_util_mkdirs(log_dir))) goto err;
@@ -177,7 +74,7 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
     if(0 != xcc_util_get_process_name(getpid(), process_name, sizeof(process_name)))
         strncpy(process_name, "unknown", sizeof(process_name));
     
-    //save current log pathname
+    //save and return current log pathname
     snprintf(buf, sizeof(buf), "%s/%s_%020"PRIu64"_%s__%s%s",
              log_dir, prefix, start_time, app_version, process_name, suffix);
     if(NULL == ((*self)->log_pathname = strdup(buf)))
@@ -185,9 +82,7 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
         r =  XCC_ERRNO_NOMEM;
         goto err;
     }
-    
-    //save obsolete log file names
-    xc_recorder_save_obsolete_logs(*self, prefix, suffix, log_cnt_max);
+    *log_pathname = (*self)->log_pathname;
     
     return 0;
 
@@ -201,98 +96,98 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
     return r;
 }
 
-static void xc_recorder_remove_obsolete_logs(xc_recorder_t *self)
+int xc_recorder_create_and_open(xc_recorder_t *self)
 {
-    char   pathname[PATH_MAX];
-    size_t i;
-    
-    if(NULL == self->obsolete_logs) return;
+    int               fd;
+    char              buf[512];
+    char              pathname[PATH_MAX];
+    int               n, i;
+    xc_util_dirent_t *ent;
 
-    for(i = 0; i < self->obsolete_logs_size; i++)
+    if(NULL == self->log_pathname) return -1;
+
+    //try to use placeholder file
+    if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) >= 0)
     {
-        xcc_fmt_snprintf(pathname, sizeof(pathname), "%s/%s", self->log_dir, self->obsolete_logs[i]);
-        unlink(pathname);
+        while((n = syscall(XC_UTIL_SYSCALL_GETDENTS, fd, buf, sizeof(buf))) > 0)
+        {
+            for(i = 0; i < n; i += ent->d_reclen)
+            {
+                ent = (xc_util_dirent_t *)(buf + i);
+
+                // placeholder_12345678901234567890.clean.xcrash
+                // file name length: 45
+                if(45 == strlen(ent->d_name) &&
+                   0 == memcmp(ent->d_name, "placeholder_", 12) &&
+                   0 == memcmp(ent->d_name + 32, ".clean.xcrash", 13))
+                {
+                    xcc_fmt_snprintf(pathname, sizeof(pathname), "%s/%s", self->log_dir, ent->d_name);
+                    if(0 == rename(pathname, self->log_pathname))
+                    {
+                        close(fd);
+                        return TEMP_FAILURE_RETRY(open(self->log_pathname, O_RDWR | O_CLOEXEC));
+                    }
+                }
+            }
+        }
+    }
+    
+    //create new file
+    self->create_new_file = 1;
+    return TEMP_FAILURE_RETRY(open(self->log_pathname, O_CREAT | O_WRONLY | O_CLOEXEC | O_TRUNC | O_APPEND, 0644));
+}
+
+int xc_recorder_seek_to_end(xc_recorder_t *self, int log_fd)
+{
+    uint8_t buf[1024];
+    ssize_t readed, n;
+    off_t   offset = 0;
+
+    //new file
+    if(self->create_new_file) return log_fd;
+    
+    //placeholder file
+    if(lseek(log_fd, 0, SEEK_SET) < 0) goto err;
+    while(1)
+    {
+        readed = TEMP_FAILURE_RETRY(read(log_fd, buf, sizeof(buf)));
+        if(readed < 0)
+        {
+            goto err;
+        }
+        else if(0 == readed)
+        {
+            if(lseek(log_fd, 0, SEEK_END) < 0) goto err;
+            return log_fd;
+        }
+        else
+        {
+            for(n = readed; n > 0; n--)
+            {
+                if(0 != buf[n - 1]) break;
+            }
+            offset += (off_t)n;
+            if(n < readed)
+            {
+                if(lseek(log_fd, offset, SEEK_SET) < 0) goto err;
+                return log_fd;
+            }
+        }
     }
 
-    self->obsolete_logs = NULL;
-}
-
-int xc_recorder_create_log(xc_recorder_t *self)
-{
-    int  fd;
-
-    //remove obsolete logs
-    xc_recorder_remove_obsolete_logs(self);
-
-    //create new log
-    if(NULL == self->log_pathname) return XCC_ERRNO_INVAL;
-    if((fd = open(self->log_pathname, O_CREAT | O_WRONLY | O_CLOEXEC | O_TRUNC, 0644)) < 0) return XCC_ERRNO_SYS;
-    close(fd);
-
-    self->create_log_ok = 1;
-    return 0;
-}
-
-int xc_recorder_create_log_ok(xc_recorder_t *self)
-{
-    return self->create_log_ok;
-}
-
-char *xc_recorder_get_log_pathname(xc_recorder_t *self)
-{
-    return self->log_pathname;
-}
-
-int xc_recorder_log_err(xc_recorder_t *self, const char *msg, int errnum)
-{
-    int fd;
-    int r;
-    
-    if(NULL == self->log_pathname || !self->create_log_ok) return XCC_ERRNO_STATE;
-
-    if((fd = open(self->log_pathname, O_WRONLY | O_CLOEXEC | O_APPEND, 0644)) < 0) return XCC_ERRNO_SYS;
-    r = xcc_util_write_format(fd, "\nxcrash error:\n%s, errnum=%d\n\n", msg, errnum);
-    close(fd);
-    
-    return r;
-}
-
-int xc_recorder_log_err_msg(xc_recorder_t *self, const char *msg, int errnum, const char *errmsg)
-{
-    int fd;
-    int r;
-    
-    if(NULL == self->log_pathname || !self->create_log_ok) return XCC_ERRNO_STATE;
-
-    if((fd = open(self->log_pathname, O_WRONLY | O_CLOEXEC | O_APPEND, 0644)) < 0) return XCC_ERRNO_SYS;
-    r = xcc_util_write_format(fd, "\nxcrash error:\n%s, errnum=%d, errmsg=%s\n\n", msg, errnum, errmsg);
-    close(fd);
-    
-    return r;
-}
-
-int xc_recorder_open(xc_recorder_t *self, int *fd)
-{
-    if(NULL == self->log_pathname || !self->create_log_ok) return XCC_ERRNO_INVAL;
-    if((*fd = open(self->log_pathname, O_WRONLY | O_CLOEXEC | O_APPEND, 0644)) < 0) return XCC_ERRNO_SYS;
-    return 0;
-}
-
-void xc_recorder_close(xc_recorder_t *self, int fd)
-{
-    (void)self;
-    
-    if(fd >= 0) close(fd);
+ err:
+    close(log_fd);
+    return -1;
 }
 
 int xc_recorder_check_backtrace_valid(xc_recorder_t *self)
 {
     int    fd = -1;
-    char   line[256];
+    char   line[512];
     size_t i = 0;
     int    r = 0;
     
-    if(NULL == self->log_pathname || !self->create_log_ok) return 0;
+    if(NULL == self->log_pathname) return 0;
 
     if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, O_RDONLY | O_CLOEXEC))) < 0) return 0;
     

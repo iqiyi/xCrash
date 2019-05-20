@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include "xcd_elf.h"
-#include "xcd_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -43,7 +43,6 @@
 #include "xcd_regs.h"
 #include "xcd_util.h"
 #include "xcd_log.h"
-#include "xcd_recorder.h"
 
 void xcd_thread_init(xcd_thread_t *self, pid_t pid, pid_t tid)
 {
@@ -133,44 +132,44 @@ int xcd_thread_load_frames(xcd_thread_t *self, xcd_maps_t *maps)
     return xcd_frames_create(&(self->frames), &(self->regs), maps, self->pid);
 }
 
-int xcd_thread_record_info(xcd_thread_t *self, xcd_recorder_t *recorder, const char *pname)
+int xcd_thread_record_info(xcd_thread_t *self, int log_fd, const char *pname)
 {
-    return xcd_recorder_print(recorder, "pid: %d, tid: %d, name: %s  >>> %s <<<\n",
-                              self->pid, self->tid, self->tname, pname);
+    return xcc_util_write_format(log_fd, "pid: %d, tid: %d, name: %s  >>> %s <<<\n",
+                                 self->pid, self->tid, self->tname, pname);
 }
 
-int xcd_thread_record_regs(xcd_thread_t *self, xcd_recorder_t *recorder)
+int xcd_thread_record_regs(xcd_thread_t *self, int log_fd)
 {
     if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
     
-    return xcd_regs_record(&(self->regs), recorder);
+    return xcd_regs_record(&(self->regs), log_fd);
 }
 
-int xcd_thread_record_backtrace(xcd_thread_t *self, xcd_recorder_t *recorder)
+int xcd_thread_record_backtrace(xcd_thread_t *self, int log_fd)
 {
     if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
 
-    return xcd_frames_record_backtrace(self->frames, recorder);
+    return xcd_frames_record_backtrace(self->frames, log_fd);
 }
 
-int xcd_thread_record_buildid(xcd_thread_t *self, xcd_recorder_t *recorder)
+int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd)
 {
     if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
 
-    return xcd_frames_record_buildid(self->frames, recorder);
+    return xcd_frames_record_buildid(self->frames, log_fd);
 }
 
-int xcd_thread_record_stack(xcd_thread_t *self, xcd_recorder_t *recorder)
+int xcd_thread_record_stack(xcd_thread_t *self, int log_fd)
 {
     if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
     
-    return xcd_frames_record_stack(self->frames, recorder);
+    return xcd_frames_record_stack(self->frames, log_fd);
 }
 
 #define XCD_THREAD_MEMORY_BYTES_TO_DUMP 256
 #define XCD_THREAD_MEMORY_BYTES_PER_LINE 16
 
-static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, xcd_recorder_t *recorder,
+static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
                                             const char *label, uintptr_t addr)
 {
     int r;
@@ -189,7 +188,7 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, xcd_recorder_t *
         return 0; //not an error
     }
 
-    if(0 != (r = xcd_recorder_print(recorder, "memory near %s:\n", label))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "memory near %s:\n", label))) return r;
     
     // Dump 256 bytes
     uintptr_t data[XCD_THREAD_MEMORY_BYTES_TO_DUMP/sizeof(uintptr_t)];
@@ -274,15 +273,15 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, xcd_recorder_t *
         }
         ascii[ascii_idx] = '\0';
 
-        if(0 != (r = xcd_recorder_print(recorder, "%s  %s\n", line, ascii))) return r;
+        if(0 != (r = xcc_util_write_format(log_fd, "%s  %s\n", line, ascii))) return r;
     }
 
-    if(0 != (r = xcd_recorder_write(recorder, "\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
 
     return 0;
 }
 
-int xcd_thread_record_memory(xcd_thread_t *self, xcd_recorder_t *recorder)
+int xcd_thread_record_memory(xcd_thread_t *self, int log_fd)
 {
     xcd_regs_label_t *labels;
     size_t            labels_count;
@@ -292,7 +291,7 @@ int xcd_thread_record_memory(xcd_thread_t *self, xcd_recorder_t *recorder)
     xcd_regs_get_labels(&labels, &labels_count);
     
     for(i = 0; i < labels_count; i++)
-        if(0 != (r = xcd_thread_record_memory_by_addr(self, recorder, labels[i].name,
+        if(0 != (r = xcd_thread_record_memory_by_addr(self, log_fd, labels[i].name,
                                                       (uintptr_t)(self->regs.r[labels[i].idx])))) return r;
 
     return 0;

@@ -27,6 +27,7 @@
 #include <ucontext.h>
 #include <sys/ptrace.h>
 #include "xcc_errno.h"
+#include "xcc_util.h"
 #include "xcd_regs.h"
 #include "xcd_memory.h"
 #include "xcd_util.h"
@@ -120,15 +121,15 @@ void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_le
     self->r[XCD_REGS_EIP] = ptregs->eip;
 }
 
-int xcd_regs_record(xcd_regs_t *self, xcd_recorder_t *recorder)
+int xcd_regs_record(xcd_regs_t *self, int log_fd)
 {
-    return xcd_recorder_print(recorder,
-                              "    eax %08x  ebx %08x  ecx %08x  edx %08x\n"
-                              "    edi %08x  esi %08x\n"
-                              "    ebp %08x  esp %08x  eip %08x\n\n",
-                              self->r[XCD_REGS_EAX], self->r[XCD_REGS_EBX], self->r[XCD_REGS_ECX], self->r[XCD_REGS_EDX],
-                              self->r[XCD_REGS_EDI], self->r[XCD_REGS_ESI],
-                              self->r[XCD_REGS_EBP], self->r[XCD_REGS_ESP], self->r[XCD_REGS_EIP]);
+    return xcc_util_write_format(log_fd,
+                                 "    eax %08x  ebx %08x  ecx %08x  edx %08x\n"
+                                 "    edi %08x  esi %08x\n"
+                                 "    ebp %08x  esp %08x  eip %08x\n\n",
+                                 self->r[XCD_REGS_EAX], self->r[XCD_REGS_EBX], self->r[XCD_REGS_ECX], self->r[XCD_REGS_EDX],
+                                 self->r[XCD_REGS_EDI], self->r[XCD_REGS_ESI],
+                                 self->r[XCD_REGS_EBP], self->r[XCD_REGS_ESP], self->r[XCD_REGS_EIP]);
 }
 
 int xcd_regs_try_step_sigreturn(xcd_regs_t *self, uintptr_t rel_pc, xcd_memory_t *memory, pid_t pid)

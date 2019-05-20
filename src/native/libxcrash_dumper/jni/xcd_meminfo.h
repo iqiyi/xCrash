@@ -26,13 +26,12 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include "xcd_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int xcd_meminfo_record(xcd_recorder_t *recorder, pid_t pid);
+int xcd_meminfo_record(int log_fd, pid_t pid);
 
 #ifdef __cplusplus
 }

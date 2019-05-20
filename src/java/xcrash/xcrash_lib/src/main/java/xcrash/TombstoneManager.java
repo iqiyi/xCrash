@@ -24,9 +24,7 @@ package xcrash;
 
 import android.text.TextUtils;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -54,29 +52,13 @@ public class TombstoneManager {
      * @param content Section content.
      * @return Return true if successful, false otherwise.
      */
-    @SuppressWarnings({"unused", "UnusedReturnValue", "TryFinallyCanBeTryWithResources"})
+    @SuppressWarnings({"unused", "UnusedReturnValue"})
     public static boolean appendSection(String logPath, String key, String content) {
         if (TextUtils.isEmpty(logPath) || TextUtils.isEmpty(key) || content == null) {
             return false;
         }
 
-        BufferedWriter writer = null;
-        try {
-            writer = new BufferedWriter(new FileWriter(logPath, true));
-            writer.write("\n\n" + key + ":\n");
-            writer.write(content);
-            writer.write("\n\n");
-            return true;
-        } catch (Exception ignored) {
-            return false;
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ignored) {
-                }
-            }
-        }
+        return FileManager.getInstance().appendText(logPath, "\n\n" + key + ":\n" + content + "\n\n");
     }
 
     /**
@@ -132,6 +114,32 @@ public class TombstoneManager {
     }
 
     /**
+     * Delete the tombstone file.
+     *
+     * <p>Note: When you use the placeholder file feature by {@link XCrash.InitParameters#setPlaceholderCountMax(int)},
+     * please always use this method to delete tombstone files.
+     *
+     * @param file The tombstone file object.
+     * @return Return true if successful, false otherwise.
+     */
+    public static boolean deleteTombstone(File file) {
+        return FileManager.getInstance().recycleLogFile(file);
+    }
+
+    /**
+     * Delete the tombstone file.
+     *
+     * <p>Note: When you use the placeholder file feature by {@link XCrash.InitParameters#setPlaceholderCountMax(int)},
+     * please always use this method to delete tombstone files.
+     *
+     * @param path The path of the tombstone file.
+     * @return Return true if successful, false otherwise.
+     */
+    public static boolean deleteTombstone(String path) {
+        return FileManager.getInstance().recycleLogFile(new File(path));
+    }
+
+    /**
      * Delete all Java exception log files.
      *
      * @return Return true if successful, false otherwise.
@@ -168,7 +176,7 @@ public class TombstoneManager {
         }
 
         File dir = new File(logDir);
-        if (!dir.exists()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             return new File[0];
         }
 
@@ -205,7 +213,7 @@ public class TombstoneManager {
         }
 
         File dir = new File(logDir);
-        if (!dir.exists()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             return false;
         }
 
@@ -226,7 +234,7 @@ public class TombstoneManager {
 
         boolean success = true;
         for (File f : files) {
-            if (!f.delete()) {
+            if (!FileManager.getInstance().recycleLogFile(f)) {
                 success = false;
             }
         }

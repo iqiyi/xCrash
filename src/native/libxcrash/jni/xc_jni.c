@@ -30,7 +30,6 @@
 #include <android/log.h>
 #include "xcc_errno.h"
 #include "xcc_util.h"
-#include "xc_recorder.h"
 #include "xc_core.h"
 #include "xc_util.h"
 #include "xc_test.h"
@@ -52,12 +51,14 @@
         if(NULL == (v)) goto label;                       \
     } while(0)
 
-static JavaVM    *xc_jni_jvm              = NULL;
-static jclass     xc_jni_class_cb         = NULL;
-static jmethodID  xc_jni_method_cb        = NULL;
-static pid_t      xc_jni_crash_tid        = 0;
-static char      *xc_jni_emergency          = NULL;
-static int        xc_jni_write_log_failed = 0;
+static JavaVM     *xc_jni_jvm          = NULL;
+static jclass      xc_jni_class_cb     = NULL;
+static jmethodID   xc_jni_method_cb    = NULL;
+
+static pid_t       xc_jni_crash_tid    = 0;
+static char       *xc_jni_emergency    = NULL;
+static int         xc_jni_log_fd       = 0;
+static const char *xc_jni_log_pathname = NULL;
 
 static int xc_jni_get_app_info(JNIEnv *env, jobject context, jstring *app_id, jstring *app_version, jstring *app_lib_dir, jstring *files_dir)
 {
@@ -126,9 +127,8 @@ static int xc_jni_get_app_info(JNIEnv *env, jobject context, jstring *app_id, js
     return XCC_ERRNO_JNI;
 }
 
-static void xc_jni_record_stack_trace(JNIEnv *env, xc_recorder_t *recorder, pid_t crash_tid)
+static void xc_jni_record_stack_trace(JNIEnv *env, int log_fd, pid_t crash_tid)
 {
-    int   fd = -1;
     int   is_main_thread = (getpid() == crash_tid ? 1 : 0);
     char  tname[64] = "\0";
     
@@ -138,9 +138,6 @@ static void xc_jni_record_stack_trace(JNIEnv *env, xc_recorder_t *recorder, pid_
         if(0 != xcc_util_get_thread_name(crash_tid, tname, sizeof(tname))) return;
         if('\0' == tname[0]) return;
     }
-
-    //open recorder
-    if(0 != xc_recorder_open(recorder, &fd)) return;
 
     //java.lang.Thread
     jclass class_Thread = (*env)->FindClass(env, "java/lang/Thread");
@@ -199,7 +196,7 @@ static void xc_jni_record_stack_trace(JNIEnv *env, xc_recorder_t *recorder, pid_
         if((is_main_thread && 0 == strcmp(c_name, "main")) ||
            (!is_main_thread && strstr(c_name, tname)))
         {
-            if(0 != xcc_util_write_str(fd, "java stacktrace:\n")) goto err;
+            if(0 != xcc_util_write_str(log_fd, "java stacktrace:\n")) goto err;
 
             jobjectArray stackTrace = (jobjectArray)(*env)->CallObjectMethod(env, thread, method_getStackTrace);
             XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(stackTrace, err);
@@ -217,24 +214,23 @@ static void xc_jni_record_stack_trace(JNIEnv *env, xc_recorder_t *recorder, pid_
                 XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(stackTraceElementStr, err);
 
                 const char *c_stackTraceElementStr = (*env)->GetStringUTFChars(env, stackTraceElementStr, 0);
-                if(0 != xcc_util_write_str(fd, "    at ")) goto err;
-                if(0 != xcc_util_write_str(fd, c_stackTraceElementStr)) goto err;
-                if(0 != xcc_util_write_str(fd, "\n")) goto err;
+                if(0 != xcc_util_write_str(log_fd, "    at ")) goto err;
+                if(0 != xcc_util_write_str(log_fd, c_stackTraceElementStr)) goto err;
+                if(0 != xcc_util_write_str(log_fd, "\n")) goto err;
                 (*env)->ReleaseStringUTFChars(env, stackTraceElementStr, c_stackTraceElementStr);
             }
-            if(0 != xcc_util_write_str(fd, "\n")) goto err;
+            if(0 != xcc_util_write_str(log_fd, "\n")) goto err;
             break;
         }
         
         (*env)->ReleaseStringUTFChars(env, name, c_name);
     }
-    
+
  err:
-    xc_recorder_close(recorder, fd);
     return;
 }
 
-static void xc_jni_callback_java(JNIEnv *env, xc_recorder_t *recorder, char *emergency)
+static void xc_jni_callback_java(JNIEnv *env, int log_fd, const char *log_pathname, char *emergency)
 {
     const char *c_pathname = NULL;
     jstring     j_pathname = NULL;
@@ -243,9 +239,9 @@ static void xc_jni_callback_java(JNIEnv *env, xc_recorder_t *recorder, char *eme
     if(NULL == xc_jni_class_cb || NULL == xc_jni_method_cb) return;
 
     //get log pathname
-    if(xc_recorder_create_log_ok(recorder))
+    if(log_fd >= 0)
     {
-        c_pathname = xc_recorder_get_log_pathname(recorder);
+        c_pathname = log_pathname;
     }
     if(NULL != c_pathname)
     {
@@ -273,10 +269,11 @@ static void xc_jni_callback_java(JNIEnv *env, xc_recorder_t *recorder, char *eme
 
 static void *xc_jni_callback_do(void *arg)
 {
-    xc_recorder_t *recorder = (xc_recorder_t *)arg;
-    JNIEnv        *env      = NULL;
-    int            attached = 0;
-    jint           r, r2;
+    JNIEnv *env      = NULL;
+    int     attached = 0;
+    jint    r, r2;
+
+    (void)arg;
     
     pthread_setname_np(pthread_self(), "xcrash_callback");
     
@@ -302,35 +299,33 @@ static void *xc_jni_callback_do(void *arg)
     if(NULL == env) goto err;
 
     //record java stack trace
-    if(!xc_jni_write_log_failed && xc_recorder_create_log_ok(recorder))
-        xc_jni_record_stack_trace(env, recorder, xc_jni_crash_tid);
+    if(xc_jni_log_fd >= 0) xc_jni_record_stack_trace(env, xc_jni_log_fd, xc_jni_crash_tid);
 
     //callback to jvm
-    xc_jni_callback_java(env, recorder, xc_jni_emergency);
+    xc_jni_callback_java(env, xc_jni_log_fd, xc_jni_log_pathname, xc_jni_emergency);
 
  err:
     if(attached) (*xc_jni_jvm)->DetachCurrentThread(xc_jni_jvm);
     return NULL;
 }
 
-void xc_jni_callback(xc_recorder_t *recorder, char *emergency, int write_log_failed)
+void xc_jni_callback(int log_fd, const char *log_pathname, char *emergency)
 {
     pthread_t thd;
 
     if(NULL == xc_jni_jvm) return;
 
-    //save the crash thread's TID
-    xc_jni_crash_tid = gettid();
-
-    xc_jni_emergency = emergency;
-    xc_jni_write_log_failed = write_log_failed;
-
-    if(0 != pthread_create(&thd, NULL, xc_jni_callback_do, (void *)recorder)) return;
+    xc_jni_crash_tid    = gettid();
+    xc_jni_emergency    = emergency;
+    xc_jni_log_fd       = log_fd;
+    xc_jni_log_pathname = log_pathname;
+    
+    if(0 != pthread_create(&thd, NULL, xc_jni_callback_do, NULL)) return;
     pthread_join(thd, NULL);
 }
 
-static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean restore_signal_handler, jstring app_version,
-                           jstring log_dir, jstring log_prefix, jstring log_suffix, jint log_count_max,
+static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean restore_signal_handler,
+                           jstring app_version, jstring log_dir, jstring log_prefix, jstring log_suffix,
                            jint logcat_system_lines, jint logcat_events_lines, jint logcat_main_lines,
                            jboolean dump_map, jboolean dump_fds, jboolean dump_all_threads,
                            jint dump_all_threads_count_max, jobjectArray dump_all_threads_whitelist,
@@ -359,8 +354,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
 
     (void)thiz;
 
-    if(!env || !(*env) || !context || log_count_max < 0 ||
-       logcat_system_lines < 0 || logcat_events_lines < 0 || logcat_main_lines < 0) return XCC_ERRNO_INVAL;
+    if(!env || !(*env) || !context || logcat_system_lines < 0 || logcat_events_lines < 0 || logcat_main_lines < 0) return XCC_ERRNO_INVAL;
 
     //get app_id, app_version, app_lib_dir, files_dir from context
     if(0 != xc_jni_get_app_info(env, context, &app_id, (app_version ? NULL : &app_version), &app_lib_dir,
@@ -436,7 +430,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
 
     //init native core
     r = xc_core_init((int)restore_signal_handler, c_app_id, c_app_version, c_app_lib_dir,
-                     p_log_dir, c_log_prefix, c_log_suffix, (unsigned int)log_count_max,
+                     p_log_dir, c_log_prefix, c_log_suffix,
                      (unsigned int)logcat_system_lines, (unsigned int)logcat_events_lines, (unsigned int)logcat_main_lines,
                      (int)dump_map, (int)dump_fds, (int)dump_all_threads,
                      (int)dump_all_threads_count_max, c_dump_all_threads_whitelist,
@@ -473,7 +467,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
 static jint xc_jni_init(JNIEnv *env, jobject thiz, jobject context)
 {
     //use default values
-    return xc_jni_init_ex(env, thiz, context, 1, NULL, NULL, NULL, NULL, 10, 50, 50, 200, 1, 1, 1, 0, NULL, NULL, NULL);
+    return xc_jni_init_ex(env, thiz, context, 1, NULL, NULL, NULL, NULL, 50, 50, 200, 1, 1, 1, 0, NULL, NULL, NULL);
 }
 
 void xc_jni_test(JNIEnv *env, jobject thiz, jint run_in_new_thread)
@@ -502,7 +496,6 @@ static JNINativeMethod xc_jni_methods[] = {
         "Ljava/lang/String;"
         "Ljava/lang/String;"
         "Ljava/lang/String;"
-        "I"
         "I"
         "I"
         "I"

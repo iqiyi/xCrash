@@ -104,6 +104,7 @@ int xcc_util_atoi(const char *str, int *i);
 int xcc_util_write(int fd, const char *buf, size_t len);
 int xcc_util_write_str(int fd, const char *str);
 int xcc_util_write_format(int fd, const char *format, ...);
+int xcc_util_write_format_safe(int fd, const char *format, ...);
 
 char *xcc_util_gets(char *s, int size, int fd);
 int xcc_util_read_file_line(const char *path, char *buf, size_t len);

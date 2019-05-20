@@ -50,11 +50,15 @@
 #include "xc_fallback.h"
 
 #define XC_CORE_EMERGENCY_BUF_LEN (20 * 1024)
+#define XC_CORE_ERR_TITLE         "\n\nxcrash error:\n"
 
 static pthread_mutex_t        xc_core_mutex   = PTHREAD_MUTEX_INITIALIZER;
 static int                    xc_core_handled = 0;
 static int                    xc_core_inited  = 0;
+static int                    xc_core_log_fd  = -1;
+static int                    xc_core_args_fd = -1;
 
+//global cache which used in signal handler
 static char                  *xc_core_dumper_pathname;
 static int                    xc_core_restore_signal_handler;
 static char                  *xc_core_emergency;
@@ -63,51 +67,36 @@ static xc_recorder_t         *xc_core_recorder;
 static long                   xc_core_timezone;
 static char                  *xc_core_kernel_version;
 
+//info passed to the dumper process
 static xcc_spot_t             xc_core_spot;
-static char                  *xc_core_log_pathname;
+static char                  *xc_core_log_pathname = NULL;
 static char                  *xc_core_app_id = "unknown";
 static char                  *xc_core_app_version = "unknown";
 static char                  *xc_core_dump_all_threads_whitelist = NULL;
 
-static void xc_core_exec_dumper()
+static int xc_core_perpare_dumper_parameters()
 {
-    int i;
-    for(i = 0; i < 1024; i++)
-        syscall(SYS_close, i);
-
-    errno = 0;
-    int devnull = TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
-    if(devnull < 0)
-    {
-        xc_recorder_log_err(xc_core_recorder, "open /dev/null failed", errno);
-        _exit(1);
-    }
-    else if(0 != devnull)
-    {
-        xc_recorder_log_err(xc_core_recorder, "/dev/null fd NOT 0", errno);
-        _exit(2);
-    }
-    TEMP_FAILURE_RETRY(dup2(devnull, STDOUT_FILENO));
-    TEMP_FAILURE_RETRY(dup2(devnull, STDERR_FILENO));
-
-    errno = 0;
+    //create args pipe
     int pipefd[2];
+    errno = 0;
     if(0 != pipe2(pipefd, O_CLOEXEC))
     {
-        xc_recorder_log_err(xc_core_recorder, "pipe2 failed", errno);
-        _exit(3);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"create args pipe failed, errno=%d\n\n", errno);
+        return -1;
     }
 
+    //set args pipe size
     //range: pagesize (4K) ~ /proc/sys/fs/pipe-max-size (1024K)
-    errno = 0;
     int write_len = (int)(sizeof(xcc_spot_t) + xc_core_spot.log_pathname_len + xc_core_spot.app_id_len
                           + xc_core_spot.app_version_len + xc_core_spot.dump_all_threads_whitelist_len);
+    errno = 0;
     if(fcntl(pipefd[1], F_SETPIPE_SZ, write_len) < write_len)
     {
-        xc_recorder_log_err(xc_core_recorder, "fcntl F_SETPIPE_SZ failed", errno);
-        _exit(4);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"set args pipe size failed, errno=%d\n\n", errno);
+        return -1;
     }
 
+    //write args to pipe
     struct iovec iovs[5] = {
         {.iov_base = &xc_core_spot, .iov_len = sizeof(xcc_spot_t)},
         {.iov_base = xc_core_log_pathname, .iov_len = xc_core_spot.log_pathname_len},
@@ -116,30 +105,19 @@ static void xc_core_exec_dumper()
         {.iov_base = xc_core_dump_all_threads_whitelist, .iov_len = xc_core_spot.dump_all_threads_whitelist_len}
     };
     int iovs_cnt = (0 == xc_core_spot.dump_all_threads_whitelist_len ? 4 : 5);
-
     errno = 0;
-    ssize_t rc = TEMP_FAILURE_RETRY(writev(pipefd[1], iovs, iovs_cnt));
-    if(-1 == rc)
+    ssize_t ret = TEMP_FAILURE_RETRY(writev(pipefd[1], iovs, iovs_cnt));
+    if((ssize_t)write_len != ret)
     {
-        xc_recorder_log_err(xc_core_recorder, "writev spot failed", errno);
-        _exit(5);
-    }
-    else if((ssize_t)write_len != rc)
-    {
-        xc_recorder_log_err(xc_core_recorder, "writev spot return less", errno);
-        _exit(6);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"write args to pipe failed, return=%d, errno=%d\n\n", ret, errno);
+        return -1;
     }
 
-    TEMP_FAILURE_RETRY(dup2(pipefd[0], STDIN_FILENO));
-        
-    close(pipefd[0]);
+    //close write side of the pipe 
     close(pipefd[1]);
-    
-    errno = 0;
-    execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
-    
-    xc_recorder_log_err_msg(xc_core_recorder, "execl failed", errno, xc_core_dumper_pathname);
-    _exit(7);
+
+    //return the read side of the pipe
+    return pipefd[0];
 }
 
 static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
@@ -149,7 +127,6 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     int             restore_orig_dumpable = 0;
     int             orig_dumpable;
     int             dump_ok = 0;
-    int             write_log_failed = 0;
 
     pthread_mutex_lock(&xc_core_mutex);
 
@@ -167,28 +144,23 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         if(0 != xcc_signal_ignore()) goto exit;
     }
 
-    //crash time
-    clock_gettime(CLOCK_REALTIME, &crash_tp);
-
-    //create log file
-    xc_recorder_create_log(xc_core_recorder);
-
     //save crash spot info
+    clock_gettime(CLOCK_REALTIME, &crash_tp);
     xc_core_spot.crash_time = (uint64_t)(crash_tp.tv_sec) * 1000 * 1000 + (uint64_t)crash_tp.tv_nsec / 1000;
     xc_core_spot.crash_pid = getpid();
     xc_core_spot.crash_tid = gettid();
     memcpy(&(xc_core_spot.siginfo), si, sizeof(siginfo_t));
     memcpy(&(xc_core_spot.ucontext), uc, sizeof(ucontext_t));
 
-    //create log file failed?
-    if(!xc_recorder_create_log_ok(xc_core_recorder)) goto end;
+    //create log file
+    if((xc_core_log_fd = xc_recorder_create_and_open(xc_core_recorder)) < 0) goto end;
 
     //check privilege-restricting mode
     //https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
     //errno = 0;
     //if(1 == prctl(PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0))
     //{
-    //    xc_recorder_log_err(xc_core_recorder, "get NO_NEW_PRIVS failed", errno);
+    //    xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"get NO_NEW_PRIVS failed, errno=%d\n\n", errno);
     //    goto end;
     //}
 
@@ -197,7 +169,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     errno = 0;
     if(0 != prctl(PR_SET_DUMPABLE, 1))
     {
-        xc_recorder_log_err(xc_core_recorder, "set dumpable failed", errno);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"set dumpable failed, errno=%d\n\n", errno);
         goto end;
     }
     restore_orig_dumpable = 1;
@@ -214,7 +186,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         }
         else
         {
-            xc_recorder_log_err(xc_core_recorder, "set traceable failed", errno);
+            xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"set traceable failed, errno=%d\n\n", errno);
             goto end;
         }
     }
@@ -223,18 +195,24 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         restore_orig_ptracer = 1;
     }
 
-    //spawn the crash dumper process
+    //perpare parameters for crash dumper process
+    if((xc_core_args_fd = xc_core_perpare_dumper_parameters()) < 0) goto end;
+
+    //spawn crash dumper process
     errno = 0;
     pid_t dumper_pid = fork();
     if(-1 == dumper_pid)
     {
-        xc_recorder_log_err(xc_core_recorder, "fork failed", errno);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"fork failed, errno=%d\n\n", errno);
         goto end;
     }
     else if(0 == dumper_pid)
     {
         //child process ...
-        xc_core_exec_dumper();
+        TEMP_FAILURE_RETRY(dup2(xc_core_args_fd, STDIN_FILENO));
+        errno = 0;
+        execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
+        _exit(100 + errno);
     }
 
     //parent process ...
@@ -242,9 +220,15 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     //wait the crash dumper process terminated
     errno = 0;
     int status = 0;
-    if(-1 == waitpid(dumper_pid, &status, 0))
+    int r = TEMP_FAILURE_RETRY(waitpid(dumper_pid, &status, 0)); //blocked
+
+    //the crash dumper process should have written a lot of logs,
+    //so we need to seek to the end of log file
+    if((xc_core_log_fd = xc_recorder_seek_to_end(xc_core_recorder, xc_core_log_fd)) < 0) goto end;
+    
+    if(-1 == r)
     {
-        xc_recorder_log_err(xc_core_recorder, "waitpid failed", errno);
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"waitpid failed, errno=%d\n\n", errno);
         goto end;
     }
 
@@ -254,18 +238,18 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         if(WIFEXITED(status) && 0 != WEXITSTATUS(status))
         {
             //terminated normally, but return / exit / _exit NON-zero
-            xc_recorder_log_err_msg(xc_core_recorder, "dumper exit status non-zero", WEXITSTATUS(status), xc_core_dumper_pathname);
+            xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"child terminated normally with non-zero exit status(%d), dumper=%s\n\n", WEXITSTATUS(status), xc_core_dumper_pathname);
             goto end;
         }
         else if(WIFSIGNALED(status))
         {
             //terminated by a signal
-            xc_recorder_log_err(xc_core_recorder, "dumper terminated by a signal", WTERMSIG(status));
+            xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"child terminated by a signal(%d)\n\n", WTERMSIG(status));
             goto end;
         }
         else
         {
-            xc_recorder_log_err_msg(xc_core_recorder, "other status", status, xc_core_dumper_pathname);
+            xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"child terminated with other error status(%d), dumper=%s\n\n", status, xc_core_dumper_pathname);
             goto end;
         }
     }
@@ -306,20 +290,25 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
                                   xc_core_emergency,
                                   XC_CORE_EMERGENCY_BUF_LEN);
 
-        if(0 != xc_fallback_record(xc_core_recorder,
-                                   xc_core_emergency,
-                                   xc_core_spot.crash_pid,
-                                   xc_core_build_prop.api_level,
-                                   xc_core_spot.logcat_system_lines,
-                                   xc_core_spot.logcat_events_lines,
-                                   xc_core_spot.logcat_main_lines))
+        if(xc_core_log_fd >= 0)
         {
-            write_log_failed = 1;
+            if(0 != xc_fallback_record(xc_core_log_fd,
+                                       xc_core_emergency,
+                                       xc_core_spot.crash_pid,
+                                       xc_core_build_prop.api_level,
+                                       xc_core_spot.logcat_system_lines,
+                                       xc_core_spot.logcat_events_lines,
+                                       xc_core_spot.logcat_main_lines))
+            {
+                close(xc_core_log_fd);
+                xc_core_log_fd = -1;
+            }
         }
     }
 
     //jni callback
-    xc_jni_callback(xc_core_recorder, '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency, write_log_failed);
+    xc_jni_callback(xc_core_log_fd, xc_core_log_pathname,
+                    '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency);
 
     xcc_signal_raise(sig);
     
@@ -398,7 +387,6 @@ int xc_core_init(int restore_signal_handler,
                  const char *log_dir,
                  const char *log_prefix,
                  const char *log_suffix,
-                 unsigned int log_count_max,
                  unsigned int logcat_system_lines,
                  unsigned int logcat_events_lines,
                  unsigned int logcat_main_lines,
@@ -424,7 +412,6 @@ int xc_core_init(int restore_signal_handler,
                         "log_dir=%s, "
                         "log_prefix=%s, "
                         "log_suffix=%s, "
-                        "log_count_max=%u, "
                         "logcat_system_lines=%u, "
                         "logcat_events_lines=%u, "
                         "logcat_main_lines=%u, "
@@ -440,7 +427,6 @@ int xc_core_init(int restore_signal_handler,
                         log_dir ? log_dir : "(NULL)",
                         log_prefix ? log_prefix : "(NULL)",
                         log_suffix ? log_suffix : "(NULL)",
-                        log_count_max,
                         logcat_system_lines,
                         logcat_events_lines,
                         logcat_main_lines,
@@ -466,7 +452,7 @@ int xc_core_init(int restore_signal_handler,
 
     if(NULL == app_lib_dir || NULL == log_dir) return XCC_ERRNO_INVAL;
 
-    //init once
+    //init only once
     if(xc_core_inited) return 0;
     xc_core_inited = 1;
 
@@ -486,10 +472,9 @@ int xc_core_init(int restore_signal_handler,
     if(NULL == (xc_core_kernel_version = strdup(buf))) return XCC_ERRNO_NOMEM;
 
     //init the tombstone file recorder
-    if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, log_prefix, log_suffix, (size_t)log_count_max))) return r;
+    if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, log_prefix, log_suffix, &xc_core_log_pathname))) return r;
 
     //strings passed to the dumper process
-    if(NULL == (xc_core_log_pathname = xc_recorder_get_log_pathname(xc_core_recorder))) return XCC_ERRNO_NOMEM;
     if(NULL != app_id)
         if(NULL == (xc_core_app_id = strdup(app_id))) return XCC_ERRNO_NOMEM;
     if(NULL != app_version)

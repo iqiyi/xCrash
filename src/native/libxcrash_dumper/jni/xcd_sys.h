@@ -27,14 +27,14 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include "xcc_util.h"
-#include "xcd_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int xcd_sys_record(xcd_recorder_t *recorder, uint64_t start_time, uint64_t crash_time,
-                   const char *app_id, const char *app_version, xcc_util_build_prop_t *props, size_t nthds);
+int xcd_sys_record(int log_fd, uint64_t start_time, uint64_t crash_time,
+                   const char *app_id, const char *app_version,
+                   xcc_util_build_prop_t *props, size_t nthds);
 
 #ifdef __cplusplus
 }

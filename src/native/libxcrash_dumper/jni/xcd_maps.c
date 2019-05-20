@@ -33,7 +33,6 @@
 #include "xcd_map.h"
 #include "xcd_util.h"
 #include "xcd_log.h"
-#include "xcd_recorder.h"
 
 typedef struct xcd_maps_item
 {
@@ -130,7 +129,7 @@ xcd_map_t *xcd_maps_get_prev_map(xcd_maps_t *self, xcd_map_t *cur_map)
     return (NULL == prev_mi ? NULL : &(prev_mi->map));
 }
 
-int xcd_maps_record(xcd_maps_t *self, xcd_recorder_t *recorder)
+int xcd_maps_record(xcd_maps_t *self, int log_fd)
 {
     int              r;
     xcd_maps_item_t *mi;
@@ -166,7 +165,7 @@ int xcd_maps_record(xcd_maps_t *self, xcd_recorder_t *recorder)
     if(0 == width_offset) width_offset = 1;
 
     //dump
-    if(0 != (r = xcd_recorder_write(recorder, "memory map:\n"))) return r;
+    if(0 != (r = xcc_util_write_str(log_fd, "memory map:\n"))) return r;
     TAILQ_FOREACH(mi, &(self->maps), link)
     {
         //get load_bias
@@ -202,18 +201,18 @@ int xcd_maps_record(xcd_maps_t *self, xcd_recorder_t *recorder)
         size = (mi->map.end - mi->map.start) / 1024;
         total_size += size;
 
-        if(0 != (r = xcd_recorder_print(recorder,
-                                        "    %0"XCC_UTIL_FMT_ADDR"-%0"XCC_UTIL_FMT_ADDR" %c%c%c %*"PRIxPTR" %*"PRIxPTR"K %s%s\n",
-                                        mi->map.start, mi->map.end,
-                                        mi->map.flags & PROT_READ ? 'r' : '-',
-                                        mi->map.flags & PROT_WRITE ? 'w' : '-',
-                                        mi->map.flags & PROT_EXEC ? 'x' : '-',
-                                        width_offset, mi->map.offset,
-                                        width_size, size,
-                                        name, load_bias_buf))) return r;
+        if(0 != (r = xcc_util_write_format(log_fd,
+                                           "    %0"XCC_UTIL_FMT_ADDR"-%0"XCC_UTIL_FMT_ADDR" %c%c%c %*"PRIxPTR" %*"PRIxPTR"K %s%s\n",
+                                           mi->map.start, mi->map.end,
+                                           mi->map.flags & PROT_READ ? 'r' : '-',
+                                           mi->map.flags & PROT_WRITE ? 'w' : '-',
+                                           mi->map.flags & PROT_EXEC ? 'x' : '-',
+                                           width_offset, mi->map.offset,
+                                           width_size, size,
+                                           name, load_bias_buf))) return r;
     }
-    if(0 != (r = xcd_recorder_print(recorder, "    TOTAL SIZE: 0x%"PRIxPTR"K (%"PRIuPTR"K)\n\n",
-                                    total_size, total_size))) return r;
+    if(0 != (r = xcc_util_write_format(log_fd, "    TOTAL SIZE: 0x%"PRIxPTR"K (%"PRIuPTR"K)\n\n",
+                                       total_size, total_size))) return r;
 
     return 0;
 }

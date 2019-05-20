@@ -26,13 +26,12 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include "xc_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void xc_jni_callback(xc_recorder_t *recorder, char *emergency, int write_log_failed);
+void xc_jni_callback(int log_fd, const char *log_pathname, char *emergency);
 
 #ifdef __cplusplus
 }

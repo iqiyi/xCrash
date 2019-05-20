@@ -27,6 +27,7 @@
 #include <string.h>
 #include <ucontext.h>
 #include "xcc_errno.h"
+#include "xcc_util.h"
 #include "xcd_regs.h"
 #include "xcd_memory.h"
 #include "xcd_util.h"
@@ -120,17 +121,17 @@ void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_le
     memcpy(&(self->r), regs, sizeof(uintptr_t) * regs_len);
 }
 
-int xcd_regs_record(xcd_regs_t *self, xcd_recorder_t *recorder)
+int xcd_regs_record(xcd_regs_t *self, int log_fd)
 {
-    return xcd_recorder_print(recorder,
-                              "    r0  %08x  r1  %08x  r2  %08x  r3  %08x\n"
-                              "    r4  %08x  r5  %08x  r6  %08x  r7  %08x\n"
-                              "    r8  %08x  r9  %08x  r10 %08x  r11 %08x\n"
-                              "    ip  %08x  sp  %08x  lr  %08x  pc  %08x\n\n",
-                              self->r[XCD_REGS_R0], self->r[XCD_REGS_R1], self->r[XCD_REGS_R2],  self->r[XCD_REGS_R3],
-                              self->r[XCD_REGS_R4], self->r[XCD_REGS_R5], self->r[XCD_REGS_R6],  self->r[XCD_REGS_R7],
-                              self->r[XCD_REGS_R8], self->r[XCD_REGS_R9], self->r[XCD_REGS_R10], self->r[XCD_REGS_R11],
-                              self->r[XCD_REGS_IP], self->r[XCD_REGS_SP], self->r[XCD_REGS_LR],  self->r[XCD_REGS_PC]);
+    return xcc_util_write_format(log_fd,
+                                 "    r0  %08x  r1  %08x  r2  %08x  r3  %08x\n"
+                                 "    r4  %08x  r5  %08x  r6  %08x  r7  %08x\n"
+                                 "    r8  %08x  r9  %08x  r10 %08x  r11 %08x\n"
+                                 "    ip  %08x  sp  %08x  lr  %08x  pc  %08x\n\n",
+                                 self->r[XCD_REGS_R0], self->r[XCD_REGS_R1], self->r[XCD_REGS_R2],  self->r[XCD_REGS_R3],
+                                 self->r[XCD_REGS_R4], self->r[XCD_REGS_R5], self->r[XCD_REGS_R6],  self->r[XCD_REGS_R7],
+                                 self->r[XCD_REGS_R8], self->r[XCD_REGS_R9], self->r[XCD_REGS_R10], self->r[XCD_REGS_R11],
+                                 self->r[XCD_REGS_IP], self->r[XCD_REGS_SP], self->r[XCD_REGS_LR],  self->r[XCD_REGS_PC]);
 }
 
 int xcd_regs_try_step_sigreturn(xcd_regs_t *self, uintptr_t rel_pc, xcd_memory_t *memory, pid_t pid)
