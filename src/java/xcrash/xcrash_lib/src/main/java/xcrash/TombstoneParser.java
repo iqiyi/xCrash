@@ -403,7 +403,7 @@ public class TombstoneParser {
         if (logPath != null) {
             try {
                 br = new BufferedReader(new FileReader(logPath));
-                parseFromReader(map, br);
+                parseFromReader(map, br, true);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -421,7 +421,7 @@ public class TombstoneParser {
         if (emergency != null) {
             try {
                 br = new BufferedReader(new StringReader(emergency));
-                parseFromReader(map, br);
+                parseFromReader(map, br, false);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -557,7 +557,36 @@ public class TombstoneParser {
         }
     }
 
-    private static void parseFromReader(Map<String, String> map, BufferedReader br) throws IOException {
+    private static String readLineInBinary(BufferedReader br) throws IOException {
+
+        // Peek the next 2 characters to determine if there is still valid text.
+
+        try {
+            br.mark(2);
+        } catch (Exception ignored) {
+            return br.readLine();
+        }
+
+        try {
+            for (int i = 0; i < 2; i++) {
+                int c = br.read();
+                if (c == -1) {
+                    br.reset();
+                    return null;
+                } else if (c > 0) {
+                    br.reset();
+                    return br.readLine();
+                }
+            }
+            br.reset();
+            return null;
+        } catch (Exception ignored) {
+            br.reset();
+            return br.readLine();
+        }
+    }
+
+    private static void parseFromReader(Map<String, String> map, BufferedReader br, boolean binary) throws IOException {
         String next, line;
         String sectionTitle = null;
         StringBuilder sectionContent = new StringBuilder();
@@ -567,9 +596,9 @@ public class TombstoneParser {
         Matcher matcher;
         Status status = Status.UNKNOWN;
 
-        line = br.readLine();
+        line = (binary ? readLineInBinary(br) : br.readLine());
         for (boolean last = (line == null); !last; line = next) {
-            last = ((next = br.readLine()) == null);
+            last = ((next = (binary ? readLineInBinary(br) : br.readLine())) == null);
             switch (status) {
                 case UNKNOWN:
                     if (line.equals(Util.sepHead)) {

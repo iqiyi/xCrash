@@ -97,8 +97,9 @@ public class MyCustomApplication extends Application {
     }
 
     private void sendThenDeleteCrashLog(String logPath, String emergency) {
-        Map<String, String> map = TombstoneParser.parse(logPath, emergency);
-        String crashReport = new JSONObject(map).toString();
+        // Parse
+        //Map<String, String> map = TombstoneParser.parse(logPath, emergency);
+        //String crashReport = new JSONObject(map).toString();
 
         // Send the crash report to server-side.
         // ......
