@@ -194,6 +194,9 @@ public class TombstoneManager {
                 return false;
             }
         });
+        if (files == null) {
+            return new File[0];
+        }
 
         //sort
         Arrays.sort(files, new Comparator<File>() {
@@ -231,6 +234,9 @@ public class TombstoneManager {
                 return false;
             }
         });
+        if (files == null) {
+            return false;
+        }
 
         boolean success = true;
         for (File f : files) {

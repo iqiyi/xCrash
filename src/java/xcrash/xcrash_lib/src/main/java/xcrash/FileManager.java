@@ -70,12 +70,16 @@ class FileManager {
             if (!dir.exists() || !dir.isDirectory()) {
                 return;
             }
+            File[] files = dir.listFiles();
+            if (files == null) {
+                return;
+            }
 
             int javaLogCount = 0;
             int nativeLogCount = 0;
             int placeholderCleanCount = 0;
             int placeholderDirtyCount = 0;
-            for (final File file : dir.listFiles()) {
+            for (final File file : files) {
                 if (file.isFile()) {
                     String name = file.getName();
                     if (name.startsWith(Util.logPrefix + "_")) {
@@ -169,18 +173,20 @@ class FileManager {
             }
         });
 
-        //try to rename from clean placeholder file
-        int cleanFilesCount = cleanFiles.length;
-        while (cleanFilesCount > 0) {
-            File cleanFile = cleanFiles[cleanFilesCount - 1];
-            try {
-                if (cleanFile.renameTo(newFile)) {
-                    return newFile;
+        if (cleanFiles != null) {
+            //try to rename from clean placeholder file
+            int cleanFilesCount = cleanFiles.length;
+            while (cleanFilesCount > 0) {
+                File cleanFile = cleanFiles[cleanFilesCount - 1];
+                try {
+                    if (cleanFile.renameTo(newFile)) {
+                        return newFile;
+                    }
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
+                cleanFile.delete();
+                cleanFilesCount--;
             }
-            cleanFile.delete();
-            cleanFilesCount--;
         }
 
         //try to create new file
@@ -249,7 +255,7 @@ class FileManager {
                     return name.startsWith(placeholderPrefix + "_") && name.endsWith(placeholderCleanSuffix);
                 }
             });
-            if (cleanFiles.length >= this.placeholderCountMax) {
+            if (cleanFiles != null && cleanFiles.length >= this.placeholderCountMax) {
                 return logFile.delete(); //no need to recycle the log file
             }
 
@@ -303,7 +309,7 @@ class FileManager {
         });
 
         //delete unwanted files
-        if (nativeFiles.length >= nativeLogCountMax) {
+        if (nativeFiles != null && nativeFiles.length >= nativeLogCountMax) {
             Arrays.sort(nativeFiles, new Comparator<File>() {
                 @Override
                 public int compare(File f1, File f2) {
@@ -314,7 +320,7 @@ class FileManager {
                 recycleLogFile(nativeFiles[i]);
             }
         }
-        if (javaFiles.length >= javaLogCountMax) {
+        if (javaFiles != null && javaFiles.length >= javaLogCountMax) {
             Arrays.sort(javaFiles, new Comparator<File>() {
                 @Override
                 public int compare(File f1, File f2) {
@@ -336,12 +342,18 @@ class FileManager {
                 return name.startsWith(placeholderPrefix + "_") && name.endsWith(placeholderCleanSuffix);
             }
         });
+        if (cleanFiles == null) {
+            return;
+        }
         File[] dirtyFiles = dir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.startsWith(placeholderPrefix + "_") && name.endsWith(placeholderDirtySuffix);
             }
         });
+        if (dirtyFiles == null) {
+            return;
+        }
 
         //create clean placeholder files from dirty placeholder files or new files
         int i = 0;
@@ -390,15 +402,17 @@ class FileManager {
         }
 
         //don't keep too many clean placeholder files
-        if (cleanFiles.length > this.placeholderCountMax) {
+        if (cleanFiles != null && cleanFiles.length > this.placeholderCountMax) {
             for (i = 0; i < cleanFiles.length - this.placeholderCountMax; i++) {
                 cleanFiles[i].delete();
             }
         }
 
         //delete all remaining dirty placeholder files
-        for (File dirtyFile : dirtyFiles) {
-            dirtyFile.delete();
+        if (dirtyFiles != null) {
+            for (File dirtyFile : dirtyFiles) {
+                dirtyFile.delete();
+            }
         }
     }
 

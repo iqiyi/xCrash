@@ -164,7 +164,7 @@ class Util {
                     return android.text.TextUtils.isDigitsOnly(name);
                 }
             });
-            return files.length;
+            return files == null ? 0 : files.length;
         } catch (Exception ignored) {
             return 0;
         }

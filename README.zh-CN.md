@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.1.1-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.1.2-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -42,7 +42,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.1'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.2'
 }
 ```
 
@@ -98,7 +98,7 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 #### 1. 下载 [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。
 
-#### 2. 编译和安装 native 库。
+#### 2. 编译和复制 native 库。
 
 ```
 cd ./src/native/

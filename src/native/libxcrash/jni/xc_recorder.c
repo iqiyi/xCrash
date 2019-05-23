@@ -45,7 +45,8 @@ struct xc_recorder
 {
     char    *log_dir;
     char    *log_pathname;
-    int      create_new_file;
+    int      if_create_new_file;
+    int      prepared_fd;
 };
 
 int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *app_version,
@@ -64,9 +65,10 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
         r =  XCC_ERRNO_NOMEM;
         goto err;
     }
-    (*self)->log_pathname           = NULL;
-    (*self)->create_new_file        = 0;
-
+    (*self)->log_pathname       = NULL;
+    (*self)->if_create_new_file = 0;
+    (*self)->prepared_fd        = -1;
+    
     //create log dirs
     if(0 != (r = xc_util_mkdirs(log_dir))) goto err;
 
@@ -83,7 +85,10 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
         goto err;
     }
     *log_pathname = (*self)->log_pathname;
-    
+
+    //the prepared fd for fd exhaust
+    (*self)->prepared_fd = TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
+
     return 0;
 
  err:
@@ -98,43 +103,71 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
 
 int xc_recorder_create_and_open(xc_recorder_t *self)
 {
-    int               fd;
+    int               fd = -1;
     char              buf[512];
     char              pathname[PATH_MAX];
     int               n, i;
     xc_util_dirent_t *ent;
+    int               dir_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
+    int               file_flags = O_RDWR | O_CLOEXEC;
+    int               new_file_flags = O_CREAT | O_WRONLY | O_CLOEXEC | O_TRUNC | O_APPEND;
 
     if(NULL == self->log_pathname) return -1;
 
-    //try to use placeholder file
-    if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) >= 0)
+    //open dir
+    if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0)
     {
-        while((n = syscall(XC_UTIL_SYSCALL_GETDENTS, fd, buf, sizeof(buf))) > 0)
+        if(self->prepared_fd >= 0)
         {
-            for(i = 0; i < n; i += ent->d_reclen)
-            {
-                ent = (xc_util_dirent_t *)(buf + i);
+            close(self->prepared_fd);
+            self->prepared_fd = -1;
+            if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0) goto new_file;
+        }
+    }
 
-                // placeholder_12345678901234567890.clean.xcrash
-                // file name length: 45
-                if(45 == strlen(ent->d_name) &&
-                   0 == memcmp(ent->d_name, "placeholder_", 12) &&
-                   0 == memcmp(ent->d_name + 32, ".clean.xcrash", 13))
+    //try to rename a placeholder file and open it
+    while((n = syscall(XC_UTIL_SYSCALL_GETDENTS, fd, buf, sizeof(buf))) > 0)
+    {
+        for(i = 0; i < n; i += ent->d_reclen)
+        {
+            ent = (xc_util_dirent_t *)(buf + i);
+            
+            // placeholder_12345678901234567890.clean.xcrash
+            // file name length: 45
+            if(45 == strlen(ent->d_name) &&
+               0 == memcmp(ent->d_name, "placeholder_", 12) &&
+               0 == memcmp(ent->d_name + 32, ".clean.xcrash", 13))
+            {
+                xcc_fmt_snprintf(pathname, sizeof(pathname), "%s/%s", self->log_dir, ent->d_name);
+                if(0 == rename(pathname, self->log_pathname))
                 {
-                    xcc_fmt_snprintf(pathname, sizeof(pathname), "%s/%s", self->log_dir, ent->d_name);
-                    if(0 == rename(pathname, self->log_pathname))
-                    {
-                        close(fd);
-                        return TEMP_FAILURE_RETRY(open(self->log_pathname, O_RDWR | O_CLOEXEC));
-                    }
+                    close(fd);
+                    fd = -1;
+                    return TEMP_FAILURE_RETRY(open(self->log_pathname, file_flags));
                 }
             }
         }
     }
+    if(fd >= 0)
+    {
+        close(fd);
+        fd = -1;
+    }
     
+ new_file:
     //create new file
-    self->create_new_file = 1;
-    return TEMP_FAILURE_RETRY(open(self->log_pathname, O_CREAT | O_WRONLY | O_CLOEXEC | O_TRUNC | O_APPEND, 0644));
+    self->if_create_new_file = 1;
+    
+    if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
+    
+    if(self->prepared_fd >= 0)
+    {
+        close(self->prepared_fd);
+        self->prepared_fd = -1;
+        if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
+    }
+
+    return -1;
 }
 
 int xc_recorder_seek_to_end(xc_recorder_t *self, int log_fd)
@@ -144,7 +177,7 @@ int xc_recorder_seek_to_end(xc_recorder_t *self, int log_fd)
     off_t   offset = 0;
 
     //new file
-    if(self->create_new_file) return log_fd;
+    if(self->if_create_new_file) return log_fd;
     
     //placeholder file
     if(lseek(log_fd, 0, SEEK_SET) < 0) goto err;

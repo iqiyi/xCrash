@@ -56,7 +56,6 @@ static pthread_mutex_t        xc_core_mutex   = PTHREAD_MUTEX_INITIALIZER;
 static int                    xc_core_handled = 0;
 static int                    xc_core_inited  = 0;
 static int                    xc_core_log_fd  = -1;
-static int                    xc_core_args_fd = -1;
 
 //global cache which used in signal handler
 static char                  *xc_core_dumper_pathname;
@@ -74,15 +73,38 @@ static char                  *xc_core_app_id = "unknown";
 static char                  *xc_core_app_version = "unknown";
 static char                  *xc_core_dump_all_threads_whitelist = NULL;
 
-static int xc_core_perpare_dumper_parameters()
+static void xc_core_exec_dumper()
 {
+    //for fd exhaust
+    //keep the log_fd open for writing error msg before execl()
+    int i;
+    for(i = 0; i < 1024; i++)
+        if(i != xc_core_log_fd)
+            syscall(SYS_close, i);
+
+    //hold the fd 0, 1, 2
+    errno = 0;
+    int devnull = TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
+    if(devnull < 0)
+    {
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"open /dev/null failed, errno=%d\n\n", errno);
+        _exit(90);
+    }
+    else if(0 != devnull)
+    {
+        xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"/dev/null fd NOT 0, errno=%d\n\n", errno);
+        _exit(91);
+    }
+    TEMP_FAILURE_RETRY(dup2(devnull, STDOUT_FILENO));
+    TEMP_FAILURE_RETRY(dup2(devnull, STDERR_FILENO));
+    
     //create args pipe
     int pipefd[2];
     errno = 0;
     if(0 != pipe2(pipefd, O_CLOEXEC))
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"create args pipe failed, errno=%d\n\n", errno);
-        return -1;
+        _exit(92);
     }
 
     //set args pipe size
@@ -93,7 +115,7 @@ static int xc_core_perpare_dumper_parameters()
     if(fcntl(pipefd[1], F_SETPIPE_SZ, write_len) < write_len)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"set args pipe size failed, errno=%d\n\n", errno);
-        return -1;
+        _exit(93);
     }
 
     //write args to pipe
@@ -110,14 +132,19 @@ static int xc_core_perpare_dumper_parameters()
     if((ssize_t)write_len != ret)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"write args to pipe failed, return=%d, errno=%d\n\n", ret, errno);
-        return -1;
+        _exit(94);
     }
 
-    //close write side of the pipe 
-    close(pipefd[1]);
+    //copy the read-side of the args-pipe to stdin (fd: 0)
+    TEMP_FAILURE_RETRY(dup2(pipefd[0], STDIN_FILENO));
+    
+    syscall(SYS_close, pipefd[0]);
+    syscall(SYS_close, pipefd[1]);
 
-    //return the read side of the pipe
-    return pipefd[0];
+    //escape to the dumper process
+    errno = 0;
+    execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
+    _exit(100 + errno);
 }
 
 static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
@@ -195,9 +222,6 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         restore_orig_ptracer = 1;
     }
 
-    //perpare parameters for crash dumper process
-    if((xc_core_args_fd = xc_core_perpare_dumper_parameters()) < 0) goto end;
-
     //spawn crash dumper process
     errno = 0;
     pid_t dumper_pid = fork();
@@ -209,10 +233,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     else if(0 == dumper_pid)
     {
         //child process ...
-        TEMP_FAILURE_RETRY(dup2(xc_core_args_fd, STDIN_FILENO));
-        errno = 0;
-        execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
-        _exit(100 + errno);
+        xc_core_exec_dumper();
     }
 
     //parent process ...

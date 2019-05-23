@@ -119,11 +119,21 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         Date crashTime = new Date();
 
         //get emergency
-        String emergency = getEmergency(crashTime, thread, throwable);
+        String emergency = null;
+        try {
+            emergency = getEmergency(crashTime, thread, throwable);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         //create log file
-        String logPath = String.format(Locale.US, "%s/%s_%020d_%s__%s%s", logDir, Util.logPrefix, startTime.getTime() * 1000, appVersion, processName, Util.javaLogSuffix);
-        File logFile = FileManager.getInstance().createLogFile(logPath);
+        File logFile = null;
+        try {
+            String logPath = String.format(Locale.US, "%s/%s_%020d_%s__%s%s", logDir, Util.logPrefix, startTime.getTime() * 1000, appVersion, processName, Util.javaLogSuffix);
+            logFile = FileManager.getInstance().createLogFile(logPath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         //write info to log file
         if (logFile != null) {
