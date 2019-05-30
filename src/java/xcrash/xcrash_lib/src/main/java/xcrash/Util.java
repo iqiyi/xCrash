@@ -47,6 +47,8 @@ class Util {
     private static final String memInfoFmt = "%21s %8s\n";
     private static final String memInfoFmt2 = "%21s %8s %21s %8s\n";
 
+    static final String TAG = "xcrash_" + Version.version;
+
     static final String sepHead = "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***";
     static final String sepOtherThreads = "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---";
     static final String sepOtherThreadsEnding = "+++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++";
@@ -80,17 +82,17 @@ class Util {
     private static final Pattern patBuffers = Pattern.compile("^Buffers:\\s+(\\d*)\\s+kB$");
     private static final Pattern patCached = Pattern.compile("^Cached:\\s+(\\d*)\\s+kB$");
 
-    static class MemoryInfo {
-        MemoryInfo() {
-            systemMemoryTotalKb = 0;
-            systemMemoryUsedKb = 0;
+    static class SystemMemoryInfo {
+        SystemMemoryInfo() {
+            totalKb = 0;
+            usedKb = 0;
         }
-        long systemMemoryTotalKb;
-        long systemMemoryUsedKb;
+        long totalKb;
+        long usedKb;
     }
 
-    static MemoryInfo getMemoryInfo(Context ctx) {
-        Util.MemoryInfo memoryInfo = new Util.MemoryInfo();
+    static SystemMemoryInfo getSystemMemoryInfo(Context ctx) {
+        Util.SystemMemoryInfo memoryInfo = new Util.SystemMemoryInfo();
 
         //get system total and used memory
         if (android.os.Build.VERSION.SDK_INT >= 16) {
@@ -99,13 +101,13 @@ class Util {
                 ActivityManager activityManager = (ActivityManager) ctx.getSystemService(ACTIVITY_SERVICE);
                 if (activityManager != null) {
                     activityManager.getMemoryInfo(mi);
-                    memoryInfo.systemMemoryTotalKb = mi.totalMem / 1024;
-                    memoryInfo.systemMemoryUsedKb = (mi.totalMem - mi.availMem) / 1024;
+                    memoryInfo.totalKb = mi.totalMem / 1024;
+                    memoryInfo.usedKb = (mi.totalMem - mi.availMem) / 1024;
                 }
             } catch (Exception ignored) {
             }
         }
-        if (memoryInfo.systemMemoryTotalKb == 0 || memoryInfo.systemMemoryUsedKb == 0) {
+        if (memoryInfo.totalKb == 0 || memoryInfo.usedKb == 0) {
             BufferedReader br = null;
             String line;
             Matcher matcher;
@@ -136,12 +138,12 @@ class Util {
                         memCached = Long.parseLong(matcher.group(1), 10);
                     }
                 }
-                memoryInfo.systemMemoryTotalKb = memTotal;
-                memoryInfo.systemMemoryUsedKb = memTotal - memFree - memBuffers - memCached;
+                memoryInfo.totalKb = memTotal;
+                memoryInfo.usedKb = memTotal - memFree - memBuffers - memCached;
             } catch (Exception e) {
-                memoryInfo.systemMemoryTotalKb = 0;
-                memoryInfo.systemMemoryUsedKb = 0;
-                e.printStackTrace();
+                memoryInfo.totalKb = 0;
+                memoryInfo.usedKb = 0;
+                XCrash.getLogger().i(Util.TAG, "Util getSystemMemoryInfo failed", e);
             } finally {
                 if (br != null) {
                     try {
@@ -241,7 +243,7 @@ class Util {
         return appVersion;
     }
 
-    static String getMemoryInfo() {
+    static String getProcessMemoryInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append(" Process Summary (From: android.os.Debug.MemoryInfo)\n");
         sb.append(String.format(Locale.US, memInfoFmt, "", "Pss(KB)"));
@@ -272,7 +274,7 @@ class Util {
                 sb.append(String.format(Locale.US, memInfoFmt, "TOTAL:", String.valueOf(mi.getTotalPss())));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().i(Util.TAG, "Util getProcessMemoryInfo failed", e);
         }
 
         return sb.toString();

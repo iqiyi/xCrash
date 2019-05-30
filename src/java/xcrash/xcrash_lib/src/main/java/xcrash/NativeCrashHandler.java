@@ -56,12 +56,12 @@ class NativeCrashHandler {
         try {
             System.loadLibrary("xcrash");
         } catch (Throwable e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "NativeCrashHandler System.loadLibrary failed", e);
             try {
                 //for some unusual Android version
                 System.load(ctx.getFilesDir().getParent() + "/lib/libxcrash.so");
             } catch (Throwable e2) {
-                e2.printStackTrace();
+                XCrash.getLogger().e(Util.TAG, "NativeCrashHandler System.load failed", e);
                 return Errno.LOAD_LIBRARY_FAILED;
             }
         }
@@ -87,7 +87,7 @@ class NativeCrashHandler {
                     "xcrash/NativeCrashHandler",
                     "callback");
         } catch (Throwable e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "NativeCrashHandler initEx failed", e);
             return Errno.INIT_LIBRARY_FAILED;
         }
     }
@@ -101,7 +101,7 @@ class NativeCrashHandler {
     private static void callback(String logPath, String emergency) {
 
         if (!TextUtils.isEmpty(logPath)) {
-            TombstoneManager.appendSection(logPath, "memory info", Util.getMemoryInfo());
+            TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
         }
 
         ICrashCallback callback = NativeCrashHandler.getInstance().callback;
@@ -109,7 +109,7 @@ class NativeCrashHandler {
             try {
                 callback.onCrash(logPath, emergency);
             } catch (Exception e) {
-                e.printStackTrace();
+                XCrash.getLogger().w(Util.TAG, "NativeCrashHandler callback.onCrash failed", e);
             }
         }
     }

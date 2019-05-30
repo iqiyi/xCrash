@@ -96,7 +96,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         try {
             Thread.setDefaultUncaughtExceptionHandler(this);
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "JavaCrashHandler setDefaultUncaughtExceptionHandler failed", e);
         }
     }
 
@@ -105,7 +105,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         try {
             handleException(thread, throwable);
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "JavaCrashHandler handleException failed", e);
         }
 
         if (this.rethrow && defaultHandler != null) {
@@ -118,21 +118,21 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private void handleException(Thread thread, Throwable throwable) {
         Date crashTime = new Date();
 
-        //get emergency
-        String emergency = null;
-        try {
-            emergency = getEmergency(crashTime, thread, throwable);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         //create log file
         File logFile = null;
         try {
             String logPath = String.format(Locale.US, "%s/%s_%020d_%s__%s%s", logDir, Util.logPrefix, startTime.getTime() * 1000, appVersion, processName, Util.javaLogSuffix);
             logFile = FileManager.getInstance().createLogFile(logPath);
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "JavaCrashHandler createLogFile failed", e);
+        }
+
+        //get emergency
+        String emergency = null;
+        try {
+            emergency = getEmergency(crashTime, thread, throwable);
+        } catch (Exception e) {
+            XCrash.getLogger().e(Util.TAG, "JavaCrashHandler getEmergency failed", e);
         }
 
         //write info to log file
@@ -142,7 +142,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 raf = new RandomAccessFile(logFile, "rws");
 
                 //write emergency info
-                raf.write(emergency.getBytes("UTF-8"));
+                if (emergency != null) {
+                    raf.write(emergency.getBytes("UTF-8"));
+                }
 
                 //If we wrote the emergency info successfully, we don't need to return it from callback again.
                 emergency = null;
@@ -154,7 +156,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
                 //write memory info
                 raf.write("memory info:\n".getBytes("UTF-8"));
-                raf.write(Util.getMemoryInfo().getBytes("UTF-8"));
+                raf.write(Util.getProcessMemoryInfo().getBytes("UTF-8"));
                 raf.write("\n".getBytes("UTF-8"));
 
                 //write other threads info
@@ -162,7 +164,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                     raf.write(getOtherThreadsInfo(thread).getBytes("UTF-8"));
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                XCrash.getLogger().e(Util.TAG, "JavaCrashHandler write log file failed", e);
             } finally {
                 if (raf != null) {
                     try {
@@ -184,7 +186,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     private String getEmergency(Date crashTime, Thread thread, Throwable throwable) {
         //memory info
-        Util.MemoryInfo mi = Util.getMemoryInfo(ctx);
+        Util.SystemMemoryInfo mi = Util.getSystemMemoryInfo(ctx);
 
         //stack stace
         StringWriter sw = new StringWriter();
@@ -204,8 +206,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 + "CPU loadavg: '" + Util.readFileLine("/proc/loadavg") + "'\n"
                 + "CPU online: '" + Util.readFileLine("/sys/devices/system/cpu/online") + "'\n"
                 + "CPU offline: '" + Util.readFileLine("/sys/devices/system/cpu/offline") + "'\n"
-                + "System memory total: '" + mi.systemMemoryTotalKb + " kB'\n"
-                + "System memory used: '" + mi.systemMemoryUsedKb + " kB'\n"
+                + "System memory total: '" + mi.totalKb + " kB'\n"
+                + "System memory used: '" + mi.usedKb + " kB'\n"
                 + "Number of threads: '" + Util.getNumberOfThreads(pid) + "'\n"
                 + "Rooted: '" + (Util.isRoot() ? "Yes" : "No") + "'\n"
                 + "API level: '" + Build.VERSION.SDK_INT + "'\n"
@@ -282,7 +284,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().w(Util.TAG, "JavaCrashHandler run logcat command failed", e);
         } finally {
             if (br != null) {
                 try {
@@ -307,7 +309,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 try {
                     whiteList.add(Pattern.compile(s));
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    XCrash.getLogger().w(Util.TAG, "JavaCrashHandler pattern compile failed", e);
                 }
             }
         }

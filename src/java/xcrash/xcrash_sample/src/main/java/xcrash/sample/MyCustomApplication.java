@@ -30,7 +30,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.util.Map;
 
 import xcrash.TombstoneManager;
 import xcrash.TombstoneParser;
@@ -123,7 +122,7 @@ public class MyCustomApplication extends Application {
             writer = new FileWriter(debug, false);
             writer.write(new JSONObject(TombstoneParser.parse(logPath, emergency)).toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.d(TAG, "debug failed", e);
         } finally {
             if (writer != null) {
                 try {

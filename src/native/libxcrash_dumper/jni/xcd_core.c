@@ -62,17 +62,28 @@ static char                  *xcd_core_dump_all_threads_whitelist = NULL;
 
 static int xcd_core_read_stdin(const char *what, void *buf, size_t len)
 {
-    ssize_t rc = TEMP_FAILURE_RETRY(read(STDIN_FILENO, buf, len));
-    if(-1 == rc)
+    size_t  nread = 0;
+    ssize_t n;
+
+    while(len - nread > 0)
     {
-        XCD_LOG_ERROR("CORE: read (%s) failed, errno=%d", what, errno);
-        return XCC_ERRNO_SYS;
+        n = XCC_UTIL_TEMP_FAILURE_RETRY(read(STDIN_FILENO, buf + nread, len - nread));
+        if(n < 0)
+        {
+            XCD_LOG_ERROR("CORE: read %s failed, errno=%d", what, errno);
+            return XCC_ERRNO_SYS;
+        }
+        else if(0 == n)
+        {
+            XCD_LOG_ERROR("CORE: read %s failed, expect %zu, read %zu", what, len, nread);
+            return XCC_ERRNO_SYS;
+        }
+        else
+        {
+            nread += (size_t)n;
+        }
     }
-    else if((ssize_t)len != rc)
-    {
-        XCD_LOG_ERROR("CORE: read %zd bytes (%s), expected %zu", rc, what, len);
-        return XCC_ERRNO_SYS;
-    }
+    
     return 0;
 }
 
@@ -158,24 +169,24 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
     //restore the signal handler
     if(0 != xcc_signal_unregister()) goto end;
 
-    //open file
-    if(xcd_core_log_fd < 0)
+    if(xcd_core_log_fd >= 0)
     {
-        if(NULL != xcd_core_log_pathname)
-            xcd_core_log_fd = open(xcd_core_log_pathname, O_WRONLY | O_CLOEXEC);
+        //dump signal, code, backtrace
+        if(0 != xcc_util_write_format_safe(xcd_core_log_fd,
+                                           "\n\n"
+                                           "xcrash error debug:\n"
+                                           "dumper has crashed (signal: %d, code: %d)\n",
+                                           si->si_signo, si->si_code)) goto err;
+        if(0 != xcc_unwind_get(uc, NULL, buf, sizeof(buf))) goto err;
+        if(0 != xcc_util_write_str(xcd_core_log_fd, buf)) goto err;
     }
-    if(xcd_core_log_fd < 0) goto end;
 
-    //dump signal, code, backtrace
-    if(0 != xcc_util_write_format_safe(xcd_core_log_fd,
-                                       "\n\n"
-                                       "xcrash error debug:\n"
-                                       "dumper has crashed (signal: %d, code: %d)\n",
-                                       si->si_signo, si->si_code)) goto end;
-    if(0 != xcc_unwind_get(uc, NULL, buf, sizeof(buf))) goto end;
-    if(0 != xcc_util_write_str(xcd_core_log_fd, buf)) goto end;
-    if(0 != xcc_util_write_str(xcd_core_log_fd, "\n")) goto end;
-
+ err:
+    if(xcd_core_log_fd >= 0)
+    {
+        xcc_util_write_str(xcd_core_log_fd, "\n\n");
+    }
+    
  end:
     xcc_signal_raise(sig);
     return;
@@ -189,14 +200,14 @@ int main(int argc, char** argv)
     //don't leave a zombie process
     alarm(30);
 
-    //register signal handler for catching self-crashing
-    xcc_signal_register(xcd_core_signal_handler);
-
     //read args from stdin
     if(0 != xcd_core_read_args()) exit(1);
 
     //open log file
-    if(0 > (xcd_core_log_fd = open(xcd_core_log_pathname, O_WRONLY | O_CLOEXEC))) exit(2);
+    if(0 > (xcd_core_log_fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(xcd_core_log_pathname, O_WRONLY | O_CLOEXEC)))) exit(2);
+
+    //register signal handler for catching self-crashing
+    xcc_signal_register(xcd_core_signal_handler);
 
     //create process object
     if(0 != xcd_process_create(&xcd_core_proc,

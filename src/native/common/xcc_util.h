@@ -53,14 +53,14 @@ extern "C" {
             __typeof__ (b) _b = (b); \
             _a < _b ? _a : _b; })
 
-#ifndef TEMP_FAILURE_RETRY
-#define TEMP_FAILURE_RETRY(exp) ({         \
-    __typeof__(exp) _rc;                   \
-    do {                                   \
-        errno = 0;                         \
-        _rc = (exp);                       \
-    } while (_rc == -1 && errno == EINTR); \
-    _rc; })
+#ifndef XCC_UTIL_TEMP_FAILURE_RETRY
+#define XCC_UTIL_TEMP_FAILURE_RETRY(exp) ({         \
+            __typeof__(exp) _rc;                    \
+            do {                                    \
+                errno = 0;                          \
+                _rc = (exp);                        \
+            } while (_rc == -1 && errno == EINTR);  \
+            _rc; })
 #endif
 
 #if defined(__arm__)

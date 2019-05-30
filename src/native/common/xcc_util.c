@@ -311,7 +311,7 @@ int xcc_util_read_file_line(const char *path, char *buf, size_t len)
     int fd = -1;
     int r = 0;
     
-    if(0 > (fd = TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_CLOEXEC))))
+    if(0 > (fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_CLOEXEC))))
     {
         r = XCC_ERRNO_SYS;
         goto end;

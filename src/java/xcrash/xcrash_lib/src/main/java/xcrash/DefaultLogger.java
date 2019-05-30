@@ -19,11 +19,59 @@
 // SOFTWARE.
 //
 
-// Created by caikelun on 2019-03-07.
+// Created by caikelun on 2019-05-30.
+package xcrash;
 
-#ifndef XCC_VERSION_H
-#define XCC_VERSION_H 1
+import android.util.Log;
 
-#define XCC_VERSION_STR "xCrash 2.1.3"
+class DefaultLogger implements ILogger {
+    @Override
+    public void v(String tag, String msg) {
+        Log.v(tag, msg);
+    }
 
-#endif
+    @Override
+    public void v(String tag, String msg, Throwable tr) {
+        Log.v(tag, msg, tr);
+    }
+
+    @Override
+    public void d(String tag, String msg) {
+        Log.d(tag, msg);
+    }
+
+    @Override
+    public void d(String tag, String msg, Throwable tr) {
+        Log.d(tag, msg, tr);
+    }
+
+    @Override
+    public void i(String tag, String msg) {
+        Log.i(tag, msg);
+    }
+
+    @Override
+    public void i(String tag, String msg, Throwable tr) {
+        Log.i(tag, msg, tr);
+    }
+
+    @Override
+    public void w(String tag, String msg) {
+        Log.w(tag, msg);
+    }
+
+    @Override
+    public void w(String tag, String msg, Throwable tr) {
+        Log.w(tag, msg, tr);
+    }
+
+    @Override
+    public void e(String tag, String msg) {
+        Log.e(tag, msg);
+    }
+
+    @Override
+    public void e(String tag, String msg, Throwable tr) {
+        Log.e(tag, msg, tr);
+    }
+}

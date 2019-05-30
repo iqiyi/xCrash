@@ -119,7 +119,7 @@ class FileManager {
                 this.delayMs = 0;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager init failed", e);
         }
     }
 
@@ -148,7 +148,7 @@ class FileManager {
                 );
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager maintain start failed", e);
         }
     }
 
@@ -182,7 +182,8 @@ class FileManager {
                     if (cleanFile.renameTo(newFile)) {
                         return newFile;
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    XCrash.getLogger().e(Util.TAG, "FileManager createLogFile by renameTo failed", e);
                 }
                 cleanFile.delete();
                 cleanFilesCount--;
@@ -193,12 +194,14 @@ class FileManager {
         try {
             if (newFile.createNewFile()) {
                 return newFile;
+            } else {
+                XCrash.getLogger().e(Util.TAG, "FileManager createLogFile by createNewFile failed, file already exists");
+                return null;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            XCrash.getLogger().e(Util.TAG, "FileManager createLogFile by createNewFile failed", e);
+            return null;
         }
-
-        //failed
-        return null;
     }
 
     boolean appendText(String logPath, String text) {
@@ -225,7 +228,7 @@ class FileManager {
 
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager appendText failed", e);
             return false;
         } finally {
             if (raf != null) {
@@ -239,11 +242,11 @@ class FileManager {
 
     @SuppressWarnings({"unused"})
     boolean recycleLogFile(File logFile) {
-        try {
-            if (this.logDir == null) {
-                return logFile.delete();
-            }
+        if (this.logDir == null) {
+            return false;
+        }
 
+        try {
             if (this.placeholderCountMax <= 0) {
                 return logFile.delete();
             }
@@ -269,8 +272,12 @@ class FileManager {
             //clean the dirty file
             return cleanTheDirtyFile(dirtyFile);
         } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+            XCrash.getLogger().e(Util.TAG, "FileManager recycleLogFile failed", e);
+            try {
+                return logFile.delete();
+            } catch (Exception ignored) {
+                return false;
+            }
         }
     }
 
@@ -283,13 +290,13 @@ class FileManager {
         try {
             doMaintainTombstone(dir);
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager doMaintainTombstone failed", e);
         }
 
         try {
             doMaintainPlaceholder(dir);
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager doMaintainPlaceholder failed", e);
         }
     }
 
@@ -374,8 +381,7 @@ class FileManager {
                             cleanFilesCount++;
                         }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (Exception ignored) {
                 }
             }
 
@@ -451,7 +457,7 @@ class FileManager {
             String newCleanFilePath = String.format(Locale.US, "%s/%s_%020d%s", logDir, placeholderPrefix, new Date().getTime() * 1000 + getNextUnique(), placeholderCleanSuffix);
             succeeded = dirtyFile.renameTo(new File(newCleanFilePath));
         } catch (Exception e) {
-            e.printStackTrace();
+            XCrash.getLogger().e(Util.TAG, "FileManager cleanTheDirtyFile failed", e);
         } finally {
             if (stream != null) {
                 try {

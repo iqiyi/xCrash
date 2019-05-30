@@ -102,7 +102,7 @@ int xcd_memory_file_create(void **obj, xcd_memory_t *base, xcd_map_t *map, xcd_m
     (*self)->size = 0;
 
     //open file
-    if(0 > ((*self)->fd = TEMP_FAILURE_RETRY(open(map->name, O_RDONLY | O_CLOEXEC))))
+    if(0 > ((*self)->fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(map->name, O_RDONLY | O_CLOEXEC))))
     {
         r = XCC_ERRNO_SYS;
         goto err;

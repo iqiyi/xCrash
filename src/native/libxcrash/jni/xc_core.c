@@ -84,7 +84,7 @@ static void xc_core_exec_dumper()
 
     //hold the fd 0, 1, 2
     errno = 0;
-    int devnull = TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
+    int devnull = XCC_UTIL_TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
     if(devnull < 0)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"open /dev/null failed, errno=%d\n\n", errno);
@@ -95,8 +95,8 @@ static void xc_core_exec_dumper()
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"/dev/null fd NOT 0, errno=%d\n\n", errno);
         _exit(91);
     }
-    TEMP_FAILURE_RETRY(dup2(devnull, STDOUT_FILENO));
-    TEMP_FAILURE_RETRY(dup2(devnull, STDERR_FILENO));
+    XCC_UTIL_TEMP_FAILURE_RETRY(dup2(devnull, STDOUT_FILENO));
+    XCC_UTIL_TEMP_FAILURE_RETRY(dup2(devnull, STDERR_FILENO));
     
     //create args pipe
     int pipefd[2];
@@ -128,7 +128,7 @@ static void xc_core_exec_dumper()
     };
     int iovs_cnt = (0 == xc_core_spot.dump_all_threads_whitelist_len ? 4 : 5);
     errno = 0;
-    ssize_t ret = TEMP_FAILURE_RETRY(writev(pipefd[1], iovs, iovs_cnt));
+    ssize_t ret = XCC_UTIL_TEMP_FAILURE_RETRY(writev(pipefd[1], iovs, iovs_cnt));
     if((ssize_t)write_len != ret)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"write args to pipe failed, return=%d, errno=%d\n\n", ret, errno);
@@ -136,7 +136,7 @@ static void xc_core_exec_dumper()
     }
 
     //copy the read-side of the args-pipe to stdin (fd: 0)
-    TEMP_FAILURE_RETRY(dup2(pipefd[0], STDIN_FILENO));
+    XCC_UTIL_TEMP_FAILURE_RETRY(dup2(pipefd[0], STDIN_FILENO));
     
     syscall(SYS_close, pipefd[0]);
     syscall(SYS_close, pipefd[1]);
@@ -241,7 +241,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     //wait the crash dumper process terminated
     errno = 0;
     int status = 0;
-    int r = TEMP_FAILURE_RETRY(waitpid(dumper_pid, &status, 0)); //blocked
+    int r = XCC_UTIL_TEMP_FAILURE_RETRY(waitpid(dumper_pid, &status, 0)); //blocked
 
     //the crash dumper process should have written a lot of logs,
     //so we need to seek to the end of log file

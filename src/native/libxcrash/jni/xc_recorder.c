@@ -87,7 +87,7 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
     *log_pathname = (*self)->log_pathname;
 
     //the prepared fd for fd exhaust
-    (*self)->prepared_fd = TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
+    (*self)->prepared_fd = XCC_UTIL_TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
 
     return 0;
 
@@ -115,14 +115,14 @@ int xc_recorder_create_and_open(xc_recorder_t *self)
     if(NULL == self->log_pathname) return -1;
 
     //open dir
-    if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0)
+    if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0)
     {
-        if(self->prepared_fd >= 0)
-        {
-            close(self->prepared_fd);
-            self->prepared_fd = -1;
-            if((fd = TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0) goto new_file;
-        }
+        if(self->prepared_fd < 0) goto new_file;
+
+        //try again with the prepared fd
+        close(self->prepared_fd);
+        self->prepared_fd = -1;
+        if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_dir, dir_flags))) < 0) goto new_file;
     }
 
     //try to rename a placeholder file and open it
@@ -142,29 +142,24 @@ int xc_recorder_create_and_open(xc_recorder_t *self)
                 if(0 == rename(pathname, self->log_pathname))
                 {
                     close(fd);
-                    fd = -1;
-                    return TEMP_FAILURE_RETRY(open(self->log_pathname, file_flags));
+                    return XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_pathname, file_flags));
                 }
             }
         }
     }
-    if(fd >= 0)
-    {
-        close(fd);
-        fd = -1;
-    }
+    close(fd);
     
  new_file:
     //create new file
     self->if_create_new_file = 1;
     
-    if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
+    if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
     
     if(self->prepared_fd >= 0)
     {
         close(self->prepared_fd);
         self->prepared_fd = -1;
-        if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
+        if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_pathname, new_file_flags, 0644))) >= 0) return fd;
     }
 
     return -1;
@@ -183,7 +178,7 @@ int xc_recorder_seek_to_end(xc_recorder_t *self, int log_fd)
     if(lseek(log_fd, 0, SEEK_SET) < 0) goto err;
     while(1)
     {
-        readed = TEMP_FAILURE_RETRY(read(log_fd, buf, sizeof(buf)));
+        readed = XCC_UTIL_TEMP_FAILURE_RETRY(read(log_fd, buf, sizeof(buf)));
         if(readed < 0)
         {
             goto err;
@@ -222,7 +217,7 @@ int xc_recorder_check_backtrace_valid(xc_recorder_t *self)
     
     if(NULL == self->log_pathname) return 0;
 
-    if((fd = TEMP_FAILURE_RETRY(open(self->log_pathname, O_RDONLY | O_CLOEXEC))) < 0) return 0;
+    if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(self->log_pathname, O_RDONLY | O_CLOEXEC))) < 0) return 0;
     
     while(NULL != xcc_util_gets(line, sizeof(line), fd))
     {

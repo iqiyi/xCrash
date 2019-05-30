@@ -365,9 +365,10 @@ public class TombstoneParser {
      *
      * @param log Object of the crash log file.
      * @return The parsed map.
+     * @throws IOException If an I/O error occurs.
      */
     @SuppressWarnings("unused")
-    public static Map<String, String> parse(File log) {
+    public static Map<String, String> parse(File log) throws IOException {
         return parse(log.getAbsolutePath(), null);
     }
 
@@ -377,9 +378,10 @@ public class TombstoneParser {
      *
      * @param logPath Absolute path of the crash log file.
      * @return The parsed map.
+     * @throws IOException If an I/O error occurs.
      */
     @SuppressWarnings("unused")
-    public static Map<String, String> parse(String logPath) {
+    public static Map<String, String> parse(String logPath) throws IOException {
         return parse(logPath, null);
     }
 
@@ -392,46 +394,25 @@ public class TombstoneParser {
      * @param logPath Absolute path of the crash log file.
      * @param emergency A buffer that holds basic crash information when disk exhausted.
      * @return The parsed map.
+     * @throws IOException If an I/O error occurs.
      */
     @SuppressWarnings("unused")
-    public static Map<String, String> parse(String logPath, String emergency) {
+    public static Map<String, String> parse(String logPath, String emergency) throws IOException {
 
         Map<String, String> map = new HashMap<String, String>();
-        BufferedReader br = null;
 
         //parse content from log file
         if (logPath != null) {
-            try {
-                br = new BufferedReader(new FileReader(logPath));
-                parseFromReader(map, br, true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (br != null) {
-                    try {
-                        br.close();
-                    } catch (Exception ignored) {
-                    }
-                    br = null;
-                }
-            }
+            BufferedReader br = new BufferedReader(new FileReader(logPath));
+            parseFromReader(map, br, true);
+            br.close();
         }
 
         //parse content from emergency buffer
         if (emergency != null) {
-            try {
-                br = new BufferedReader(new StringReader(emergency));
-                parseFromReader(map, br, false);
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (br != null) {
-                    try {
-                        br.close();
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
+            BufferedReader br = new BufferedReader(new StringReader(emergency));
+            parseFromReader(map, br, false);
+            br.close();
         }
 
         //try to parse APP version, process name, crash type, start time and crash time from log path

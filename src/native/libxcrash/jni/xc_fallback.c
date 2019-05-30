@@ -103,7 +103,7 @@ static int xc_fallback_get_system_mem(char *buf, size_t len)
     size_t  mfree_all = 0;
     int     used = 0;
 
-    if((fd = TEMP_FAILURE_RETRY(open("/proc/meminfo", O_RDONLY | O_CLOEXEC))) < 0) goto end;
+    if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open("/proc/meminfo", O_RDONLY | O_CLOEXEC))) < 0) goto end;
     
     while(NULL != xcc_util_gets(line, sizeof(line), fd))
     {
@@ -141,7 +141,7 @@ static size_t xc_fallback_get_number_of_threads(pid_t pid)
     xc_util_dirent_t *ent;
     
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/task", pid);
-    if((fd = TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
+    if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
     
     while(1)
     {
@@ -405,7 +405,7 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
     if(0 != (r = xcc_util_write_str(fd, "open files:\n"))) return r;
 
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/fd", pid);
-    if((fd2 = TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
+    if((fd2 = XCC_UTIL_TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
     
     while(1)
     {

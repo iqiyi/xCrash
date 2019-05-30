@@ -41,5 +41,6 @@ public interface ICrashCallback {
      * @param emergency A buffer that holds basic crash information when disk exhausted.
      * @throws Exception xCrash will catch and ignore any exception throw by this method.
      */
+    @SuppressWarnings("unused")
     void onCrash(String logPath, String emergency) throws Exception;
 }

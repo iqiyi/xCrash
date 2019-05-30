@@ -35,6 +35,7 @@ public final class XCrash {
     private static String appId = null;
     private static String appVersion = null;
     private static String logDir = null;
+    private static ILogger logger = new DefaultLogger();
 
     private XCrash() {
     }
@@ -78,26 +79,35 @@ public final class XCrash {
             ctx = appContext;
         }
 
+        //use default parameters
         if (params == null) {
-            //use default parameters
             params = new InitParameters();
         }
-        if (TextUtils.isEmpty(params.appVersion)) {
-            params.appVersion = Util.getAppVersion(ctx);
-        }
-        if (TextUtils.isEmpty(params.logDir)) {
-            params.logDir = ctx.getFilesDir() + "/tombstones";
+
+        //set logger
+        if (params.logger != null) {
+            XCrash.logger = params.logger;
         }
 
-        //save some common values
+        //save app id
         XCrash.appId = ctx.getPackageName();
         if (TextUtils.isEmpty(XCrash.appId)) {
             XCrash.appId = "unknown";
         }
+
+        //save app version
+        if (TextUtils.isEmpty(params.appVersion)) {
+            params.appVersion = Util.getAppVersion(ctx);
+        }
         XCrash.appVersion = params.appVersion;
+
+        //save log dir
+        if (TextUtils.isEmpty(params.logDir)) {
+            params.logDir = ctx.getFilesDir() + "/tombstones";
+        }
         XCrash.logDir = params.logDir;
 
-        //init FileManager
+        //init file manager
         FileManager.getInstance().initialize(
             params.logDir,
             params.javaLogCountMax,
@@ -106,7 +116,7 @@ public final class XCrash {
             params.placeholderSizeKb,
             params.logFileMaintainDelayMs);
 
-        //java
+        //init java crash handler
         if (params.enableJavaCrashHandler) {
             JavaCrashHandler.getInstance().initialize(
                 ctx,
@@ -123,7 +133,7 @@ public final class XCrash {
                 params.javaCallback);
         }
 
-        //native
+        //init native crash handler
         int r = Errno.OK;
         if (params.enableNativeCrashHandler) {
             r = NativeCrashHandler.getInstance().initialize(
@@ -153,9 +163,10 @@ public final class XCrash {
      */
     public static class InitParameters {
         //common
-        String appVersion             = null;
-        String logDir                 = null;
-        int    logFileMaintainDelayMs = 5000;
+        String  appVersion             = null;
+        String  logDir                 = null;
+        int     logFileMaintainDelayMs = 5000;
+        ILogger logger                 = null;
 
         /**
          * Set App version. You can use this method to set an internal test/gray version number.
@@ -192,6 +203,17 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setLogFileMaintainDelayMs(int logFileMaintainDelayMs) {
             this.logFileMaintainDelayMs = (logFileMaintainDelayMs < 0 ? 0 : logFileMaintainDelayMs);
+            return this;
+        }
+
+        /**
+         * Set a logger implementation for xCrash to log message and exception.
+         *
+         * @param logger An instance of {@link xcrash.ILogger}.
+         * @return The InitParameters object.
+         */
+        public InitParameters setLogger(ILogger logger) {
+            this.logger = logger;
             return this;
         }
 
@@ -606,6 +628,10 @@ public final class XCrash {
 
     static String getLogDir() {
         return logDir;
+    }
+
+    static ILogger getLogger() {
+        return logger;
     }
 
     /**
