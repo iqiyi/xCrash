@@ -162,6 +162,8 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
 {
     char buf[2048] = "\0";
 
+    (void)sig;
+
     //only once
     if(xcd_core_handled) _exit(200);
     xcd_core_handled = 1;
@@ -188,7 +190,7 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
     }
     
  end:
-    xcc_signal_raise(sig);
+    xcc_signal_resend(si);
     return;
 }
 

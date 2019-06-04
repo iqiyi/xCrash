@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
@@ -46,6 +47,8 @@ const char* xcc_util_get_signame(const siginfo_t* si)
     case SIGFPE:    return "SIGFPE";
     case SIGILL:    return "SIGILL";
     case SIGSEGV:   return "SIGSEGV";
+    case SIGTRAP:   return "SIGTRAP";
+    case SIGSYS:    return "SIGSYS";
     case SIGSTKFLT: return "SIGSTKFLT";
     default:        return "?";
     }
@@ -56,7 +59,7 @@ const char* xcc_util_get_sigcodename(const siginfo_t* si)
     // Try the signal-specific codes...
     switch (si->si_signo) {
     case SIGBUS:
-        switch (si->si_code)
+        switch(si->si_code)
         {
         case BUS_ADRALN:    return "BUS_ADRALN";
         case BUS_ADRERR:    return "BUS_ADRERR";
@@ -67,7 +70,7 @@ const char* xcc_util_get_sigcodename(const siginfo_t* si)
         }
         break;
     case SIGFPE:
-        switch (si->si_code)
+        switch(si->si_code)
         {
         case FPE_INTDIV:   return "FPE_INTDIV";
         case FPE_INTOVF:   return "FPE_INTOVF";
@@ -81,7 +84,7 @@ const char* xcc_util_get_sigcodename(const siginfo_t* si)
         }
         break;
     case SIGILL:
-        switch (si->si_code)
+        switch(si->si_code)
         {
         case ILL_ILLOPC:   return "ILL_ILLOPC";
         case ILL_ILLOPN:   return "ILL_ILLOPN";
@@ -95,13 +98,45 @@ const char* xcc_util_get_sigcodename(const siginfo_t* si)
         }
         break;
     case SIGSEGV:
-        switch (si->si_code)
+        switch(si->si_code)
         {
         case SEGV_MAPERR:  return "SEGV_MAPERR";
         case SEGV_ACCERR:  return "SEGV_ACCERR";
         case SEGV_BNDERR:  return "SEGV_BNDERR";
         case SEGV_PKUERR:  return "SEGV_PKUERR";
         default:           break;
+        }
+        break;
+    case SIGTRAP:
+        switch(si->si_code)
+        {
+        case TRAP_BRKPT:   return "TRAP_BRKPT";
+        case TRAP_TRACE:   return "TRAP_TRACE";
+        case TRAP_BRANCH:  return "TRAP_BRANCH";
+        case TRAP_HWBKPT:  return "TRAP_HWBKPT";
+        default:           break;
+        }
+        if((si->si_code & 0xff) == SIGTRAP)
+        {
+            switch((si->si_code >> 8) & 0xff)
+            {
+            case PTRACE_EVENT_FORK:       return "PTRACE_EVENT_FORK";
+            case PTRACE_EVENT_VFORK:      return "PTRACE_EVENT_VFORK";
+            case PTRACE_EVENT_CLONE:      return "PTRACE_EVENT_CLONE";
+            case PTRACE_EVENT_EXEC:       return "PTRACE_EVENT_EXEC";
+            case PTRACE_EVENT_VFORK_DONE: return "PTRACE_EVENT_VFORK_DONE";
+            case PTRACE_EVENT_EXIT:       return "PTRACE_EVENT_EXIT";
+            case PTRACE_EVENT_SECCOMP:    return "PTRACE_EVENT_SECCOMP";
+            case PTRACE_EVENT_STOP:       return "PTRACE_EVENT_STOP";
+            default:                      break;
+            }
+        }
+        break;
+    case SIGSYS:
+        switch(si->si_code)
+        {
+        case SYS_SECCOMP: return "SYS_SECCOMP";
+        default:          break;
         }
         break;
     default:
@@ -128,7 +163,7 @@ const char* xcc_util_get_sigcodename(const siginfo_t* si)
 int xcc_util_signal_has_si_addr(const siginfo_t* si)
 {
     //manually sent signals won't have si_addr
-    if (si->si_code == SI_USER || si->si_code == SI_QUEUE || si->si_code == SI_TKILL) return 0;
+    if(si->si_code == SI_USER || si->si_code == SI_QUEUE || si->si_code == SI_TKILL) return 0;
 
     switch (si->si_signo)
     {

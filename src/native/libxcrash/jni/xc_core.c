@@ -50,6 +50,7 @@
 #include "xc_fallback.h"
 
 #define XC_CORE_EMERGENCY_BUF_LEN (20 * 1024)
+#define XC_CORE_CHILD_STACK_LEN   (16 * 1024)
 #define XC_CORE_ERR_TITLE         "\n\nxcrash error:\n"
 
 static pthread_mutex_t        xc_core_mutex   = PTHREAD_MUTEX_INITIALIZER;
@@ -58,6 +59,9 @@ static int                    xc_core_inited  = 0;
 static int                    xc_core_log_fd  = -1;
 
 //global cache which used in signal handler
+#ifndef __i386__
+static void                  *xc_core_child_stack;
+#endif
 static char                  *xc_core_dumper_pathname;
 static int                    xc_core_restore_signal_handler;
 static char                  *xc_core_emergency;
@@ -73,8 +77,33 @@ static char                  *xc_core_app_id = "unknown";
 static char                  *xc_core_app_version = "unknown";
 static char                  *xc_core_dump_all_threads_whitelist = NULL;
 
-static void xc_core_exec_dumper()
+static int xc_core_fork(int (*fn)(void *))
 {
+#ifndef __i386__
+    return clone(fn, xc_core_child_stack, CLONE_VFORK | CLONE_FS | CLONE_UNTRACED, NULL);
+#else
+    pid_t dumper_pid = fork();
+    if(-1 == dumper_pid)
+    {
+        return -1;
+    }
+    else if(0 == dumper_pid)
+    {
+        //child process ...
+        return fn(NULL);
+    }
+    else
+    {
+        sleep(1); //we dont want to use SIGCHLD, so let it be...
+        return dumper_pid;
+    }
+#endif
+}
+
+static int xc_core_exec_dumper(void *arg)
+{
+    (void)arg;
+
     //for fd exhaust
     //keep the log_fd open for writing error msg before execl()
     int i;
@@ -88,12 +117,12 @@ static void xc_core_exec_dumper()
     if(devnull < 0)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"open /dev/null failed, errno=%d\n\n", errno);
-        _exit(90);
+        return 90;
     }
     else if(0 != devnull)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"/dev/null fd NOT 0, errno=%d\n\n", errno);
-        _exit(91);
+        return 91;
     }
     XCC_UTIL_TEMP_FAILURE_RETRY(dup2(devnull, STDOUT_FILENO));
     XCC_UTIL_TEMP_FAILURE_RETRY(dup2(devnull, STDERR_FILENO));
@@ -104,7 +133,7 @@ static void xc_core_exec_dumper()
     if(0 != pipe2(pipefd, O_CLOEXEC))
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"create args pipe failed, errno=%d\n\n", errno);
-        _exit(92);
+        return 92;
     }
 
     //set args pipe size
@@ -115,7 +144,7 @@ static void xc_core_exec_dumper()
     if(fcntl(pipefd[1], F_SETPIPE_SZ, write_len) < write_len)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"set args pipe size failed, errno=%d\n\n", errno);
-        _exit(93);
+        return 93;
     }
 
     //write args to pipe
@@ -132,7 +161,7 @@ static void xc_core_exec_dumper()
     if((ssize_t)write_len != ret)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"write args to pipe failed, return=%d, errno=%d\n\n", ret, errno);
-        _exit(94);
+        return 94;
     }
 
     //copy the read-side of the args-pipe to stdin (fd: 0)
@@ -144,7 +173,7 @@ static void xc_core_exec_dumper()
     //escape to the dumper process
     errno = 0;
     execl(xc_core_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
-    _exit(100 + errno);
+    return 100 + errno;
 }
 
 static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
@@ -154,6 +183,8 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     int             restore_orig_dumpable = 0;
     int             orig_dumpable;
     int             dump_ok = 0;
+
+    (void)sig;
 
     pthread_mutex_lock(&xc_core_mutex);
 
@@ -224,16 +255,11 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
 
     //spawn crash dumper process
     errno = 0;
-    pid_t dumper_pid = fork();
+    pid_t dumper_pid = xc_core_fork(xc_core_exec_dumper);
     if(-1 == dumper_pid)
     {
         xcc_util_write_format_safe(xc_core_log_fd, XC_CORE_ERR_TITLE"fork failed, errno=%d\n\n", errno);
         goto end;
-    }
-    else if(0 == dumper_pid)
-    {
-        //child process ...
-        xc_core_exec_dumper();
     }
 
     //parent process ...
@@ -241,7 +267,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     //wait the crash dumper process terminated
     errno = 0;
     int status = 0;
-    int r = XCC_UTIL_TEMP_FAILURE_RETRY(waitpid(dumper_pid, &status, 0)); //blocked
+    int r = XCC_UTIL_TEMP_FAILURE_RETRY(waitpid(dumper_pid, &status, __WALL));
 
     //the crash dumper process should have written a lot of logs,
     //so we need to seek to the end of log file
@@ -331,7 +357,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     xc_jni_callback(xc_core_log_fd, xc_core_log_pathname,
                     '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency);
 
-    xcc_signal_raise(sig);
+    xcc_signal_resend(si);
     
     pthread_mutex_unlock(&xc_core_mutex);
     return;
@@ -528,6 +554,10 @@ int xc_core_init(int restore_signal_handler,
     xc_core_restore_signal_handler = restore_signal_handler;
     if(NULL == (xc_core_emergency = calloc(XC_CORE_EMERGENCY_BUF_LEN, 1))) return XCC_ERRNO_NOMEM;
     if(NULL == (xc_core_dumper_pathname = xc_util_strdupcat(app_lib_dir, "/"XCC_UTIL_XCRASH_DUMPER_FILENAME))) return XCC_ERRNO_NOMEM;
+#ifndef __i386__
+    if(NULL == (xc_core_child_stack = calloc(XC_CORE_CHILD_STACK_LEN, 1))) return XCC_ERRNO_NOMEM;
+    xc_core_child_stack += XC_CORE_CHILD_STACK_LEN;
+#endif
 
     //register signal handler
     if(0 != (r = xcc_signal_register(xc_core_signal_handler))) return r;

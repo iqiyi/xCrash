@@ -27,7 +27,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <signal.h>
-#include <android/log.h>
+#include <sys/syscall.h>
 #include "xcc_signal.h"
 #include "xcc_errno.h"
 
@@ -46,6 +46,8 @@ static xcc_signal_info_t xcc_signal_info[] =
     {.signum = SIGFPE},
     {.signum = SIGILL},
     {.signum = SIGSEGV},
+    {.signum = SIGTRAP},
+    {.signum = SIGSYS},
     {.signum = SIGSTKFLT}
 };
 
@@ -97,20 +99,10 @@ int xcc_signal_ignore()
     return r;
 }
 
-void xcc_signal_raise(int sig)
+void xcc_signal_resend(siginfo_t* si)
 {
-    switch(sig)
+    if(SIGABRT == si->si_signo || SI_FROMUSER(si))
     {
-    case SIGABRT:
-    case SIGFPE:
-    case SIGSTKFLT:
-        raise(sig);
-        break;
-    case SIGBUS:
-    case SIGILL:
-    case SIGSEGV:
-    default:
-        //these signals will be re-thrown by kernel again
-        break;
+        syscall(SYS_rt_tgsigqueueinfo, getpid(), gettid(), si->si_signo, si);
     }
 }
