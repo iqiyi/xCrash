@@ -59,9 +59,6 @@ static int                    xc_core_inited  = 0;
 static int                    xc_core_log_fd  = -1;
 
 //global cache which used in signal handler
-#ifndef __i386__
-static void                  *xc_core_child_stack;
-#endif
 static char                  *xc_core_dumper_pathname;
 static int                    xc_core_restore_signal_handler;
 static char                  *xc_core_emergency;
@@ -69,6 +66,13 @@ static xcc_util_build_prop_t  xc_core_build_prop;
 static xc_recorder_t         *xc_core_recorder;
 static long                   xc_core_timezone;
 static char                  *xc_core_kernel_version;
+
+//for clone and fork
+#ifndef __i386__
+static void                  *xc_core_child_stack;
+#else
+static int                    xc_core_child_notifier[2];
+#endif
 
 //info passed to the dumper process
 static xcc_spot_t             xc_core_spot;
@@ -90,11 +94,21 @@ static int xc_core_fork(int (*fn)(void *))
     else if(0 == dumper_pid)
     {
         //child process ...
-        return fn(NULL);
+        char msg = 'a';
+        XCC_UTIL_TEMP_FAILURE_RETRY(write(xc_core_child_notifier[1], &msg, sizeof(char)));
+        syscall(SYS_close, xc_core_child_notifier[0]);
+        syscall(SYS_close, xc_core_child_notifier[1]);
+
+        _exit(fn(NULL));
     }
     else
     {
-        sleep(1); //we dont want to use SIGCHLD, so let it be...
+        //parent process ...
+        char msg;
+        XCC_UTIL_TEMP_FAILURE_RETRY(read(xc_core_child_notifier[0], &msg, sizeof(char)));
+        syscall(SYS_close, xc_core_child_notifier[0]);
+        syscall(SYS_close, xc_core_child_notifier[1]);
+
         return dumper_pid;
     }
 #endif
@@ -554,9 +568,13 @@ int xc_core_init(int restore_signal_handler,
     xc_core_restore_signal_handler = restore_signal_handler;
     if(NULL == (xc_core_emergency = calloc(XC_CORE_EMERGENCY_BUF_LEN, 1))) return XCC_ERRNO_NOMEM;
     if(NULL == (xc_core_dumper_pathname = xc_util_strdupcat(app_lib_dir, "/"XCC_UTIL_XCRASH_DUMPER_FILENAME))) return XCC_ERRNO_NOMEM;
+
+    //for clone and fork
 #ifndef __i386__
     if(NULL == (xc_core_child_stack = calloc(XC_CORE_CHILD_STACK_LEN, 1))) return XCC_ERRNO_NOMEM;
     xc_core_child_stack += XC_CORE_CHILD_STACK_LEN;
+#else
+    if(0 != pipe2(xc_core_child_notifier, O_CLOEXEC)) return XCC_ERRNO_SYS;
 #endif
 
     //register signal handler
