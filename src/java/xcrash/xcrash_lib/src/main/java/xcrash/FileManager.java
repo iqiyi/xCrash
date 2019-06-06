@@ -242,15 +242,19 @@ class FileManager {
 
     @SuppressWarnings({"unused"})
     boolean recycleLogFile(File logFile) {
-        if (this.logDir == null) {
+        if (logFile == null) {
             return false;
         }
 
-        try {
-            if (this.placeholderCountMax <= 0) {
+        if (this.logDir == null || this.placeholderCountMax <= 0) {
+            try {
                 return logFile.delete();
+            } catch (Exception ignored) {
+                return false;
             }
+        }
 
+        try {
             File dir = new File(logDir);
             File[] cleanFiles = dir.listFiles(new FilenameFilter() {
                 @Override
@@ -259,14 +263,22 @@ class FileManager {
                 }
             });
             if (cleanFiles != null && cleanFiles.length >= this.placeholderCountMax) {
-                return logFile.delete(); //no need to recycle the log file
+                try {
+                    return logFile.delete();
+                } catch (Exception ignored) {
+                    return false;
+                }
             }
 
             //rename to dirty file
             String dirtyFilePath = String.format(Locale.US, "%s/%s_%020d%s", logDir, placeholderPrefix, new Date().getTime() * 1000 + getNextUnique(), placeholderDirtySuffix);
             File dirtyFile = new File(dirtyFilePath);
             if (!logFile.renameTo(dirtyFile)) {
-                return logFile.delete();
+                try {
+                    return logFile.delete();
+                } catch (Exception ignored) {
+                    return false;
+                }
             }
 
             //clean the dirty file
