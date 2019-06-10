@@ -31,7 +31,7 @@
 #include "xcc_signal.h"
 #include "xcc_errno.h"
 
-#define XCC_SIGNAL_STACK_SIZE (1024 * 16)
+#define XCC_SIGNAL_STACK_SIZE (1024 * 32)
 
 typedef struct
 {
