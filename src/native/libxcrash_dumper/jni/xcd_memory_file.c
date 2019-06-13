@@ -36,6 +36,8 @@
 #include "xcd_memory_file.h"
 #include "xcd_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_memory_file
 {
     xcd_memory_t *base;
@@ -44,6 +46,7 @@ struct xcd_memory_file
     size_t        offset;
     size_t        size;
 };
+#pragma clang diagnostic pop
 
 static void xcd_memory_file_uninit(xcd_memory_file_t *self)
 {
@@ -62,17 +65,17 @@ static int xcd_memory_file_init(xcd_memory_file_t *self, size_t size, size_t off
 
     if(offset >= (size_t)file_size) return XCC_ERRNO_RANGE;
 
-    size_t aligned_offset = offset & ~(getpagesize() - 1);
+    size_t aligned_offset = offset & (~(size_t)(getpagesize() - 1));
     if(aligned_offset > (size_t)file_size) return XCC_ERRNO_RANGE;
 
-    self->offset = offset & (getpagesize() - 1);
+    self->offset = offset & (size_t)(getpagesize() - 1);
     self->size = (size_t)file_size - aligned_offset;
     
     size_t max_size;
     if(!__builtin_add_overflow(size, self->offset, &max_size) && max_size < self->size)
         self->size = max_size;
 
-    void* map = mmap(NULL, self->size, PROT_READ, MAP_PRIVATE, self->fd, aligned_offset);
+    void* map = mmap(NULL, self->size, PROT_READ, MAP_PRIVATE, self->fd, (off_t)aligned_offset);
     if(map == MAP_FAILED) return XCC_ERRNO_SYS;
 
     self->data = (uint8_t *)map + self->offset;
@@ -102,11 +105,14 @@ int xcd_memory_file_create(void **obj, xcd_memory_t *base, xcd_map_t *map, xcd_m
     (*self)->size = 0;
 
     //open file
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
     if(0 > ((*self)->fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(map->name, O_RDONLY | O_CLOEXEC))))
     {
         r = XCC_ERRNO_SYS;
         goto err;
     }
+#pragma clang diagnostic pop
 
     //get file size
     if(0 != fstat((*self)->fd, &st))
@@ -242,13 +248,20 @@ size_t xcd_memory_file_read(void *obj, uintptr_t addr, void *dst, size_t size)
 
     size_t bytes_left = self->size - (size_t)addr;
     uint8_t *actual_base = self->data + addr;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
     size_t actual_len = XCC_UTIL_MIN(bytes_left, size);
+#pragma clang diagnostic pop
 
     memcpy(dst, actual_base, actual_len);
     return actual_len;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-variable-declarations"
 const xcd_memory_handlers_t xcd_memory_file_handlers = {
     xcd_memory_file_destroy,
     xcd_memory_file_read
 };
+#pragma clang diagnostic pop

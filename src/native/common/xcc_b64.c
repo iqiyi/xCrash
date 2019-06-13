@@ -74,7 +74,8 @@ char *xcc_b64_encode(const uint8_t *in, size_t in_len, size_t *out_len)
 
     *p = '\0';
     
-    if(NULL != out_len) *out_len = p - out;
+    if(NULL != out_len) *out_len = (size_t)(p - out);
+    
     return out;
 }
 
@@ -119,9 +120,9 @@ uint8_t *xcc_b64_decode(const char *in, size_t in_len, size_t *out_len)
         count++;
         if (count == 4)
         {
-            *p++ = (block[0] << 2) | (block[1] >> 4);
-            *p++ = (block[1] << 4) | (block[2] >> 2);
-            *p++ = (block[2] << 6) | block[3];
+            *p++ = (uint8_t)((block[0] << 2) | (block[1] >> 4));
+            *p++ = (uint8_t)((block[1] << 4) | (block[2] >> 2));
+            *p++ = (uint8_t)((block[2] << 6) | block[3]);
             count = 0;
             if (pad)
             {
@@ -140,6 +141,6 @@ uint8_t *xcc_b64_decode(const char *in, size_t in_len, size_t *out_len)
     
     *p = 0;
 
-    if(NULL != out_len) *out_len = p - out;
+    if(NULL != out_len) *out_len = (size_t)(p - out);
     return out;
 }

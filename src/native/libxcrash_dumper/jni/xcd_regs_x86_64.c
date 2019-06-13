@@ -21,6 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
+typedef int make_iso_compilers_happy;
+
 #ifdef __x86_64__
 
 #include <stdio.h>
@@ -102,23 +104,23 @@ void xcd_regs_set_sp(xcd_regs_t *self, uintptr_t sp)
 
 void xcd_regs_load_from_ucontext(xcd_regs_t *self, ucontext_t *uc)
 {
-    self->r[XCD_REGS_RAX] = uc->uc_mcontext.gregs[REG_RAX];
-    self->r[XCD_REGS_RBX] = uc->uc_mcontext.gregs[REG_RBX];
-    self->r[XCD_REGS_RCX] = uc->uc_mcontext.gregs[REG_RCX];
-    self->r[XCD_REGS_RDX] = uc->uc_mcontext.gregs[REG_RDX];
-    self->r[XCD_REGS_R8]  = uc->uc_mcontext.gregs[REG_R8];
-    self->r[XCD_REGS_R9]  = uc->uc_mcontext.gregs[REG_R9];
-    self->r[XCD_REGS_R10] = uc->uc_mcontext.gregs[REG_R10];
-    self->r[XCD_REGS_R11] = uc->uc_mcontext.gregs[REG_R11];
-    self->r[XCD_REGS_R12] = uc->uc_mcontext.gregs[REG_R12];
-    self->r[XCD_REGS_R13] = uc->uc_mcontext.gregs[REG_R13];
-    self->r[XCD_REGS_R14] = uc->uc_mcontext.gregs[REG_R14];
-    self->r[XCD_REGS_R15] = uc->uc_mcontext.gregs[REG_R15];
-    self->r[XCD_REGS_RDI] = uc->uc_mcontext.gregs[REG_RDI];
-    self->r[XCD_REGS_RSI] = uc->uc_mcontext.gregs[REG_RSI];
-    self->r[XCD_REGS_RBP] = uc->uc_mcontext.gregs[REG_RBP];
-    self->r[XCD_REGS_RSP] = uc->uc_mcontext.gregs[REG_RSP];
-    self->r[XCD_REGS_RIP] = uc->uc_mcontext.gregs[REG_RIP];
+    self->r[XCD_REGS_RAX] = (uintptr_t)uc->uc_mcontext.gregs[REG_RAX];
+    self->r[XCD_REGS_RBX] = (uintptr_t)uc->uc_mcontext.gregs[REG_RBX];
+    self->r[XCD_REGS_RCX] = (uintptr_t)uc->uc_mcontext.gregs[REG_RCX];
+    self->r[XCD_REGS_RDX] = (uintptr_t)uc->uc_mcontext.gregs[REG_RDX];
+    self->r[XCD_REGS_R8]  = (uintptr_t)uc->uc_mcontext.gregs[REG_R8];
+    self->r[XCD_REGS_R9]  = (uintptr_t)uc->uc_mcontext.gregs[REG_R9];
+    self->r[XCD_REGS_R10] = (uintptr_t)uc->uc_mcontext.gregs[REG_R10];
+    self->r[XCD_REGS_R11] = (uintptr_t)uc->uc_mcontext.gregs[REG_R11];
+    self->r[XCD_REGS_R12] = (uintptr_t)uc->uc_mcontext.gregs[REG_R12];
+    self->r[XCD_REGS_R13] = (uintptr_t)uc->uc_mcontext.gregs[REG_R13];
+    self->r[XCD_REGS_R14] = (uintptr_t)uc->uc_mcontext.gregs[REG_R14];
+    self->r[XCD_REGS_R15] = (uintptr_t)uc->uc_mcontext.gregs[REG_R15];
+    self->r[XCD_REGS_RDI] = (uintptr_t)uc->uc_mcontext.gregs[REG_RDI];
+    self->r[XCD_REGS_RSI] = (uintptr_t)uc->uc_mcontext.gregs[REG_RSI];
+    self->r[XCD_REGS_RBP] = (uintptr_t)uc->uc_mcontext.gregs[REG_RBP];
+    self->r[XCD_REGS_RSP] = (uintptr_t)uc->uc_mcontext.gregs[REG_RSP];
+    self->r[XCD_REGS_RIP] = (uintptr_t)uc->uc_mcontext.gregs[REG_RIP];
 }
 
 void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_len)

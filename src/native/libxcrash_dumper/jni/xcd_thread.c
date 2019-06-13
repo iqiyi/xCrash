@@ -204,7 +204,7 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
         // In this case, we might want to try another read at the beginning of
         // the next page only if it's within the amount of memory we would have
         // read.
-        size_t page_size = sysconf(_SC_PAGE_SIZE);
+        size_t page_size = (size_t)sysconf(_SC_PAGE_SIZE);
         start = ((addr + (page_size - 1)) & ~(page_size - 1)) - addr;
         if (start == 0 || start >= XCD_THREAD_MEMORY_BYTES_TO_DUMP)
             skip_2nd_read = 1;
@@ -218,8 +218,8 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
         // into a readable map. Only requires one extra read because a map has
         // to contain at least one page, and the total number of bytes to dump
         // is smaller than a page.
-        size_t bytes2 = xcd_util_ptrace_read(self->pid, addr + start + bytes, (uint8_t *)(data) + bytes,
-                                             sizeof(data) - bytes - start);
+        size_t bytes2 = xcd_util_ptrace_read(self->pid, (uintptr_t)(addr + start + bytes), (uint8_t *)(data) + bytes,
+                                             (size_t)(sizeof(data) - bytes - start));
         bytes += bytes2;
         if(bytes2 > 0 && bytes % sizeof(uintptr_t) != 0)
             bytes &= ~(sizeof(uintptr_t) - 1);
@@ -227,7 +227,7 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
     uintptr_t *data_ptr = data;
     uint8_t *ptr;
     size_t current = 0;
-    size_t total_bytes = start + bytes;
+    size_t total_bytes = (size_t)(start + bytes);
     size_t i, j, k;
     char ascii[XCD_THREAD_MEMORY_BYTES_PER_LINE + 1];
     size_t ascii_idx = 0;
@@ -237,14 +237,14 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
     {
         ascii_idx = 0;
         
-        line_len = snprintf(line, sizeof(line), "    %0"XCC_UTIL_FMT_ADDR, addr);
+        line_len = (size_t)snprintf(line, sizeof(line), "    %0"XCC_UTIL_FMT_ADDR, addr);
         addr += XCD_THREAD_MEMORY_BYTES_PER_LINE;
 
         for(i = 0; i < XCD_THREAD_MEMORY_BYTES_PER_LINE / sizeof(uintptr_t); i++)
         {
             if(current >= start && current + sizeof(uintptr_t) <= total_bytes)
             {
-                line_len += snprintf(line + line_len, sizeof(line) - line_len, " %0"XCC_UTIL_FMT_ADDR, *data_ptr);
+                line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len, " %0"XCC_UTIL_FMT_ADDR, *data_ptr);
                 
                 // Fill out the ascii string from the data.
                 ptr = (uint8_t *)data_ptr;
@@ -252,7 +252,7 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
                 {
                     if(*ptr >= 0x20 && *ptr < 0x7f)
                     {
-                        ascii[ascii_idx++] = *ptr;
+                        ascii[ascii_idx++] = (char)(*ptr);
                     }
                     else
                     {
@@ -263,9 +263,9 @@ static int xcd_thread_record_memory_by_addr(xcd_thread_t *self, int log_fd,
             }
             else
             {
-                line_len += snprintf(line + line_len, sizeof(line) - line_len, " ");
+                line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len, " ");
                 for(k = 0; k < sizeof(uintptr_t) * 2; k++)
-                    line_len += snprintf(line + line_len, sizeof(line) - line_len, "-");
+                    line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len, "-");
                 for(k = 0; k < sizeof(uintptr_t); k++)
                     ascii[ascii_idx++] = '.';
             }

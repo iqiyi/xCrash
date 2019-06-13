@@ -34,6 +34,9 @@
 #include "xcd_log.h"
 #include "xcd_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+
 //DWARF data encoding
 #define DW_EH_PE_absptr   0x00
 #define DW_EH_PE_uleb128  0x01
@@ -52,7 +55,7 @@
 #define DW_EH_PE_datarel  0x30
 #define DW_EH_PE_funcrel  0x40
 #define DW_EH_PE_aligned  0x50
-#define DW_EH_PE_indirect 0x80
+//#define DW_EH_PE_indirect 0x80
 #define DW_EH_PE_omit     0xFF
 
 //CIE
@@ -75,7 +78,10 @@ static int xcd_dwarf_cie_cmp(xcd_dwarf_cie_t *a, xcd_dwarf_cie_t *b)
     else return (a->offset > b->offset ? 1 : -1);
 }
 typedef RB_HEAD(xcd_dwarf_cie_tree, xcd_dwarf_cie) xcd_dwarf_cie_tree_t;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
 RB_GENERATE_STATIC(xcd_dwarf_cie_tree, xcd_dwarf_cie, link, xcd_dwarf_cie_cmp)
+#pragma clang diagnostic pop
 
 //FDE
 typedef struct
@@ -847,7 +853,7 @@ static xcd_dwarf_fde_t *xcd_dwarf_get_fde_from_offset(xcd_dwarf_t *self, size_t 
     }
 
     //CIE
-    if(NULL == (cie = xcd_dwarf_get_cie(self, cie_offset))) goto end;
+    if(NULL == (cie = xcd_dwarf_get_cie(self, (size_t)cie_offset))) goto end;
 
     //SKIP segment selector
     *offset += cie->segment_size;
@@ -956,10 +962,12 @@ static int xcd_dwarf_get_fde_offset_linear(xcd_dwarf_t *self, uintptr_t pc, size
     xcd_dwarf_eh_frame_hdr_t *hdr = self->eh_frame_hdr;
     size_t cur;
     size_t cur_offset = hdr->entries_offset;
-    uintptr_t cur_pc;
+    uintptr_t cur_pc = 0;
     uint64_t v64;
     uint64_t prev_v64 = 0;
     size_t cur_field_offset;
+
+    if(0 == hdr->fde_count) return XCC_ERRNO_NOTFND;
 
     for(cur = 0; cur < hdr->fde_count; cur++)
     {
@@ -1047,8 +1055,6 @@ static xcd_dwarf_fde_t *xcd_dwarf_get_fde(xcd_dwarf_t *self, uintptr_t pc)
         return xcd_dwarf_get_fde_no_hdr(self, pc);
     case XCD_DWARF_TYPE_EH_FRAME_HDR:
         return xcd_dwarf_get_fde_with_hdr(self, pc);
-    default:
-        return NULL;
     }
 }
 
@@ -1296,6 +1302,8 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
 //////////////////////////////////////////////////////////////////////
 // eval
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
 static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t offset, size_t end, uintptr_t *result)
 {
     uint8_t         op_code;
@@ -1460,7 +1468,7 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
         case 0x26: //DW_OP_shra
             vup1 = pop();
             vup2 = pop();
-            push((intptr_t)vup2 >> vup1);
+            push((uintptr_t)((intptr_t)vup2 >> vup1));
             break;
         case 0x27: //DW_OP_xor
             vup1 = pop();
@@ -1591,6 +1599,7 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
     *result = pick(0);
     return 0;
 }
+#pragma clang diagnostic pop
     
 static int xcd_dwarf_eval(xcd_dwarf_t *self, xcd_dwarf_fde_t *fde, xcd_dwarf_loc_t *loc, xcd_regs_t *regs, int *finished)
 {
@@ -1606,11 +1615,11 @@ static int xcd_dwarf_eval(xcd_dwarf_t *self, xcd_dwarf_fde_t *fde, xcd_dwarf_loc
     {
     case DW_LOC_REGISTER:
         if(loc->cfa_rule.values[0] >= XCD_REGS_MACHINE_NUM) return XCC_ERRNO_RANGE;
-        cfa = regs_orig.r[loc->cfa_rule.values[0]] + loc->cfa_rule.values[1];
+        cfa = (uintptr_t)(regs_orig.r[loc->cfa_rule.values[0]] + loc->cfa_rule.values[1]);
         break;
     case DW_LOC_VAL_EXPRESSION:
-        if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, loc->cfa_rule.values[1] - loc->cfa_rule.values[0],
-                                               loc->cfa_rule.values[1], &value))) return r;
+        if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, (size_t)(loc->cfa_rule.values[1] - loc->cfa_rule.values[0]),
+                                               (size_t)(loc->cfa_rule.values[1]), &value))) return r;
         cfa = value;
         break;
     default:
@@ -1623,23 +1632,23 @@ static int xcd_dwarf_eval(xcd_dwarf_t *self, xcd_dwarf_fde_t *fde, xcd_dwarf_loc
         switch(loc->reg_rules[i].type)
         {
         case DW_LOC_OFFSET:
-            if(0 != (r = xcd_util_ptrace_read_fully(self->pid, cfa + loc->reg_rules[i].values[0], &(regs->r[i]), sizeof(regs->r[i])))) return r;
+            if(0 != (r = xcd_util_ptrace_read_fully(self->pid, (uintptr_t)(cfa + loc->reg_rules[i].values[0]), &(regs->r[i]), sizeof(regs->r[i])))) return r;
             break;
         case DW_LOC_VAL_OFFSET:
-            regs->r[i] = cfa + loc->reg_rules[i].values[0];
+            regs->r[i] = (uintptr_t)(cfa + loc->reg_rules[i].values[0]);
             break;
         case DW_LOC_REGISTER:
             if(loc->reg_rules[i].values[0] >= XCD_REGS_MACHINE_NUM) return XCC_ERRNO_RANGE;
-            regs->r[i] = regs_orig.r[loc->reg_rules[i].values[0]] + loc->reg_rules[i].values[1];
+            regs->r[i] = (uintptr_t)(regs_orig.r[loc->reg_rules[i].values[0]] + loc->reg_rules[i].values[1]);
             break;
         case DW_LOC_EXPRESSION:
-            if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, loc->reg_rules[i].values[1] - loc->reg_rules[i].values[0],
-                                                   loc->reg_rules[i].values[1], &value))) return r;
+            if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, (size_t)(loc->reg_rules[i].values[1] - loc->reg_rules[i].values[0]),
+                                                   (size_t)(loc->reg_rules[i].values[1]), &value))) return r;
             if(0 != (r = xcd_util_ptrace_read_fully(self->pid, value, &(regs->r[i]), sizeof(regs->r[i])))) return r;
             break;
         case DW_LOC_VAL_EXPRESSION:
-            if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, loc->reg_rules[i].values[1] - loc->reg_rules[i].values[0],
-                                                   loc->reg_rules[i].values[1], &value))) return r;
+            if(0 != (r = xcd_dwarf_eval_expression(self, &regs_orig, (size_t)(loc->reg_rules[i].values[1] - loc->reg_rules[i].values[0]),
+                                                   (size_t)(loc->reg_rules[i].values[1]), &value))) return r;
             regs->r[i] = value;
             break;
         case DW_LOC_UNDEFINED:
@@ -1812,3 +1821,5 @@ int xcd_dwarf_step(xcd_dwarf_t *self, xcd_regs_t *regs, uintptr_t pc, int *finis
     if(NULL != loc) free(loc);
     return r;
 }
+
+#pragma clang diagnostic pop

@@ -33,6 +33,9 @@
 extern "C" {
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+
 typedef struct
 {
     //set when crashed
@@ -58,6 +61,8 @@ typedef struct
     size_t       app_version_len;
     size_t       dump_all_threads_whitelist_len;
 } xcc_spot_t;
+
+#pragma clang diagnostic pop
 
 #ifdef __cplusplus
 }

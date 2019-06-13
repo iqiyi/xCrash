@@ -50,6 +50,9 @@
 #include "xcd_sys.h"
 #include "xcd_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+
 static int                    xcd_core_handled      = 0;
 static int                    xcd_core_log_fd       = -1;
 static xcc_util_build_prop_t  xcd_core_build_prop;
@@ -67,7 +70,7 @@ static int xcd_core_read_stdin(const char *what, void *buf, size_t len)
 
     while(len - nread > 0)
     {
-        n = XCC_UTIL_TEMP_FAILURE_RETRY(read(STDIN_FILENO, buf + nread, len - nread));
+        n = XCC_UTIL_TEMP_FAILURE_RETRY(read(STDIN_FILENO, (void *)((uint8_t *)buf + nread), len - nread));
         if(n < 0)
         {
             XCD_LOG_ERROR("CORE: read %s failed, errno=%d", what, errno);
@@ -257,3 +260,5 @@ int main(int argc, char** argv)
 #endif
     return 0;
 }
+
+#pragma clang diagnostic pop

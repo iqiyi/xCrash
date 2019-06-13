@@ -38,6 +38,9 @@
 #include "xcc_fmt.h"
 #include "xcc_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+
 const char* xcc_util_get_signame(const siginfo_t* si)
 {
     switch (si->si_signo)
@@ -257,7 +260,7 @@ int xcc_util_write(int fd, const char *buf, size_t len)
                 return XCC_ERRNO_SYS;    /* error */
         }
 
-        nleft -= nwritten;
+        nleft -= (size_t)nwritten;
         ptr   += nwritten;
     }
 
@@ -272,7 +275,7 @@ int xcc_util_write_str(int fd, const char *str)
     if(fd < 0) return XCC_ERRNO_INVAL;
     
     while(*tmp) tmp++;
-    len = tmp - str;
+    len = (size_t)(tmp - str);
     if(0 == len) return 0;
 
     return xcc_util_write(fd, str, len);
@@ -287,30 +290,36 @@ int xcc_util_write_format(int fd, const char *format, ...)
     if(fd < 0) return XCC_ERRNO_INVAL;
     
     va_start(ap, format);
+    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
     len = vsnprintf(buf, sizeof(buf), format, ap);
+#pragma clang diagnostic pop
+    
     va_end(ap);
+    
     if(len <= 0) return 0;
     
-    return xcc_util_write(fd, buf, len);
+    return xcc_util_write(fd, buf, (size_t)len);
 }
 
 int xcc_util_write_format_safe(int fd, const char *format, ...)
 {
     va_list ap;
     char    buf[1024];
-    ssize_t len;
+    size_t  len;
 
     if(fd < 0) return XCC_ERRNO_INVAL;
     
     va_start(ap, format);
     len = xcc_fmt_vsnprintf(buf, sizeof(buf), format, ap);
     va_end(ap);
-    if(len <= 0) return 0;
+    if(0 == len) return 0;
     
     return xcc_util_write(fd, buf, len);
 }
 
-char *xcc_util_gets(char *s, int size, int fd)
+char *xcc_util_gets(char *s, size_t size, int fd)
 {
     ssize_t i, nread;
     char    c, *p;
@@ -320,7 +329,7 @@ char *xcc_util_gets(char *s, int size, int fd)
     s[0] = '\0';
     p = s;
     
-    for(i = 0; i < size - 1; i++)
+    for(i = 0; i < (ssize_t)(size - 1); i++)
     {
         if(1 == (nread = read(fd, &c, 1)))
         {
@@ -395,7 +404,7 @@ static const char *xcc_util_su_pathnames[] =
     "/su/bin/su"
 };
 
-int xcc_util_is_root()
+int xcc_util_is_root(void)
 {
     size_t i;
     for(i = 0; i < sizeof(xcc_util_su_pathnames) / sizeof(xcc_util_su_pathnames[0]); i++)
@@ -467,7 +476,7 @@ void xcc_util_load_build_prop(xcc_util_build_prop_t *prop)
     char    buf[256];
     char   *abi = NULL;
     char   *abi2 = NULL;
-    size_t  len;
+    size_t  len = 0;
 
     memset(prop, 0, sizeof(xcc_util_build_prop_t));
 
@@ -505,7 +514,7 @@ void xcc_util_load_build_prop(xcc_util_build_prop_t *prop)
     //build abi_list from abi and abi2
     if(NULL == prop->abi_list && (NULL != abi || NULL != abi2))
     {
-        if(NULL != abi)  len = snprintf(buf, sizeof(buf), "%s", abi);
+        if(NULL != abi)  len = (size_t)snprintf(buf, sizeof(buf), "%s", abi);
         if(NULL != abi2) snprintf(buf + len, sizeof(buf) - len, ",%s", abi2);
         prop->abi_list = strdup(buf);
     }
@@ -536,3 +545,5 @@ void xcc_util_get_kernel_version(char *buf, size_t len)
 
     snprintf(buf, len, "%s version %s %s (%s)", uts.sysname, uts.release, uts.version, uts.machine);
 }
+
+#pragma clang diagnostic pop

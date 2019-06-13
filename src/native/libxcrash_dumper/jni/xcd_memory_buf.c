@@ -65,12 +65,19 @@ size_t xcd_memory_buf_read(void *obj, uintptr_t addr, void *dst, size_t size)
 
     if((size_t)addr >= self->len) return 0;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
     size_t read_length = XCC_UTIL_MIN(size, self->len - addr);
+#pragma clang diagnostic pop
+    
     memcpy(dst, self->buf + addr, read_length);
     return read_length;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-variable-declarations"
 const xcd_memory_handlers_t xcd_memory_buf_handlers = {
     xcd_memory_buf_destroy,
     xcd_memory_buf_read
 };
+#pragma clang diagnostic pop

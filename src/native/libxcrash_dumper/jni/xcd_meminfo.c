@@ -50,7 +50,7 @@ typedef struct
     size_t swapped_out_pss;
 } xcd_meminfo_t;
 
-const char *xcd_meminfo_label[] =
+static const char *xcd_meminfo_label[] =
 {
     "Native Heap",
     "Dalvik Heap",
@@ -148,7 +148,8 @@ static void xcd_meminfo_load(FILE *fp, xcd_meminfo_t *stats, int *found_swap_pss
     
     uintptr_t  start = 0, end = 0, prev_end = 0;
     char      *name;
-    int        name_len, name_pos;
+    size_t     name_len, name_pos;
+    int        pos = 0;
 
     size_t     pss;
     size_t     swappable_pss;
@@ -183,12 +184,14 @@ static void xcd_meminfo_load(FILE *fp, xcd_meminfo_t *stats, int *found_swap_pss
         if (len < 1) return;
         line[--len] = '\0';
         
-        if(sscanf(line, "%"SCNxPTR"-%"SCNxPTR" %*s %*x %*x:%*x %*d%n", &start, &end, &name_pos) != 2)
+        if(sscanf(line, "%"SCNxPTR"-%"SCNxPTR" %*s %*x %*x:%*x %*d%n", &start, &end, &pos) != 2)
         {
             skip = 1;
         }
         else
         {
+            name_pos = (size_t)pos;
+            
             //get name and name length
             while(isspace(line[name_pos]))
                 name_pos += 1;
@@ -408,7 +411,7 @@ static void xcd_meminfo_load(FILE *fp, xcd_meminfo_t *stats, int *found_swap_pss
                 {
                     sharing_proportion = (pss - private_clean - private_dirty) / (shared_clean + shared_dirty);
                 }
-                swappable_pss = (sharing_proportion * shared_clean) + private_clean;
+                swappable_pss = (size_t)((sharing_proportion * shared_clean) + private_clean);
             }
             else
             {

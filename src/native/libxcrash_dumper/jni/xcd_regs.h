@@ -47,9 +47,12 @@ extern "C" {
 #define XCD_REGS_MACHINE_NUM 17
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct {
     uintptr_t r[XCD_REGS_USER_NUM];
 } xcd_regs_t;
+#pragma clang diagnostic pop
 
 uintptr_t xcd_regs_get_pc(xcd_regs_t *self);
 void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc);
@@ -57,10 +60,13 @@ void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc);
 uintptr_t xcd_regs_get_sp(xcd_regs_t *self);
 void xcd_regs_set_sp(xcd_regs_t *self, uintptr_t sp);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct {
     uint8_t     idx;
     const char *name;
 } xcd_regs_label_t;
+#pragma clang diagnostic pop
 
 void xcd_regs_get_labels(xcd_regs_label_t **labels, size_t *labels_count);
 

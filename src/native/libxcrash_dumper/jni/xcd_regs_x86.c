@@ -21,6 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
+typedef int make_iso_compilers_happy;
+
 #ifdef __i386__
 
 #include <stdio.h>
@@ -41,13 +43,13 @@
 #define XCD_REGS_ESI 6
 #define XCD_REGS_EDI 7
 #define XCD_REGS_EIP 8
-#define XCD_REGS_EFL 9
-#define XCD_REGS_CS  10
-#define XCD_REGS_SS  11
-#define XCD_REGS_DS  12
-#define XCD_REGS_ES  13
-#define XCD_REGS_FS  14
-#define XCD_REGS_GS  15
+//#define XCD_REGS_EFL 9
+//#define XCD_REGS_CS  10
+//#define XCD_REGS_SS  11
+//#define XCD_REGS_DS  12
+//#define XCD_REGS_ES  13
+//#define XCD_REGS_FS  14
+//#define XCD_REGS_GS  15
 
 #define XCD_REGS_SP  XCD_REGS_ESP
 #define XCD_REGS_PC  XCD_REGS_EIP
@@ -93,15 +95,15 @@ void xcd_regs_set_sp(xcd_regs_t *self, uintptr_t sp)
 
 void xcd_regs_load_from_ucontext(xcd_regs_t *self, ucontext_t *uc)
 {
-    self->r[XCD_REGS_EAX] = uc->uc_mcontext.gregs[REG_EAX];
-    self->r[XCD_REGS_EBX] = uc->uc_mcontext.gregs[REG_EBX];
-    self->r[XCD_REGS_ECX] = uc->uc_mcontext.gregs[REG_ECX];
-    self->r[XCD_REGS_EDX] = uc->uc_mcontext.gregs[REG_EDX];
-    self->r[XCD_REGS_EDI] = uc->uc_mcontext.gregs[REG_EDI];
-    self->r[XCD_REGS_ESI] = uc->uc_mcontext.gregs[REG_ESI];
-    self->r[XCD_REGS_EBP] = uc->uc_mcontext.gregs[REG_EBP];
-    self->r[XCD_REGS_ESP] = uc->uc_mcontext.gregs[REG_ESP];
-    self->r[XCD_REGS_EIP] = uc->uc_mcontext.gregs[REG_EIP];
+    self->r[XCD_REGS_EAX] = (uintptr_t)uc->uc_mcontext.gregs[REG_EAX];
+    self->r[XCD_REGS_EBX] = (uintptr_t)uc->uc_mcontext.gregs[REG_EBX];
+    self->r[XCD_REGS_ECX] = (uintptr_t)uc->uc_mcontext.gregs[REG_ECX];
+    self->r[XCD_REGS_EDX] = (uintptr_t)uc->uc_mcontext.gregs[REG_EDX];
+    self->r[XCD_REGS_EDI] = (uintptr_t)uc->uc_mcontext.gregs[REG_EDI];
+    self->r[XCD_REGS_ESI] = (uintptr_t)uc->uc_mcontext.gregs[REG_ESI];
+    self->r[XCD_REGS_EBP] = (uintptr_t)uc->uc_mcontext.gregs[REG_EBP];
+    self->r[XCD_REGS_ESP] = (uintptr_t)uc->uc_mcontext.gregs[REG_ESP];
+    self->r[XCD_REGS_EIP] = (uintptr_t)uc->uc_mcontext.gregs[REG_EIP];
 }
 
 void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_len)
@@ -110,15 +112,15 @@ void xcd_regs_load_from_ptregs(xcd_regs_t *self, uintptr_t *regs, size_t regs_le
     
     struct pt_regs *ptregs = (struct pt_regs *)regs;
     
-    self->r[XCD_REGS_EAX] = ptregs->eax;
-    self->r[XCD_REGS_EBX] = ptregs->ebx;
-    self->r[XCD_REGS_ECX] = ptregs->ecx;
-    self->r[XCD_REGS_EDX] = ptregs->edx;
-    self->r[XCD_REGS_EDI] = ptregs->edi;
-    self->r[XCD_REGS_ESI] = ptregs->esi;
-    self->r[XCD_REGS_EBP] = ptregs->ebp;
-    self->r[XCD_REGS_ESP] = ptregs->esp;
-    self->r[XCD_REGS_EIP] = ptregs->eip;
+    self->r[XCD_REGS_EAX] = (uintptr_t)ptregs->eax;
+    self->r[XCD_REGS_EBX] = (uintptr_t)ptregs->ebx;
+    self->r[XCD_REGS_ECX] = (uintptr_t)ptregs->ecx;
+    self->r[XCD_REGS_EDX] = (uintptr_t)ptregs->edx;
+    self->r[XCD_REGS_EDI] = (uintptr_t)ptregs->edi;
+    self->r[XCD_REGS_ESI] = (uintptr_t)ptregs->esi;
+    self->r[XCD_REGS_EBP] = (uintptr_t)ptregs->ebp;
+    self->r[XCD_REGS_ESP] = (uintptr_t)ptregs->esp;
+    self->r[XCD_REGS_EIP] = (uintptr_t)ptregs->eip;
 }
 
 int xcd_regs_record(xcd_regs_t *self, int log_fd)
@@ -153,13 +155,13 @@ int xcd_regs_try_step_sigreturn(xcd_regs_t *self, uintptr_t rel_pc, xcd_memory_t
         // Only read the portion of the data structure we care about.
         mcontext_t mc;
         if(0 != xcd_util_ptrace_read_fully(pid, xcd_regs_get_sp(self) + 4, &(mc.gregs), sizeof(mc.gregs))) return XCC_ERRNO_MEM;
-        self->r[XCD_REGS_EAX] = mc.gregs[REG_EAX];
-        self->r[XCD_REGS_EBX] = mc.gregs[REG_EBX];
-        self->r[XCD_REGS_ECX] = mc.gregs[REG_ECX];
-        self->r[XCD_REGS_EDX] = mc.gregs[REG_EDX];
-        self->r[XCD_REGS_EBP] = mc.gregs[REG_EBP];
-        self->r[XCD_REGS_ESP] = mc.gregs[REG_ESP];
-        self->r[XCD_REGS_EIP] = mc.gregs[REG_EIP];
+        self->r[XCD_REGS_EAX] = (uintptr_t)mc.gregs[REG_EAX];
+        self->r[XCD_REGS_EBX] = (uintptr_t)mc.gregs[REG_EBX];
+        self->r[XCD_REGS_ECX] = (uintptr_t)mc.gregs[REG_ECX];
+        self->r[XCD_REGS_EDX] = (uintptr_t)mc.gregs[REG_EDX];
+        self->r[XCD_REGS_EBP] = (uintptr_t)mc.gregs[REG_EBP];
+        self->r[XCD_REGS_ESP] = (uintptr_t)mc.gregs[REG_ESP];
+        self->r[XCD_REGS_EIP] = (uintptr_t)mc.gregs[REG_EIP];
         
         return 0;
     }

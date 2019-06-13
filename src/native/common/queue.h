@@ -34,7 +34,7 @@
 #define QUEUE_H
 
 /* #include <sys/cdefs.h> */
-#define __containerof(ptr, type, field) ((type *)((char *)(ptr) - ((char *)&((type *)0)->field)))
+#define QUEUE_CONTAINER_OF(ptr, type, field) ((type *)((char *)(ptr) - ((char *)&((type *)0)->field)))
 
 /*
  * This file defines four types of data structures: singly-linked lists,
@@ -225,7 +225,7 @@
 
 #define LIST_PREV(elm, head, type, field)                               \
     ((elm)->field.le_prev == &LIST_FIRST((head)) ? NULL :               \
-     __containerof((elm)->field.le_prev, struct type, field.le_next))
+     QUEUE_CONTAINER_OF((elm)->field.le_prev, struct type, field.le_next))
 
 #define LIST_FOREACH(var, head, field)                                  \
     for ((var) = LIST_FIRST((head));                                    \
@@ -319,7 +319,7 @@
 
 #define STAILQ_LAST(head, type, field)                                  \
     (STAILQ_EMPTY((head)) ? NULL :                                      \
-     __containerof((head)->stqh_last, struct type, field.stqe_next))
+     QUEUE_CONTAINER_OF((head)->stqh_last, struct type, field.stqe_next))
 
 #define STAILQ_FOREACH(var, head, field)                                \
     for((var) = STAILQ_FIRST((head));                                   \

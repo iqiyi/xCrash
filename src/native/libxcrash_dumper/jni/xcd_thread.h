@@ -42,6 +42,8 @@ typedef enum
     XCD_THREAD_STATUS_ATTACH_WAIT
 } xcd_thread_status_t;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct xcd_thread
 {
     xcd_thread_status_t  status;
@@ -51,6 +53,7 @@ typedef struct xcd_thread
     xcd_regs_t           regs;
     xcd_frames_t        *frames;
 } xcd_thread_t;
+#pragma clang diagnostic pop
 
 void xcd_thread_init(xcd_thread_t *self, pid_t pid, pid_t tid);
 

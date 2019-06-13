@@ -21,6 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
+typedef int make_iso_compilers_happy;
+
 #ifdef __arm__
 
 #include <sys/types.h>
@@ -89,7 +91,7 @@ static int xcd_arm_exidx_prel31_addr(xcd_memory_t *memory, uint32_t offset, uint
 
     //sign extend the value if necessary
     int32_t value = ((int32_t)(data) << 1) >> 1;
-    *addr = offset + value;
+    *addr = (uint32_t)((int32_t)offset + value);
     
     return 0;
 }
@@ -185,7 +187,7 @@ static int xcd_arm_exidx_get_entry(xcd_arm_exidx_t *self)
         
         //get the address of the table entry
         int32_t signed_data = (int32_t)(data << 1) >> 1;
-        uint32_t addr = (self->entry_offset + 4) + signed_data;
+        uint32_t addr = (uint32_t)((int32_t)(self->entry_offset + 4) + signed_data);
 
         //get the table entry
         if(0 != xcd_memory_read_fully(self->memory, addr, &data, sizeof(data))) return XCC_ERRNO_MEM;
@@ -253,7 +255,7 @@ static int xcd_arm_exidx_get_entry(xcd_arm_exidx_t *self)
 static int xcd_arm_exidx_decode_entry_10_00(xcd_arm_exidx_t *self, uint8_t byte)
 {
     int      r;
-    uint16_t bytes = (byte & 0xf) << 8;
+    uint16_t bytes = (uint16_t)((byte & 0xf) << 8);
 
     if(0 != (r = xcd_arm_exidx_entry_pop(self, &byte))) return r;
     bytes |= byte;
@@ -315,8 +317,8 @@ static int xcd_arm_exidx_decode_entry_10_10(xcd_arm_exidx_t *self, uint8_t byte)
 {
     // 10100nnn: Pop r4-r[4+nnn]
     // 10101nnn: Pop r4-r[4+nnn], r14
-    size_t i;    
-    for(i = 4; i <= 4 + (byte & 0x7); i++)
+    size_t i;
+    for(i = 4; i <= (size_t)(4 + (byte & 0x7)); i++)
     {
 #if XCD_ARM_EXIDX_DEBUG
         XCD_LOG_DEBUG("ARM_EXIDE: 1010, ptrace, reg=%zu, vsp=%x", i, self->vsp);
@@ -391,7 +393,7 @@ static int xcd_arm_exidx_decode_entry_10_11_0010(xcd_arm_exidx_t *self)
     do
     {
         if(0 != (r = xcd_arm_exidx_entry_pop(self, &byte))) return r;
-        result |= (byte & 0x7f) << shift;
+        result |= (uint32_t)((byte & 0x7f) << shift);
         shift += 7;
     } while (byte & 0x80);
     
@@ -488,7 +490,7 @@ static int xcd_arm_exidx_decode_entry_11_000(xcd_arm_exidx_t *self, uint8_t byte
         else if(0 == (byte >> 4))
         {
             // 11000111 0000iiii: Intel Wireless MMX pop wCGR registers {wCGR0,1,2,3}
-            self->vsp += __builtin_popcount(byte) * 4;
+            self->vsp += (uintptr_t)(__builtin_popcount(byte) * 4);
             return 0;
         }
         else
@@ -567,11 +569,11 @@ static int xcd_arm_exidx_decode_entry(xcd_arm_exidx_t *self)
     {
     case 0:
         //00xxxxxx: vsp = vsp + (xxxxxx << 2) + 4
-        self->vsp += ((byte & 0x3f) << 2) + 4;
+        self->vsp += (uintptr_t)(((byte & 0x3f) << 2) + 4);
         return 0;
     case 1:
         //01xxxxxx: vsp = vsp - (xxxxxx << 2) - 4
-        self->vsp -= ((byte & 0x3f) << 2) + 4;
+        self->vsp -= (uintptr_t)(((byte & 0x3f) << 2) + 4);
         return 0;
     case 2:
         return xcd_arm_exidx_decode_entry_10(self, byte);

@@ -34,6 +34,8 @@ extern "C" {
 
 #define XCD_MAP_PORT_DEVICE 0x8000
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct xcd_map
 {
     //base info from /proc/<PID>/maps
@@ -49,6 +51,7 @@ typedef struct xcd_map
     size_t     elf_offset;
     size_t     elf_start_offset;
 } xcd_map_t;
+#pragma clang diagnostic pop
 
 int xcd_map_init(xcd_map_t *self, uintptr_t start, uintptr_t end, size_t offset,
                  const char * flags, const char *name);

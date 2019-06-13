@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <stdarg.h>
 #include <string.h>
+#include "xcc_fmt.h"
 
 static unsigned xcc_fmt_parse_decimal(const char *format, int *ppos)
 {
@@ -41,7 +42,7 @@ static unsigned xcc_fmt_parse_decimal(const char *format, int *ppos)
         result = result * 10 + d;
         p++;
     }
-    *ppos = p - format;
+    *ppos = (int)(p - format);
     return result;
 }
 
@@ -53,18 +54,18 @@ static void xcc_fmt_format_unsigned(char *buf, size_t buf_size, uint64_t value, 
     // Generate digit string in reverse order.
     while (value)
     {
-        unsigned d = value % base;
-        value /= base;
+        unsigned d = (unsigned)(value % (uint64_t)base);
+        value /= (uint64_t)base;
         if (p != end)
         {
             char ch;
             if (d < 10)
             {
-                ch = '0' + d;
+                ch = '0' + (char)d;
             }
             else
             {
-                ch = (caps ? 'A' : 'a') + (d - 10);
+                ch = (caps ? 'A' : 'a') + (char)(d - 10);
             }
             *p++ = ch;
         }
@@ -81,7 +82,7 @@ static void xcc_fmt_format_unsigned(char *buf, size_t buf_size, uint64_t value, 
     *p = '\0';
     
     // Reverse digit string in-place.
-    size_t length = p - buf;
+    size_t length = (size_t)(p - buf);
     for (size_t i = 0, j = length - 1; i < j; ++i, --j)
     {
         char ch = buf[i];
@@ -130,7 +131,7 @@ static void xcc_fmt_stream_init(xcc_fmt_stream_t *self, char *buffer, size_t buf
     if(self->avail > 0) self->pos[0] = '\0';
 }
 
-static int xcc_fmt_stream_total(xcc_fmt_stream_t *self)
+static size_t xcc_fmt_stream_total(xcc_fmt_stream_t *self)
 {
     return self->total;
 }
@@ -139,9 +140,9 @@ static void xcc_fmt_stream_send(xcc_fmt_stream_t *self, const char *data, int le
 {
     if(len < 0)
     {
-        len = strlen(data);
+        len = (int)strlen(data);
     }
-    self->total += len;
+    self->total += (size_t)len;
     
     if(self->avail <= 1)
     {
@@ -151,13 +152,13 @@ static void xcc_fmt_stream_send(xcc_fmt_stream_t *self, const char *data, int le
     
     if((size_t)len >= self->avail)
     {
-        len = self->avail - 1;
+        len = (int)(self->avail - 1);
     }
     
-    memcpy(self->pos, data, len);
+    memcpy(self->pos, data, (size_t)len);
     self->pos += len;
     self->pos[0] = '\0';
-    self->avail -= len;
+    self->avail -= (size_t)len;
 }
 
 static void xcc_fmt_stream_send_repeat(xcc_fmt_stream_t *self, char ch, int count)
@@ -343,7 +344,7 @@ static void xcc_fmt_stream_vformat(xcc_fmt_stream_t *self, const char *format, v
             //sign extension, if needed
             if(is_signed)
             {
-                int shift = 64 - 8 * bytelen;
+                int shift = (int)(64 - 8 * bytelen);
                 value = (uint64_t)(((int64_t)(value << shift)) >> shift);
             }
             //format the number properly into our buffer
@@ -362,7 +363,7 @@ static void xcc_fmt_stream_vformat(xcc_fmt_stream_t *self, const char *format, v
         
         //if we are here, 'str' points to the content that must be outputted.
         //handle padding and alignment now
-        slen = strlen(str);
+        slen = (int)strlen(str);
         if (sign != '\0' || prec != -1)
         {
             //__assert(__FILE__, __LINE__, "sign/precision unsupported");
@@ -382,7 +383,7 @@ static void xcc_fmt_stream_vformat(xcc_fmt_stream_t *self, const char *format, v
     }
 }
 
-int xcc_fmt_vsnprintf(char *buffer, size_t buffer_size, const char *format, va_list args)
+size_t xcc_fmt_vsnprintf(char *buffer, size_t buffer_size, const char *format, va_list args)
 {
     xcc_fmt_stream_t stream;
     xcc_fmt_stream_init(&stream, buffer, buffer_size);
@@ -390,11 +391,11 @@ int xcc_fmt_vsnprintf(char *buffer, size_t buffer_size, const char *format, va_l
     return xcc_fmt_stream_total(&stream);
 }
 
-int xcc_fmt_snprintf(char *buffer, size_t buffer_size, const char *format, ...)
+size_t xcc_fmt_snprintf(char *buffer, size_t buffer_size, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    int buffer_len = xcc_fmt_vsnprintf(buffer, buffer_size, format, args);
+    size_t buffer_len = xcc_fmt_vsnprintf(buffer, buffer_size, format, args);
     va_end(args);
     return buffer_len;
 }

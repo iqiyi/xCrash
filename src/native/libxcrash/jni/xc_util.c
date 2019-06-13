@@ -82,9 +82,9 @@ struct tm *xca_util_time2tm(const time_t timev, long gmtoff, struct tm *result)
         rem -= XCA_UTIL_SECS_PER_DAY;
         ++days;
     }
-    result->tm_hour = rem / XCA_UTIL_SECS_PER_HOUR;
+    result->tm_hour = (int)(rem / XCA_UTIL_SECS_PER_HOUR);
     rem %= XCA_UTIL_SECS_PER_HOUR;
-    result->tm_min = rem / 60;
+    result->tm_min = (int)(rem / 60);
     result->tm_sec = rem % 60;
     /* January 1, 1970 was a Thursday.  */
     result->tm_wday = (4 + days) % 7;
@@ -104,20 +104,20 @@ struct tm *xca_util_time2tm(const time_t timev, long gmtoff, struct tm *result)
 
         y = yg;
     }
-    result->tm_year = y - 1900;
+    result->tm_year = (int)(y - 1900);
     if (result->tm_year != y - 1900)
     {
         /* The year cannot be represented due to overflow.  */
         errno = EOVERFLOW;
         return NULL;
     }
-    result->tm_yday = days;
+    result->tm_yday = (int)days;
     ip = xca_util_mon_yday[XCA_UTIL_ISLEAP(y)];
     for (y = 11; days < (long int) ip[y]; --y)
         continue;
     days -= ip[y];
-    result->tm_mon = y;
-    result->tm_mday = days + 1;
+    result->tm_mon = (int)y;
+    result->tm_mday = (int)(days + 1);
     return result;
 }
 

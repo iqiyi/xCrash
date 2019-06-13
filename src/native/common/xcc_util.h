@@ -53,7 +53,6 @@ extern "C" {
             __typeof__ (b) _b = (b); \
             _a < _b ? _a : _b; })
 
-#ifndef XCC_UTIL_TEMP_FAILURE_RETRY
 #define XCC_UTIL_TEMP_FAILURE_RETRY(exp) ({         \
             __typeof__(exp) _rc;                    \
             do {                                    \
@@ -61,7 +60,6 @@ extern "C" {
                 _rc = (exp);                        \
             } while (_rc == -1 && errno == EINTR);  \
             _rc; })
-#endif
 
 #if defined(__arm__)
 #define XCC_UTIL_ABI_STRING "arm"
@@ -79,6 +77,8 @@ extern "C" {
 #define XCC_UTIL_THREAD_SEP "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---\n"
 #define XCC_UTIL_THREAD_END "+++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++\n"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct
 {
     int   api_level;
@@ -90,6 +90,7 @@ typedef struct
     char *build_fingerprint;
     char *revision;
 } xcc_util_build_prop_t;
+#pragma clang diagnostic pop
 
 void xcc_util_load_build_prop(xcc_util_build_prop_t *prop);
 
@@ -106,12 +107,12 @@ int xcc_util_write_str(int fd, const char *str);
 int xcc_util_write_format(int fd, const char *format, ...);
 int xcc_util_write_format_safe(int fd, const char *format, ...);
 
-char *xcc_util_gets(char *s, int size, int fd);
+char *xcc_util_gets(char *s, size_t size, int fd);
 int xcc_util_read_file_line(const char *path, char *buf, size_t len);
 
 int xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
 int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
-int xcc_util_is_root();
+int xcc_util_is_root(void);
 void xcc_util_get_kernel_version(char *buf, size_t len);
 
 #ifdef __cplusplus

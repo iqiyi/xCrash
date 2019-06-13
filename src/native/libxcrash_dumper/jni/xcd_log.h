@@ -34,10 +34,14 @@ extern "C" {
 #define XCD_LOG_PRIO ANDROID_LOG_WARN //ANDROID_LOG_DEBUG
 
 #define XCD_LOG_TAG "xcrash_dumper"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #define XCD_LOG_DEBUG(fmt, ...) do{if(XCD_LOG_PRIO <= ANDROID_LOG_DEBUG) __android_log_print(ANDROID_LOG_DEBUG, XCD_LOG_TAG, fmt, ##__VA_ARGS__);}while(0)
 #define XCD_LOG_INFO(fmt, ...)  do{if(XCD_LOG_PRIO <= ANDROID_LOG_INFO)  __android_log_print(ANDROID_LOG_INFO,  XCD_LOG_TAG, fmt, ##__VA_ARGS__);}while(0)
 #define XCD_LOG_WARN(fmt, ...)  do{if(XCD_LOG_PRIO <= ANDROID_LOG_WARN)  __android_log_print(ANDROID_LOG_WARN,  XCD_LOG_TAG, fmt, ##__VA_ARGS__);}while(0)
 #define XCD_LOG_ERROR(fmt, ...) do{if(XCD_LOG_PRIO <= ANDROID_LOG_ERROR) __android_log_print(ANDROID_LOG_ERROR, XCD_LOG_TAG, fmt, ##__VA_ARGS__);}while(0)
+#pragma clang diagnostic pop
 
 //debug-log flags for modules
 #define XCD_CORE_DEBUG          0

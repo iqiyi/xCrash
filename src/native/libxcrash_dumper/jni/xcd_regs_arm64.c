@@ -21,6 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
+typedef int make_iso_compilers_happy;
+
 #ifdef __aarch64__
 
 #include <stdio.h>

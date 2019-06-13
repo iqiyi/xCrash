@@ -21,6 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
+typedef int make_iso_compilers_happy;
+
 #ifdef __arm__
 
 #include <stdio.h>
@@ -235,7 +237,7 @@ uintptr_t xcd_regs_get_adjust_pc(uintptr_t rel_pc, uintptr_t load_bias, xcd_memo
     {
         // This is a thumb instruction, it could be 2 or 4 bytes.
         uint32_t value;
-        if(0 != xcd_memory_read_fully(memory, adjusted_rel_pc - 5, &value, sizeof(value)) ||
+        if(0 != xcd_memory_read_fully(memory, (uintptr_t)(adjusted_rel_pc - 5), &value, sizeof(value)) ||
            (value & 0xe000f000) != 0xe000f000)
         {
             return 2;

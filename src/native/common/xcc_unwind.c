@@ -82,7 +82,7 @@ static int xcc_unwind_check_ignore_lib(const char *name, const char *ignore_lib)
     ignore_lib_len = strlen(ignore_lib);
     if(name_len < ignore_lib_len) return 0;
 
-    return (0 == memcmp((void *)(name + name_len - ignore_lib_len), (void *)ignore_lib, ignore_lib_len) ? 1 : 0);
+    return (0 == memcmp((const void *)(name + name_len - ignore_lib_len), (const void *)ignore_lib, ignore_lib_len) ? 1 : 0);
 }
 
 static void xcc_unwind_parse_name_from_maps(uintptr_t pc, const char **name, char *name_buf, size_t name_buf_len)
@@ -118,7 +118,7 @@ static void xcc_unwind_parse_name_from_maps(uintptr_t pc, const char **name, cha
     if(fd >= 0) close(fd);
 }
 
-int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf_len)
+size_t xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf_len)
 {
     uintptr_t           sig_pc = 0;
     uintptr_t           sig_lr = 0;
@@ -143,15 +143,15 @@ int xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf
     //Trying to get LR for x86 and x86_64 on local unwind is usually
     //leads to access unmapped memory, which will crash the process immediately.
 #if defined(__arm__)
-    sig_pc = uc->uc_mcontext.arm_pc;
-    sig_lr = uc->uc_mcontext.arm_lr;
+    sig_pc = (uintptr_t)uc->uc_mcontext.arm_pc;
+    sig_lr = (uintptr_t)uc->uc_mcontext.arm_lr;
 #elif defined(__aarch64__)
-    sig_pc = uc->uc_mcontext.pc;
-    sig_lr = uc->uc_mcontext.regs[30];
+    sig_pc = (uintptr_t)uc->uc_mcontext.pc;
+    sig_lr = (uintptr_t)uc->uc_mcontext.regs[30];
 #elif defined(__i386__)
-    sig_pc = uc->uc_mcontext.gregs[REG_EIP];
+    sig_pc = (uintptr_t)uc->uc_mcontext.gregs[REG_EIP];
 #elif defined(__x86_64__)
-    sig_pc = uc->uc_mcontext.gregs[REG_RIP];
+    sig_pc = (uintptr_t)uc->uc_mcontext.gregs[REG_RIP];
 #endif
 
     buf[0] = '\0';

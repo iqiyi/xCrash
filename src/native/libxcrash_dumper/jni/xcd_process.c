@@ -57,6 +57,8 @@ typedef struct xcd_thread_info
 } xcd_thread_info_t;
 typedef TAILQ_HEAD(xcd_thread_info_queue, xcd_thread_info,) xcd_thread_info_queue_t;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_process
 {
     pid_t                    pid;
@@ -68,6 +70,7 @@ struct xcd_process
     size_t                   nthds;
     xcd_maps_t              *maps;
 };
+#pragma clang diagnostic pop
 
 static int xcd_process_load_threads(xcd_process_t *self)
 {

@@ -30,6 +30,7 @@
 #include <android/log.h>
 #include "xcc_errno.h"
 #include "xcc_util.h"
+#include "xc_jni.h"
 #include "xc_core.h"
 #include "xc_util.h"
 #include "xc_test.h"
@@ -349,7 +350,8 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
     jstring      app_lib_dir                      = NULL;
     jstring      files_dir                        = NULL;
     
-    char        *p_log_dir                        = NULL;
+    const char  *p_log_dir                        = NULL;
+    char        *p_log_dir_tmp                    = NULL;
     int          r                                = 0;
 
     (void)thiz;
@@ -372,7 +374,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
 
     if(dump_all_threads_whitelist)
     {
-        len = (*env)->GetArrayLength(env, dump_all_threads_whitelist);
+        len = (size_t)(*env)->GetArrayLength(env, dump_all_threads_whitelist);
         if(len > 0)
         {
             if(NULL != (c_dump_all_threads_whitelist = calloc(len, sizeof(char *))))
@@ -380,7 +382,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
                 c_dump_all_threads_whitelist_len = len;
                 for(i = 0; i < len; i++)
                 {
-                    jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, i));
+                    jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
                     c_dump_all_threads_whitelist[i] = (wl ? (*env)->GetStringUTFChars(env, wl, 0) : NULL);
                 }
             }
@@ -402,15 +404,16 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
             r = XCC_ERRNO_INVAL;
             goto end;
         }
-        if(NULL == (p_log_dir = xc_util_strdupcat(c_files_dir, "/tombstones")))
+        if(NULL == (p_log_dir_tmp = xc_util_strdupcat(c_files_dir, "/tombstones")))
         {
             r = XCC_ERRNO_NOMEM;
             goto end;
         }
+        p_log_dir = (const char *)p_log_dir_tmp;
     }
     else
     {
-        p_log_dir = (char *)c_log_dir;
+        p_log_dir = c_log_dir;
     }
 
     //save callback class & method
@@ -437,8 +440,8 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
                      c_dump_all_threads_whitelist_len);
 
     //free log_dir
-    if(p_log_dir != c_log_dir && p_log_dir != NULL)
-        free(p_log_dir);
+    if(NULL != p_log_dir_tmp)
+        free(p_log_dir_tmp);
 
  end:
     if(app_id) (*env)->ReleaseStringUTFChars(env, app_id, c_app_id);
@@ -455,7 +458,7 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
     {
         for(i = 0; i < c_dump_all_threads_whitelist_len; i++)
         {
-            jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, i));
+            jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
             const char *c_wl = c_dump_all_threads_whitelist[i];
             if(wl && NULL != c_wl) (*env)->ReleaseStringUTFChars(env, wl, c_wl);
         }
@@ -470,7 +473,7 @@ static jint xc_jni_init(JNIEnv *env, jobject thiz, jobject context)
     return xc_jni_init_ex(env, thiz, context, 1, NULL, NULL, NULL, NULL, 50, 50, 200, 1, 1, 1, 0, NULL, NULL, NULL);
 }
 
-void xc_jni_test(JNIEnv *env, jobject thiz, jint run_in_new_thread)
+static void xc_jni_test(JNIEnv *env, jobject thiz, jint run_in_new_thread)
 {
     (void)env;
     (void)thiz;

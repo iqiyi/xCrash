@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE           := xcrash_dumper
-LOCAL_CFLAGS           := -std=c11 -Wall -Wextra -Werror -fPIE -fvisibility=hidden
+LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden -fPIE
 LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
 LOCAL_STATIC_LIBRARIES := lzma
 LOCAL_LDLIBS           := -llog -fPIE -pie

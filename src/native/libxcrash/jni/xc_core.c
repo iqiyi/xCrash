@@ -21,7 +21,11 @@
 
 // Created by caikelun on 2019-03-07.
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
 #define _GNU_SOURCE
+#pragma clang diagnostic pop
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,6 +36,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <sched.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -44,13 +49,16 @@
 #include "xcc_unwind.h"
 #include "xcc_signal.h"
 #include "xcc_b64.h"
+#include "xc_core.h"
 #include "xc_util.h"
 #include "xc_jni.h"
 #include "xc_recorder.h"
 #include "xc_fallback.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+
 #define XC_CORE_EMERGENCY_BUF_LEN (20 * 1024)
-#define XC_CORE_CHILD_STACK_LEN   (16 * 1024)
 #define XC_CORE_ERR_TITLE         "\n\nxcrash error:\n"
 
 static pthread_mutex_t        xc_core_mutex   = PTHREAD_MUTEX_INITIALIZER;
@@ -69,6 +77,7 @@ static char                  *xc_core_kernel_version;
 
 //for clone and fork
 #ifndef __i386__
+#define XC_CORE_CHILD_STACK_LEN   (16 * 1024)
 static void                  *xc_core_child_stack;
 #else
 static int                    xc_core_child_notifier[2];
@@ -195,7 +204,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     struct timespec crash_tp;
     int             restore_orig_ptracer = 0;
     int             restore_orig_dumpable = 0;
-    int             orig_dumpable;
+    int             orig_dumpable = 0;
     int             dump_ok = 0;
 
     (void)sig;
@@ -572,7 +581,7 @@ int xc_core_init(int restore_signal_handler,
     //for clone and fork
 #ifndef __i386__
     if(NULL == (xc_core_child_stack = calloc(XC_CORE_CHILD_STACK_LEN, 1))) return XCC_ERRNO_NOMEM;
-    xc_core_child_stack += XC_CORE_CHILD_STACK_LEN;
+    xc_core_child_stack = (void *)(((uint8_t *)xc_core_child_stack) + XC_CORE_CHILD_STACK_LEN);
 #else
     if(0 != pipe2(xc_core_child_notifier, O_CLOEXEC)) return XCC_ERRNO_SYS;
 #endif
@@ -582,3 +591,5 @@ int xc_core_init(int restore_signal_handler,
     
     return 0;
 }
+
+#pragma clang diagnostic pop

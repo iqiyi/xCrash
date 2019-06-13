@@ -29,6 +29,10 @@
 #include <android/log.h>
 #include "xc_test.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
 #define XC_TEST_LOG(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "xcrash", fmt, ##__VA_ARGS__)
 
 int xc_test_call_4(int v)
@@ -54,13 +58,13 @@ int xc_test_call_2(int v)
     return r;
 }
 
-void xc_test_call_1()
+void xc_test_call_1(void)
 {
     int r = xc_test_call_2(1);
     r = 0;
 }
 
-void *xc_test_new_thread(void *arg)
+static void *xc_test_new_thread(void *arg)
 {
     (void)arg;
     pthread_detach(pthread_self());
@@ -99,3 +103,5 @@ void xc_test_crash(int run_in_new_thread)
     else
         xc_test_call_1();
 }
+
+#pragma clang diagnostic pop

@@ -39,6 +39,9 @@ extern "C" {
 #define XC_UTIL_SYSCALL_GETDENTS SYS_getdents64
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+
 typedef struct
 {
 #ifndef __LP64__
@@ -53,6 +56,8 @@ typedef struct
 #endif
     char           d_name[1];
 } xc_util_dirent_t;
+
+#pragma clang diagnostic pop
 
 struct tm *xca_util_time2tm(const time_t timev, long gmtoff, struct tm *result);
 char *xc_util_strdupcat(const char *s1, const char *s2);

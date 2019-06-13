@@ -37,9 +37,13 @@
 #include "xcd_util.h"
 #include "xcd_log.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
+#pragma clang diagnostic ignored "-Wpadded"
 #include "7zCrc.h"
 #include "Xz.h"
 #include "XzCrc64.h"
+#pragma clang diagnostic pop
 
 int xcd_util_ptrace_read_long(pid_t pid, uintptr_t addr, long *value)
 {
@@ -68,8 +72,12 @@ size_t xcd_util_ptrace_read(pid_t pid, uintptr_t addr, void *dst, size_t bytes)
     if(align_bytes != 0)
     {
         if(0 != xcd_util_ptrace_read_long(pid, addr & ~(sizeof(long) - 1), &data)) return 0;
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
         size_t copy_bytes = XCC_UTIL_MIN(sizeof(long) - align_bytes, bytes);
+#pragma clang diagnostic pop
+        
         memcpy(dst, (uint8_t *)(&data) + align_bytes, copy_bytes);
         addr += copy_bytes;
         dst = (void *)((uintptr_t)dst + copy_bytes);
@@ -118,7 +126,7 @@ static void xcd_util_xz_free(ISzAllocPtr p, void* address)
     free(address);
 }
 
-int xcd_util_xz_crc_gen = 0;
+static int xcd_util_xz_crc_gen = 0;
 int xcd_util_xz_decompress(uint8_t* src, size_t src_size, uint8_t** dst, size_t* dst_size)
 {
     size_t       src_offset = 0;

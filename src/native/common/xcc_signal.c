@@ -33,11 +33,14 @@
 
 #define XCC_SIGNAL_STACK_SIZE (1024 * 32)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct
 {
     int              signum;
     struct sigaction orig_act;
 } xcc_signal_info_t;
+#pragma clang diagnostic pop
 
 static xcc_signal_info_t xcc_signal_info[] =
 {
@@ -72,7 +75,7 @@ int xcc_signal_register(xcc_signal_handler_t handler)
     return 0;
 }
 
-int xcc_signal_unregister()
+int xcc_signal_unregister(void)
 {
     int r = 0;
     size_t i;
@@ -83,7 +86,7 @@ int xcc_signal_unregister()
     return r;
 }
 
-int xcc_signal_ignore()
+int xcc_signal_ignore(void)
 {
     struct sigaction act;
     act.sa_flags = 0;

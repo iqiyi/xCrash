@@ -35,6 +35,8 @@
 #include "xcd_memory.h"
 #include "xcd_log.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_elf
 {
     pid_t                pid;
@@ -44,6 +46,7 @@ struct xcd_elf
     xcd_elf_interface_t *gnu_interface;
     int                  gnu_interface_created;
 };
+#pragma clang diagnostic pop
 
 int xcd_elf_is_valid(xcd_memory_t *memory)
 {

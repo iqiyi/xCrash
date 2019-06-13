@@ -34,12 +34,15 @@
 #include "xcd_util.h"
 #include "xcd_log.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_memory_remote
 {
     pid_t     pid;
     uintptr_t start;
     size_t    length;
 };
+#pragma clang diagnostic pop
 
 int xcd_memory_remote_create(void **obj, xcd_map_t *map, pid_t pid)
 {
@@ -67,14 +70,21 @@ size_t xcd_memory_remote_read(void *obj, uintptr_t addr, void *dst, size_t size)
 
     if((size_t)addr >= self->length) return 0;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
     size_t read_length = XCC_UTIL_MIN(size, self->length - addr);
+#pragma clang diagnostic pop
+    
     uint64_t read_addr;
     if(__builtin_add_overflow(self->start, addr, &read_addr)) return 0;
     
-    return xcd_util_ptrace_read(self->pid, read_addr, dst, read_length);
+    return xcd_util_ptrace_read(self->pid, (uintptr_t)read_addr, dst, read_length);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-variable-declarations"
 const xcd_memory_handlers_t xcd_memory_remote_handlers = {
     xcd_memory_remote_destroy,
     xcd_memory_remote_read
 };
+#pragma clang diagnostic pop

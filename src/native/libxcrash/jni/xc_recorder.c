@@ -36,10 +36,11 @@
 #include "xc_recorder.h"
 #include "xc_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+
 // log filename format:
 // prefix_01234567890123456789_version__pname[suffix]
-
-#define XC_RECORDER_LOG_TS_LEN 20
 
 struct xc_recorder
 {
@@ -106,7 +107,7 @@ int xc_recorder_create_and_open(xc_recorder_t *self)
     int               fd = -1;
     char              buf[512];
     char              pathname[PATH_MAX];
-    int               n, i;
+    long              n, i;
     xc_util_dirent_t *ent;
     int               dir_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
     int               file_flags = O_RDWR | O_CLOEXEC;
@@ -130,7 +131,10 @@ int xc_recorder_create_and_open(xc_recorder_t *self)
     {
         for(i = 0; i < n; i += ent->d_reclen)
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
             ent = (xc_util_dirent_t *)(buf + i);
+#pragma clang diagnostic pop
             
             // placeholder_12345678901234567890.clean.xcrash
             // file name length: 45
@@ -235,3 +239,5 @@ int xc_recorder_check_backtrace_valid(xc_recorder_t *self)
     if(fd >= 0) close(fd);
     return r;    
 }
+
+#pragma clang diagnostic pop

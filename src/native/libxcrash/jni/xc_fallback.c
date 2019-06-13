@@ -21,7 +21,11 @@
 
 // Created by caikelun on 2019-03-07.
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
 #define _GNU_SOURCE
+#pragma clang diagnostic pop
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -43,9 +47,12 @@
 #include "xc_fallback.h"
 #include "xc_util.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+
 #define XC_FALLBACK_TIME_FORMAT "%s: '%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld'\n"
 
-static int xc_fallback_get_file_line(char *buf, size_t len, const char *title, const char *path)
+static size_t xc_fallback_get_file_line(char *buf, size_t len, const char *title, const char *path)
 {
     int   fd2 = -1;
     char  line[256];
@@ -60,9 +67,9 @@ static int xc_fallback_get_file_line(char *buf, size_t len, const char *title, c
     return xcc_fmt_snprintf(buf, len, "%s: '%s'\n", title, p);
 }
 
-static int xc_fallback_get_cpu(char *buf, size_t len)
+static size_t xc_fallback_get_cpu(char *buf, size_t len)
 {
-    int used = 0;
+    size_t used = 0;
 
     used += xc_fallback_get_file_line(buf + used, len - used, "CPU loadavg", "/proc/loadavg");
     used += xc_fallback_get_file_line(buf + used, len - used, "CPU online",  "/sys/devices/system/cpu/online");
@@ -91,7 +98,7 @@ static int xc_fallback_parse_kb(char *line, const char *key)
     return val;
 }
 
-static int xc_fallback_get_system_mem(char *buf, size_t len)
+static size_t xc_fallback_get_system_mem(char *buf, size_t len)
 {
     int     fd = -1;
     char    line[256];
@@ -101,7 +108,7 @@ static int xc_fallback_get_system_mem(char *buf, size_t len)
     size_t  mbuffers = 0;
     size_t  mcached = 0;
     size_t  mfree_all = 0;
-    int     used = 0;
+    size_t  used = 0;
 
     if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open("/proc/meminfo", O_RDONLY | O_CLOEXEC))) < 0) goto end;
     
@@ -136,7 +143,8 @@ static size_t xc_fallback_get_number_of_threads(pid_t pid)
     int               fd = -1;
     char              path[64];
     char              buf[512];
-    int               n, i, tid;
+    long              n, i;
+    int               tid;
     size_t            total = 0;
     xc_util_dirent_t *ent;
     
@@ -150,7 +158,10 @@ static size_t xc_fallback_get_number_of_threads(pid_t pid)
 
         for(i = 0; i < n;)
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
             ent = (xc_util_dirent_t *)(buf + i);
+#pragma clang diagnostic pop
             
             if(0 != memcmp(ent->d_name, ".", 1) &&
                0 != memcmp(ent->d_name, "..", 2) &&
@@ -166,7 +177,7 @@ static size_t xc_fallback_get_number_of_threads(pid_t pid)
     return total;
 }
 
-static int xc_fallback_get_process_thread(char *buf, size_t len, pid_t pid, pid_t tid)
+static size_t xc_fallback_get_process_thread(char *buf, size_t len, pid_t pid, pid_t tid)
 {
     char  buf1[128];
     char  buf2[64];
@@ -180,7 +191,7 @@ static int xc_fallback_get_process_thread(char *buf, size_t len, pid_t pid, pid_
                             pid, tid, tname, pname);
 }
 
-static int xc_fallback_get_signal(char *buf, size_t len, siginfo_t *si, pid_t pid)
+static size_t xc_fallback_get_signal(char *buf, size_t len, siginfo_t *si, pid_t pid)
 {
     //fault addr
     char addr_desc[64];
@@ -199,7 +210,7 @@ static int xc_fallback_get_signal(char *buf, size_t len, siginfo_t *si, pid_t pi
                             si->si_code, xcc_util_get_sigcodename(si), sender_desc, addr_desc);
 }
 
-static int xc_fallback_get_regs(char *buf, size_t len, ucontext_t *uc)
+static size_t xc_fallback_get_regs(char *buf, size_t len, ucontext_t *uc)
 {
 #if defined(__arm__)
     return xcc_fmt_snprintf(buf, len, 
@@ -308,7 +319,7 @@ static int xc_fallback_get_regs(char *buf, size_t len, ucontext_t *uc)
 #endif
 }
 
-static int xc_fallback_get_backtrace(char *buf, size_t len, ucontext_t *uc, const char *ignore_lib)
+static size_t xc_fallback_get_backtrace(char *buf, size_t len, ucontext_t *uc, const char *ignore_lib)
 {
     size_t used = 0;
 
@@ -396,7 +407,8 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
     char              path[128];
     char              fd_path[512];
     char              buf[512];
-    int               n, i, fd_num;
+    long              n, i;
+    int               fd_num;
     size_t            total = 0;
     xc_util_dirent_t *ent;
     ssize_t           len;
@@ -414,7 +426,10 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
 
         for(i = 0; i < n;)
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
             ent = (xc_util_dirent_t *)(buf + i);
+#pragma clang diagnostic pop
 
             //get the fd
             if('\0' == ent->d_name[0]) goto next;
@@ -454,26 +469,26 @@ static int xc_fallback_record_fds(int fd, pid_t pid)
     return r;
 }
 
-int xc_fallback_get_emergency(siginfo_t *si,
-                              ucontext_t *uc,
-                              pid_t pid,
-                              pid_t tid,
-                              long timezone,
-                              uint64_t start_time,
-                              uint64_t crash_time,
-                              const char *app_id,
-                              const char *app_version,
-                              int api_level,
-                              const char *os_version,
-                              const char *kernel_version,
-                              const char *abi_list,
-                              const char *manufacturer,
-                              const char *brand,
-                              const char *model,
-                              const char *build_fingerprint,
-                              const char *revision,
-                              char *emergency,
-                              size_t emergency_len)
+size_t xc_fallback_get_emergency(siginfo_t *si,
+                                 ucontext_t *uc,
+                                 pid_t pid,
+                                 pid_t tid,
+                                 long tz,
+                                 uint64_t start_time,
+                                 uint64_t crash_time,
+                                 const char *app_id,
+                                 const char *app_version,
+                                 int api_level,
+                                 const char *os_version,
+                                 const char *kernel_version,
+                                 const char *abi_list,
+                                 const char *manufacturer,
+                                 const char *brand,
+                                 const char *model,
+                                 const char *build_fingerprint,
+                                 const char *revision,
+                                 char *emergency,
+                                 size_t emergency_len)
 {
     time_t       start_sec  = (time_t)(start_time / 1000000);
     suseconds_t  start_usec = (time_t)(start_time % 1000000);
@@ -488,8 +503,8 @@ int xc_fallback_get_emergency(siginfo_t *si,
     //convert times
     memset(&crash_tm, 0, sizeof(crash_tm));
     memset(&start_tm, 0, sizeof(start_tm));
-    xca_util_time2tm(start_sec, timezone, &start_tm);
-    xca_util_time2tm(crash_sec, timezone, &crash_tm);
+    xca_util_time2tm(start_sec, tz, &start_tm);
+    xca_util_time2tm(crash_sec, tz, &crash_tm);
 
     //dump
     used += xcc_fmt_snprintf(buf + used, len - used, XCC_UTIL_TOMB_HEAD);
@@ -498,11 +513,11 @@ int xc_fallback_get_emergency(siginfo_t *si,
     used += xcc_fmt_snprintf(buf + used, len - used, XC_FALLBACK_TIME_FORMAT, "Start time",
                              start_tm.tm_year + 1900, start_tm.tm_mon + 1, start_tm.tm_mday,
                              start_tm.tm_hour, start_tm.tm_min, start_tm.tm_sec, start_usec / 1000,
-                             timezone < 0 ? '-' : '+', labs(timezone / 3600), labs(timezone % 3600));
+                             tz < 0 ? '-' : '+', labs(tz / 3600), labs(tz % 3600));
     used += xcc_fmt_snprintf(buf + used, len - used, XC_FALLBACK_TIME_FORMAT, "Crash time",
                              crash_tm.tm_year + 1900, crash_tm.tm_mon + 1, crash_tm.tm_mday,
                              crash_tm.tm_hour, crash_tm.tm_min, crash_tm.tm_sec, crash_usec / 1000,
-                             timezone < 0 ? '-' : '+', labs(timezone / 3600), labs(timezone % 3600));
+                             tz < 0 ? '-' : '+', labs(tz / 3600), labs(tz % 3600));
     used += xcc_fmt_snprintf(buf + used, len - used, "App ID: '%s'\n", app_id);
     used += xcc_fmt_snprintf(buf + used, len - used, "App version: '%s'\n", app_version);
     used += xc_fallback_get_cpu(buf + used, len - used);
@@ -546,3 +561,5 @@ int xc_fallback_record(int log_fd,
     
     return 0;
 }
+
+#pragma clang diagnostic pop

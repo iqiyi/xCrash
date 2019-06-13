@@ -36,6 +36,8 @@
 #define XCD_FRAMES_MAX         256
 #define XCD_FRAMES_STACK_WORDS 16
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 typedef struct xcd_frame
 {
     xcd_map_t* map;
@@ -47,8 +49,11 @@ typedef struct xcd_frame
     size_t     func_offset;
     TAILQ_ENTRY(xcd_frame,) link;
 } xcd_frame_t;
+#pragma clang diagnostic pop
 typedef TAILQ_HEAD(xcd_frame_queue, xcd_frame,) xcd_frame_queue_t;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_frames
 {
     pid_t              pid;
@@ -57,6 +62,7 @@ struct xcd_frames
     xcd_frame_queue_t  frames;
     size_t             frames_num;
 };
+#pragma clang diagnostic pop
 
 static void xcd_frames_load(xcd_frames_t *self)
 {
@@ -358,7 +364,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd)
         if(0 != xcd_elf_get_build_id(elf, build_id, sizeof(build_id), &build_id_len)) continue;
         offset = 0;
         for(i = 0; i < build_id_len; i++)
-            offset += snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
+            offset += (size_t)snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
 
         //dump
         if(0 != (r = xcc_util_write_format(log_fd, "    %s (BuildId: %s)\n", name, build_id_buf))) return r;
@@ -394,13 +400,13 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
     {
         //num
         if(i == 0 && label >= 0)
-            line_len = snprintf(line, sizeof(line), "    #%02d  ", label);
+            line_len = (size_t)snprintf(line, sizeof(line), "    #%02d  ", label);
         else
-            line_len = snprintf(line, sizeof(line), "         ");
+            line_len = (size_t)snprintf(line, sizeof(line), "         ");
 
         //addr, data
-        line_len += snprintf(line + line_len, sizeof(line) - line_len,
-                             "%0"XCC_UTIL_FMT_ADDR"  %0"XCC_UTIL_FMT_ADDR, *sp, stack_data[i]);
+        line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len,
+                                     "%0"XCC_UTIL_FMT_ADDR"  %0"XCC_UTIL_FMT_ADDR, *sp, stack_data[i]);
 
         //file, func-name, func-offset
         map = NULL;
@@ -409,8 +415,8 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
         if(NULL != (map = xcd_maps_find(self->maps, stack_data[i])) &&
            NULL != map->name && '\0' != map->name[0])
         {
-            line_len += snprintf(line + line_len, sizeof(line) - line_len,
-                                 "  %s", map->name);
+            line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len,
+                                         "  %s", map->name);
 
             if(NULL != (elf = xcd_map_get_elf(map, self->pid, (void *)self->maps)))
             {
@@ -419,7 +425,7 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
                     name_embedded = xcd_elf_get_so_name(elf);
                     if(NULL != name_embedded && strlen(name_embedded) > 0)
                     {
-                        line_len += snprintf(line + line_len, sizeof(line) - line_len, "!%s", name_embedded);
+                        line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len, "!%s", name_embedded);
                     }
                 }
 
@@ -432,11 +438,11 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
                 if(NULL != func_name)
                 {
                     if(func_offset > 0)
-                        line_len += snprintf(line + line_len, sizeof(line) - line_len,
-                                             " (%s+%zu)", func_name, func_offset);
+                        line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len,
+                                                     " (%s+%zu)", func_name, func_offset);
                     else
-                        line_len += snprintf(line + line_len, sizeof(line) - line_len,
-                                             " (%s)", func_name);
+                        line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len,
+                                                     " (%s)", func_name);
                 }
             }
         }
@@ -455,7 +461,7 @@ int xcd_frames_record_stack(xcd_frames_t *self, int log_fd)
 {
     int          segment_recorded = 0;
     xcd_frame_t *frame, *next_frame;
-    uintptr_t    sp;
+    uintptr_t    sp = 0;
     size_t       stack_size;
     size_t       words;
     int          r;
@@ -490,7 +496,7 @@ int xcd_frames_record_stack(xcd_frames_t *self, int log_fd)
         if(NULL == next_frame || 0 == next_frame->sp || next_frame->sp < frame->sp)
         {
             //the last
-            xcd_frames_record_stack_segment(self, log_fd, &sp, XCD_FRAMES_STACK_WORDS, frame->num);
+            xcd_frames_record_stack_segment(self, log_fd, &sp, XCD_FRAMES_STACK_WORDS, (int)frame->num);
         }
         else
         {
@@ -501,7 +507,7 @@ int xcd_frames_record_stack(xcd_frames_t *self, int log_fd)
                 words = 1;
             else if(words > XCD_FRAMES_STACK_WORDS)
                 words = XCD_FRAMES_STACK_WORDS;
-            xcd_frames_record_stack_segment(self, log_fd, &sp, words, frame->num);
+            xcd_frames_record_stack_segment(self, log_fd, &sp, words, (int)frame->num);
         }
         
     }
