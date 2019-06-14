@@ -57,7 +57,7 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
     const char *prefix = log_prefix ? log_prefix : "tombstone";
     const char *suffix = log_suffix ? log_suffix : "";
     char        buf[PATH_MAX];
-    char        process_name[512] = "\0";
+    char        process_name[256] = "\0";
     int         r = 0;
     
     if(NULL == (*self = malloc(sizeof(xc_recorder_t)))) return XCC_ERRNO_NOMEM;

@@ -153,10 +153,10 @@ int xcd_process_load_info(xcd_process_t *self)
 {
     int                r;
     xcd_thread_info_t *thd;
-    char               buf[128];
+    char               buf[256];
     
     if(0 != xcc_util_get_process_name(self->pid, buf, sizeof(buf)) ||
-       NULL == (self->pname = strdup(xcc_util_trim(buf))))
+       NULL == (self->pname = strdup(buf)))
         self->pname = "<unknown>";
 
     TAILQ_FOREACH(thd, &(self->thds), link)

@@ -41,7 +41,16 @@ public class MainActivity extends AppCompatActivity {
         XCrash.testNativeCrash(false);
     }
 
-    public void testNativeCrashInAnotherThread_onClick(View view) {
+    public void testNativeCrashInAnotherJavaThread_onClick(View view) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                XCrash.testNativeCrash(false);
+            }
+        }, "java_thread_with_a_very_long_name").start();
+    }
+
+    public void testNativeCrashInAnotherNativeThread_onClick(View view) {
         XCrash.testNativeCrash(true);
     }
 

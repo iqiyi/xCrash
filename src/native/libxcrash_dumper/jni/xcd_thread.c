@@ -86,10 +86,10 @@ void xcd_thread_resume(xcd_thread_t *self)
 
 void xcd_thread_load_info(xcd_thread_t *self)
 {
-    char buf[128];
+    char buf[64] = "\0";
     
     if(0 != xcc_util_get_thread_name(self->tid, buf, sizeof(buf)) ||
-       NULL == (self->tname = strdup(xcc_util_trim(buf))))
+       NULL == (self->tname = strdup(buf)))
         self->tname = "<unknown>";
 }
 

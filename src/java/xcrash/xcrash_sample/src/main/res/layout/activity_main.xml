@@ -15,18 +15,29 @@
         android:padding="20dp"
         android:textAllCaps="false"
         android:onClick="testNativeCrashInMainThread_onClick"
-        android:text="native crash (in main thread)"
+        android:text="native crash (in main java thread)"
         tools:ignore="HardcodedText" />
 
     <Button
-        android:id="@+id/testNativeCrashInAnotherThreadButton"
+        android:id="@+id/testNativeCrashInAnotherJavaThreadButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="0dp"
         android:padding="20dp"
         android:textAllCaps="false"
-        android:onClick="testNativeCrashInAnotherThread_onClick"
-        android:text="native crash (in another thread)"
+        android:onClick="testNativeCrashInAnotherJavaThread_onClick"
+        android:text="native crash (in another java thread)"
+        tools:ignore="HardcodedText" />
+
+    <Button
+        android:id="@+id/testNativeCrashInAnotherNativeThreadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="0dp"
+        android:padding="20dp"
+        android:textAllCaps="false"
+        android:onClick="testNativeCrashInAnotherNativeThread_onClick"
+        android:text="native crash (in another native thread)"
         tools:ignore="HardcodedText" />
 
     <Button
@@ -51,7 +62,7 @@
         android:padding="20dp"
         android:textAllCaps="false"
         android:onClick="testJavaCrashInMainThread_onClick"
-        android:text="java crash (in main thread)"
+        android:text="java crash (in main java thread)"
         tools:ignore="HardcodedText" />
 
     <Button
@@ -62,7 +73,7 @@
         android:padding="20dp"
         android:textAllCaps="false"
         android:onClick="testJavaCrashInAnotherThread_onClick"
-        android:text="java crash (in another thread)"
+        android:text="java crash (in another java thread)"
         tools:ignore="HardcodedText" />
 
     <Button

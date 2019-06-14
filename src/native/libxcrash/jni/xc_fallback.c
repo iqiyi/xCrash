@@ -179,13 +179,13 @@ static size_t xc_fallback_get_number_of_threads(pid_t pid)
 
 static size_t xc_fallback_get_process_thread(char *buf, size_t len, pid_t pid, pid_t tid)
 {
-    char  buf1[128];
-    char  buf2[64];
+    char  pname_buf[256];
+    char  tname_buf[64];
     char *pname = "<unknown>";
     char *tname = "<unknown>";
     
-    if(0 == xcc_util_get_process_name(pid, buf1, sizeof(buf1))) pname = xcc_util_trim(buf1);
-    if(0 == xcc_util_get_thread_name(tid, buf2, sizeof(buf2)))  tname = xcc_util_trim(buf2);
+    if(0 == xcc_util_get_process_name(pid, pname_buf, sizeof(pname_buf))) pname = pname_buf;
+    if(0 == xcc_util_get_thread_name(tid, tname_buf, sizeof(tname_buf)))  tname = tname_buf;
 
     return xcc_fmt_snprintf(buf, len, "pid: %d, tid: %d, name: %s  >>> %s <<<\n",
                             pid, tid, tname, pname);

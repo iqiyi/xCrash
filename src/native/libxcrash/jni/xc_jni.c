@@ -193,7 +193,7 @@ static void xc_jni_record_stack_trace(JNIEnv *env, int log_fd, pid_t crash_tid)
 
         //Notice:
         //TID from linux kernel and JVM are different things.
-        //Here we match thread by thread name is not very accurate.
+        //Here we match thread by thread name.
         if((is_main_thread && 0 == strcmp(c_name, "main")) ||
            (!is_main_thread && strstr(c_name, tname)))
         {

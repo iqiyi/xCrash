@@ -371,22 +371,43 @@ int xcc_util_read_file_line(const char *path, char *buf, size_t len)
     return r;
 }
 
+static int xcc_util_get_process_thread_name(const char *path, char *buf, size_t len)
+{
+    char    tmp[256], *data;
+    size_t  data_len, cpy_len;
+    int     r;
+
+    //read a line
+    if(0 != (r = xcc_util_read_file_line(path, tmp, sizeof(tmp)))) return r;
+
+    //trim
+    data = xcc_util_trim(tmp);
+
+    //return data
+    if(0 == (data_len = strlen(data))) return XCC_ERRNO_MISSING;
+    cpy_len = XCC_UTIL_MIN(len - 1, data_len);
+    memcpy(buf, data, cpy_len);
+    buf[cpy_len] = '\0';
+
+    return 0;
+}
+
 int xcc_util_get_process_name(pid_t pid, char *buf, size_t len)
 {
     char path[128];
-    
+
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
     
-    return xcc_util_read_file_line(path, buf, len);
+    return xcc_util_get_process_thread_name(path, buf, len);
 }
-    
+
 int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len)
 {
     char path[128];
     
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/comm", tid);
     
-    return xcc_util_read_file_line(path, buf, len);
+    return xcc_util_get_process_thread_name(path, buf, len);
 }
 
 static const char *xcc_util_su_pathnames[] =
