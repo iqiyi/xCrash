@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
 
+boolean useExternalNativeBuild = false
+
 android {
     compileSdkVersion 28
     buildToolsVersion '28.0.3'
@@ -22,15 +24,44 @@ android {
             useProguard false
         }
     }
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['libs']
+
+    if (useExternalNativeBuild) {
+        externalNativeBuild {
+            ndkBuild {
+                path "src/main/cpp/Android.mk"
+            }
         }
     }
+
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+}
+
+if (useExternalNativeBuild) {
+    project.android.libraryVariants.all { def variant ->
+        def externalNativeBuildTask = project.tasks.findByName("externalNativeBuild${variant.name.capitalize()}")
+        def mergeJniLibFoldersTask = project.tasks.findByName("merge${variant.name.capitalize()}JniLibFolders")
+
+        FileCollection mergeJniLibFolders = mergeJniLibFoldersTask.outputs.files.filter { File f ->
+            f.getParentFile().getName() != 'incremental'
+        }
+        mergeJniLibFoldersTask.doLast {
+            externalNativeBuildTask.getObjFolder().eachFile { File dir ->
+                File dumperFile = new File(dir, 'xcrash_dumper')
+                File destFile = new File(new File(mergeJniLibFolders.getSingleFile(), dumperFile.getParentFile().getName()), 'libxcrash_dumper.so')
+                if (dumperFile.exists()) {
+                    //noinspection UnnecessaryQualifiedReference
+                    org.gradle.util.GFileUtils.deleteQuietly(destFile)
+                    //noinspection UnnecessaryQualifiedReference
+                    org.gradle.util.GFileUtils.copyFile(dumperFile, destFile)
+                } else {
+                    project.logger.error "dumperFile not exists:${dumperFile}"
+                }
+            }
+        }
+    }
 }
 
 apply from: rootProject.file('gradle/check.gradle')
