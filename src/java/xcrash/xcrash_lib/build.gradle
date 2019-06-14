@@ -31,6 +31,12 @@ android {
                 path "src/main/cpp/Android.mk"
             }
         }
+    } else {
+        sourceSets {
+            main {
+                jniLibs.srcDirs = ['libs']
+            }
+        }
     }
 
 }
