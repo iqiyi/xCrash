@@ -2,8 +2,8 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.1.6-red.svg?style=flat)
-![](https://img.shields.io/badge/Android-4.0%20--%209.0-blue.svg?style=flat)
+![](https://img.shields.io/badge/release-2.1.7-red.svg?style=flat)
+![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
 xCrash 是一个安卓 APP 的崩溃捕获库。它支持捕获 native 崩溃和 Java 异常。
@@ -17,7 +17,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ## 特征
 
-* 支持 Android 4.0 - 9.0（API level 14 - 28）。
+* 支持 Android 4.0 - 10（API level 14 - 29）。
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
 * 捕获 native 崩溃和 Java 异常。
 * 通过正则表达式设置需要获取哪些线程的信息。
@@ -42,7 +42,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.6'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.7'
 }
 ```
 

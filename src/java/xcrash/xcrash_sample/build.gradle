@@ -1,22 +1,21 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '28.0.3'
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
     defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         applicationId "xcrash.sample"
-        minSdkVersion 14
-        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
         ndk {
-            //select one or more ABI from: 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
             abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
+        sourceCompatibility rootProject.ext.javaVersion
+        targetCompatibility rootProject.ext.javaVersion
     }
     buildTypes {
         debug {
@@ -34,12 +33,8 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
-
-    //jcenter
-    //implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.6'
-
-    //local project
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    //implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.7'
     implementation project(':xcrash_lib')
 }

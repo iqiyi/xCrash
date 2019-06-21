@@ -1,0 +1,129 @@
+apply plugin: 'digital.wup.android-maven-publish'
+apply plugin: 'com.jfrog.bintray'
+
+def readPropertyFromLocalProperties(String key) {
+    Properties properties = new Properties()
+    try {
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    } catch (Exception e) {
+        println("load local.properties failed. msg: ${e.message}")
+    }
+    return properties.getProperty(key)
+}
+
+def getCustomMavenRepo() {
+    return readPropertyFromLocalProperties('CUSTOM_MAVEN_REPO')
+}
+
+def getCustomMavenUsername() {
+    return readPropertyFromLocalProperties('CUSTOM_MAVEN_USERNAME')
+}
+
+def getCustomMavenPassword() {
+    return readPropertyFromLocalProperties('CUSTOM_MAVEN_PASSWORD')
+}
+
+def getBintrayUser() {
+    return readPropertyFromLocalProperties('BINTRAY_USER')
+}
+
+def getBintrayApikey() {
+    return readPropertyFromLocalProperties('BINTRAY_APIKEY')
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+publishing.publications {
+    mavenAar(MavenPublication) {
+        from components.android
+
+        artifact sourcesJar
+        artifact javadocJar
+
+        artifactId POM_ARTIFACT_ID
+        groupId POM_GROUP_ID
+        version POM_VERSION_NAME
+
+        pom {
+            name = POM_NAME
+            description = POM_DESCRIPTION
+            url = POM_URL
+            inceptionYear = POM_INCEPTION_YEAR
+            packaging = POM_PACKAGING
+            scm {
+                connection = POM_SCM_CONNECTION
+                url = POM_URL
+            }
+            issueManagement {
+                system = POM_ISSUE_SYSTEM
+                url = POM_ISSUE_URL
+            }
+            licenses {
+                license {
+                    name = POM_LICENCE_NAME
+                    url = POM_LICENCE_URL
+                    distribution = POM_LICENCE_DIST
+                }
+            }
+            developers {
+                developer {
+                    id = POM_DEVELOPER_ID
+                    name = POM_DEVELOPER_NAME
+                }
+            }
+        }
+    }
+}
+
+// custom maven repo
+publishing.repositories {
+    maven {
+        url getCustomMavenRepo()
+        credentials {
+            username getCustomMavenUsername()
+            password getCustomMavenPassword()
+        }
+    }
+}
+
+// bintray maven repo
+bintray {
+    user = getBintrayUser()
+    key = getBintrayApikey()
+    publications = ['mavenAar']
+    pkg {
+        repo = BINTRAY_REPO
+        name = "${POM_GROUP_ID}:${POM_ARTIFACT_ID}"
+        userOrg = BINTRAY_ORGANIZATION
+        desc = POM_DESCRIPTION
+        websiteUrl = POM_URL
+        issueTrackerUrl = POM_ISSUE_URL
+        vcsUrl = POM_SCM_CONNECTION
+        licenses = BINTRAY_LICENCE
+        publicDownloadNumbers = true
+        publish = true
+        dryRun = false
+
+        version {
+            name = POM_VERSION_NAME
+            released = new Date()
+            vcsTag = POM_VERSION_NAME
+            gpg {
+                sign = true
+            }
+        }
+    }
+}

@@ -4,17 +4,14 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.2'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
+        classpath 'com.android.tools.build:gradle:3.4.1'
+        classpath 'digital.wup:android-maven-publish:3.6.2'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
     }
 }
 
 allprojects {
     repositories {
-        //maven {
-        //    url = 'https://dl.bintray.com/xcrash/maven/'
-        //}
         google()
         jcenter()
     }
@@ -22,4 +19,38 @@ allprojects {
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+ext {
+    minSdkVersion = 14
+    compileSdkVersion = 29
+    targetSdkVersion = 29
+    buildToolsVersion = '29.0.0'
+    javaVersion = JavaVersion.VERSION_1_6
+
+    POM_GROUP_ID = "com.iqiyi.xcrash"
+    POM_ARTIFACT_ID = "xcrash-android-lib"
+    POM_VERSION_NAME = "2.1.7"
+
+    POM_NAME = "xCrash Android Lib"
+    POM_DESCRIPTION = "A crash reporting library for Android APPs."
+    POM_URL = "https://github.com/iqiyi/xCrash"
+    POM_INCEPTION_YEAR = "2019"
+    POM_PACKAGING = "aar"
+
+    POM_SCM_CONNECTION = "https://github.com/iqiyi/xCrash.git"
+
+    POM_ISSUE_SYSTEM = "github"
+    POM_ISSUE_URL = "https://github.com/iqiyi/xCrash/issues"
+
+    POM_LICENCE_NAME = "The MIT License"
+    POM_LICENCE_URL = "https://opensource.org/licenses/MIT"
+    POM_LICENCE_DIST = "repo"
+
+    POM_DEVELOPER_ID = "iQIYI"
+    POM_DEVELOPER_NAME = "iQIYI, Inc."
+
+    BINTRAY_REPO = "maven"
+    BINTRAY_ORGANIZATION = "xcrash"
+    BINTRAY_LICENCE = ['MIT']
 }

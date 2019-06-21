@@ -1,16 +1,16 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '28.0.3'
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 28
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         consumerProguardFiles 'proguard-rules.pro'
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
+        sourceCompatibility rootProject.ext.javaVersion
+        targetCompatibility rootProject.ext.javaVersion
     }
     buildTypes {
         debug {
@@ -34,6 +34,4 @@ dependencies {
 }
 
 apply from: rootProject.file('gradle/check.gradle')
-apply from: rootProject.file('gradle/android_artifacts.gradle')
-apply from: rootProject.file('gradle/bintray_publish.gradle')
-apply from: rootProject.file('gradle/maven_publish.gradle')
+apply from: rootProject.file('gradle/publish.gradle')
