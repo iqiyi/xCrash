@@ -102,7 +102,7 @@ static void xcd_frames_load(xcd_frames_t *self)
         sigreturn = 0;
 
         //get relative pc
-        if(NULL != (map = xcd_maps_find(self->maps, cur_pc)))
+        if(NULL != (map = xcd_maps_find_map(self->maps, cur_pc)))
         {
             rel_pc = xcd_map_get_rel_pc(map, step_pc, self->pid, (void *)self->maps);
             step_pc = rel_pc;
@@ -147,7 +147,7 @@ static void xcd_frames_load(xcd_frames_t *self)
             stepped = 0;
             in_device_map = 1;
         }
-        else if((NULL != (map_sp = xcd_maps_find(self->maps, cur_sp))) &&
+        else if((NULL != (map_sp = xcd_maps_find_map(self->maps, cur_sp))) &&
                 (map_sp->flags & XCD_MAP_PORT_DEVICE))
         {
             //sp in device map
@@ -193,7 +193,7 @@ static void xcd_frames_load(xcd_frames_t *self)
             //step failed
             if(return_address_attempt)
             {
-                if(self->frames_num > 2 || (self->frames_num > 0 && NULL != xcd_maps_find(self->maps, TAILQ_FIRST(&(self->frames))->pc)))
+                if(self->frames_num > 2 || (self->frames_num > 0 && NULL != xcd_maps_find_map(self->maps, TAILQ_FIRST(&(self->frames))->pc)))
                 {
                     TAILQ_REMOVE(&(self->frames), frame, link);
                     self->frames_num--;
@@ -412,7 +412,7 @@ static int xcd_frames_record_stack_segment(xcd_frames_t *self, int log_fd,
         map = NULL;
         func_name = NULL;
         func_offset = 0;
-        if(NULL != (map = xcd_maps_find(self->maps, stack_data[i])) &&
+        if(NULL != (map = xcd_maps_find_map(self->maps, stack_data[i])) &&
            NULL != map->name && '\0' != map->name[0])
         {
             line_len += (size_t)snprintf(line + line_len, sizeof(line) - line_len,

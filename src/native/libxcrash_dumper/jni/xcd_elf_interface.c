@@ -516,12 +516,12 @@ int xcd_elf_interface_arm_exidx_step(xcd_elf_interface_t *self, uintptr_t step_p
 int xcd_elf_interface_get_function_info(xcd_elf_interface_t *self, uintptr_t addr, char **name, size_t *name_offset)
 {
     xcd_elf_symbols_t *symbols;
-    size_t offset;
-    size_t start_offset;
-    size_t end_offset;
-    size_t str_offset;
-    ElfW(Sym) sym;
-    char buf[512];
+    size_t             offset;
+    size_t             start_offset;
+    size_t             end_offset;
+    size_t             str_offset;
+    ElfW(Sym)          sym;
+    char               buf[512];
 
     TAILQ_FOREACH(symbols, &(self->symbolsq), link)
     {
@@ -539,7 +539,7 @@ int xcd_elf_interface_get_function_info(xcd_elf_interface_t *self, uintptr_t add
             str_offset = symbols->str_offset + sym.st_name;
             if(str_offset >= symbols->str_end) continue;
             
-            if(0 != xcd_memory_read_string(self->memory, str_offset, buf, sizeof(buf), symbols->str_end - str_offset)) break;
+            if(0 != xcd_memory_read_string(self->memory, str_offset, buf, sizeof(buf), symbols->str_end - str_offset)) continue;
             if(NULL == (*name = strdup(buf))) break;
 
             return 0;
@@ -548,6 +548,40 @@ int xcd_elf_interface_get_function_info(xcd_elf_interface_t *self, uintptr_t add
 
     *name = NULL;
     *name_offset = 0;
+    return XCC_ERRNO_NOTFND;
+}
+
+int xcd_elf_interface_get_symbol_addr(xcd_elf_interface_t *self, const char *name, uintptr_t *addr)
+{
+    xcd_elf_symbols_t *symbols;
+    size_t             offset;
+    size_t             str_offset;
+    ElfW(Sym)          sym;
+    char               buf[512];
+
+    TAILQ_FOREACH(symbols, &(self->symbolsq), link)
+    {
+        for(offset = symbols->sym_offset; offset < symbols->sym_end; offset += symbols->sym_entry_size)
+        {
+            //read .symtab / .dynsym
+            if(0 != xcd_memory_read_fully(self->memory, offset, &sym, sizeof(sym))) break;
+            if(sym.st_shndx == SHN_UNDEF) continue;
+
+            //read .strtab / .dynstr
+            str_offset = symbols->str_offset + sym.st_name;
+            if(str_offset >= symbols->str_end) continue;
+            if(0 != xcd_memory_read_string(self->memory, str_offset, buf, sizeof(buf), symbols->str_end - str_offset)) continue;
+
+            //compare symbol name
+            if(0 != strcmp(name, buf)) continue;
+
+            //found it
+            *addr = sym.st_value;
+            return 0;
+        }
+    }
+
+    *addr = 0;
     return XCC_ERRNO_NOTFND;
 }
 

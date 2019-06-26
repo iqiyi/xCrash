@@ -164,7 +164,12 @@ int xcd_elf_get_function_info(xcd_elf_t *self, uintptr_t addr, char **name, size
     if(NULL != self->gnu_interface)
         if(0 == (r = xcd_elf_interface_get_function_info(self->gnu_interface, addr, name, name_offset))) return 0;
 
-    return r;    
+    return r;
+}
+
+int xcd_elf_get_symbol_addr(xcd_elf_t *self, const char *name, uintptr_t *addr)
+{
+    return xcd_elf_interface_get_symbol_addr(self->interface, name, addr);
 }
 
 int xcd_elf_get_build_id(xcd_elf_t *self, uint8_t *build_id, size_t build_id_len, size_t *build_id_len_ret)

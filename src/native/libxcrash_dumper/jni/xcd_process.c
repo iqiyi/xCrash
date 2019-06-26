@@ -31,6 +31,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <regex.h>
+#include <ctype.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,6 +50,13 @@
 #include "xcd_util.h"
 #include "xcd_sys.h"
 #include "xcd_meminfo.h"
+
+#if defined(__LP64__)
+#define XCD_PROCESS_LIBC_PATHNAME "/system/lib64/libc.so"
+#else
+#define XCD_PROCESS_LIBC_PATHNAME "/system/lib/libc.so"
+#endif
+#define XCD_PROCESS_ABORT_MSG_PTR "__abort_message_ptr"
 
 typedef struct xcd_thread_info
 {
@@ -212,6 +220,66 @@ static int xcd_process_record_signal_info(xcd_process_t *self, int log_fd)
                                  self->si->si_signo, xcc_util_get_signame(self->si),
                                  self->si->si_code, xcc_util_get_sigcodename(self->si),
                                  sender_desc, addr_desc);
+}
+
+static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd)
+{
+    //
+    // struct abort_msg_t {
+    //     size_t size;
+    //     char msg[0];
+    // };
+    //
+    // abort_msg_t** __abort_message_ptr;
+    //
+    // ......
+    // size_t size = sizeof(abort_msg_t) + strlen(msg) + 1;
+    // ......
+    //
+
+    //get abort_msg_t ***ppp (&__abort_message_ptr)
+    uintptr_t ppp = xcd_maps_find_pc(self->maps, XCD_PROCESS_LIBC_PATHNAME, XCD_PROCESS_ABORT_MSG_PTR);
+    if(0 == ppp) return 0;
+    XCD_LOG_DEBUG("PROCESS: abort_msg, ppp = %"PRIxPTR, ppp);
+
+    //get abort_msg_t **pp (__abort_message_ptr)
+    uintptr_t pp = 0;
+    if(0 != xcd_util_ptrace_read_fully(self->pid, ppp, &pp, sizeof(uintptr_t))) return 0;
+    if(0 == pp) return 0;
+    XCD_LOG_DEBUG("PROCESS: abort_msg, pp = %"PRIxPTR, pp);
+
+    //get abort_msg_t *p (*__abort_message_ptr)
+    uintptr_t p = 0;
+    if(0 != xcd_util_ptrace_read_fully(self->pid, pp, &p, sizeof(uintptr_t))) return 0;
+    if(0 == p) return 0;
+    XCD_LOG_DEBUG("PROCESS: abort_msg, p = %"PRIxPTR, p);
+
+    //get p->size
+    size_t size = 0;
+    if(0 != xcd_util_ptrace_read_fully(self->pid, p, &size, sizeof(size_t))) return 0;
+    if(size < sizeof(size_t) + 1 + 1) return 0;
+    XCD_LOG_DEBUG("PROCESS: abort_msg, size = %zu", size);
+
+    //get strlen(msg)
+    size -= (sizeof(size_t) + 1);
+
+    //get p->msg
+    if(size > 256) size = 256;
+    char msg[256 + 1];
+    memset(msg, 0, sizeof(msg));
+    if(0 != xcd_util_ptrace_read_fully(self->pid, p + sizeof(size_t), msg, size)) return 0;
+
+    //format
+    size_t i;
+    for(i = 0; i < sizeof(msg); i++)
+    {
+        if(isspace(msg[i]) && ' ' != msg[i])
+            msg[i] = ' ';
+    }
+    XCD_LOG_DEBUG("PROCESS: abort_msg, strlen(msg) = %zu", strlen(msg));
+
+    //write
+    return xcc_util_write_format(log_fd, "Abort message: '%s'\n", msg);
 }
 
 static int xcd_process_record_fds(xcd_process_t *self, int log_fd)
@@ -408,6 +476,7 @@ int xcd_process_record(xcd_process_t *self, int log_fd,
         {
             if(0 != (r = xcd_thread_record_info(&(thd->t), log_fd, self->pname))) return r;
             if(0 != (r = xcd_process_record_signal_info(self, log_fd))) return r;
+            if(0 != (r = xcd_process_record_abort_message(self, log_fd))) return r;
             if(0 != (r = xcd_thread_record_regs(&(thd->t), log_fd))) return r;
             if(0 == xcd_thread_load_frames(&(thd->t), self->maps))
             {

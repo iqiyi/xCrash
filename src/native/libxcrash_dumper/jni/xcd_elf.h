@@ -36,10 +36,15 @@ extern "C" {
 typedef struct xcd_elf xcd_elf_t;
 
 int xcd_elf_create(xcd_elf_t **self, pid_t pid, xcd_memory_t *memory);
+
 int xcd_elf_step(xcd_elf_t *self, uintptr_t rel_pc, uintptr_t step_pc, xcd_regs_t *regs, int *finished, int *sigreturn);
+
 int xcd_elf_get_function_info(xcd_elf_t *self, uintptr_t addr, char **name, size_t *name_offset);
+int xcd_elf_get_symbol_addr(xcd_elf_t *self, const char *name, uintptr_t *addr);
+
 int xcd_elf_get_build_id(xcd_elf_t *self, uint8_t *build_id, size_t build_id_len, size_t *build_id_len_ret);
 char *xcd_elf_get_so_name(xcd_elf_t *self);
+
 uintptr_t xcd_elf_get_load_bias(xcd_elf_t *self);
 xcd_memory_t *xcd_elf_get_memory(xcd_elf_t *self);
 

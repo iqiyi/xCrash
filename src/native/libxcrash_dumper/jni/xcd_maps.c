@@ -41,10 +41,14 @@ typedef struct xcd_maps_item
 } xcd_maps_item_t;
 typedef TAILQ_HEAD(xcd_maps_item_queue, xcd_maps_item,) xcd_maps_item_queue_t;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
 struct xcd_maps
 {
     xcd_maps_item_queue_t maps;
+    pid_t                 pid;
 };
+#pragma clang diagnostic pop
 
 static int xcd_maps_parse_line(char *line, xcd_maps_item_t **mi)
 {
@@ -75,6 +79,7 @@ int xcd_maps_create(xcd_maps_t **self, pid_t pid)
 
     if(NULL == (*self = malloc(sizeof(xcd_maps_t)))) return XCC_ERRNO_NOMEM;
     TAILQ_INIT(&((*self)->maps));
+    (*self)->pid = pid;
 
     snprintf(buf, sizeof(buf), "/proc/%d/maps", pid);
     if(NULL == (fp = fopen(buf, "r"))) return XCC_ERRNO_SYS;
@@ -108,7 +113,7 @@ void xcd_maps_destroy(xcd_maps_t **self)
     *self = NULL;
 }
 
-xcd_map_t *xcd_maps_find(xcd_maps_t *self, uintptr_t pc)
+xcd_map_t *xcd_maps_find_map(xcd_maps_t *self, uintptr_t pc)
 {
     xcd_maps_item_t *mi;
 
@@ -127,6 +132,29 @@ xcd_map_t *xcd_maps_get_prev_map(xcd_maps_t *self, xcd_map_t *cur_map)
     xcd_maps_item_t *prev_mi = TAILQ_PREV(cur_mi, xcd_maps_item_queue, link);
 
     return (NULL == prev_mi ? NULL : &(prev_mi->map));
+}
+
+uintptr_t xcd_maps_find_pc(xcd_maps_t *self, const char *pathname, const char *symbol)
+{
+    xcd_maps_item_t *mi;
+    xcd_elf_t       *elf;
+    uintptr_t        addr = 0;
+
+    TAILQ_FOREACH(mi, &(self->maps), link)
+    {
+        if(NULL != mi->map.name && 0 == strcmp(mi->map.name, pathname))
+        {
+            //get ELF
+            if(NULL == (elf = xcd_map_get_elf(&(mi->map), self->pid, (void *)self))) return 0;
+
+            //get rel addr (offset)
+            if(0 != xcd_elf_get_symbol_addr(elf, symbol, &addr)) return 0;
+
+            return xcd_map_get_abs_pc(&(mi->map), addr, self->pid, (void *)self);
+        }
+    }
+
+    return 0; //not found
 }
 
 int xcd_maps_record(xcd_maps_t *self, int log_fd)

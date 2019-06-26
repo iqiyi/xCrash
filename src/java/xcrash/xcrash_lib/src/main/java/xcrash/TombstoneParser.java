@@ -230,6 +230,12 @@ public class TombstoneParser {
     public static final String keyFaultAddr = "fault addr";
 
     /**
+     * Native crash abort message.
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static final String keyAbortMessage = "Abort message";
+
+    /**
      * Native crash registers values.
      */
     @SuppressWarnings("WeakerAccess")
@@ -335,7 +341,8 @@ public class TombstoneParser {
         keyModel,
         keyBuildFingerprint,
         keyRevision,
-        keyAbi
+        keyAbi,
+        keyAbortMessage
     ));
 
     private static final Set<String> keySections = new HashSet<String>(Arrays.asList(

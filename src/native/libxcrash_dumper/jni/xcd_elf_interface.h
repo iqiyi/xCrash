@@ -45,6 +45,8 @@ int xcd_elf_interface_arm_exidx_step(xcd_elf_interface_t *self, uintptr_t step_p
 #endif
 
 int xcd_elf_interface_get_function_info(xcd_elf_interface_t *self, uintptr_t addr, char **name, size_t *name_offset);
+int xcd_elf_interface_get_symbol_addr(xcd_elf_interface_t *self, const char *name, uintptr_t *addr);
+
 int xcd_elf_interface_get_build_id(xcd_elf_interface_t *self, uint8_t *build_id, size_t build_id_len, size_t *build_id_len_ret);
 char *xcd_elf_interface_get_so_name(xcd_elf_interface_t *self);
 
