@@ -6,7 +6,7 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash is a crash reporting library for Android APPs. It support catching native crash and Java exception.
+xCrash is a crash reporting library for Android APP which supports catching native crash and Java exception.
 
 xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the APP process crashes. And, no root permission or any system permissions are required.
 
