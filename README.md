@@ -114,6 +114,14 @@ cd ./src/java/xcrash/
 ```
 
 
+## Support
+
+1. Check the [xcrash-sample](src/java/xcrash/xcrash_sample).
+2. Communicate on [GitHub issues](https://github.com/iqiyi/xCrash/issues).
+3. Mail: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
+4. WeChat: alan_choi
+
+
 ## Contributing
 
 See [xCrash Contributing Guide](CONTRIBUTING.md).
