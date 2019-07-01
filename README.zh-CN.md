@@ -10,6 +10,8 @@ xCrash 是一个安卓 APP 的崩溃捕获库，它支持捕获 native 崩溃和
 
 xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。并且，不需要 root 权限或任何系统权限。
 
+<p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
+
 xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
 
 [README English Version](README.md)
@@ -29,11 +31,11 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ### 架构
 
-<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="90%"></p>
+<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="750px"></p>
 
 ### 捕获 native 崩溃
 
-<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="75%"></p>
+<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="520px"></p>
 
 
 ## 使用
