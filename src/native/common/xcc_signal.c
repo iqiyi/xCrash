@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <signal.h>
@@ -63,9 +64,10 @@ int xcc_signal_register(xcc_signal_handler_t handler)
     if(0 != sigaltstack(&ss, NULL)) return XCC_ERRNO_SYS;
 
     struct sigaction act;
-    act.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    memset(&act, 0, sizeof(act));
+    sigfillset(&act.sa_mask);
     act.sa_sigaction = handler;
-    if(0 != sigemptyset(&act.sa_mask)) return XCC_ERRNO_SYS;
+    act.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
     
     size_t i;
     for(i = 0; i < sizeof(xcc_signal_info) / sizeof(xcc_signal_info[0]); i++)
@@ -89,9 +91,10 @@ int xcc_signal_unregister(void)
 int xcc_signal_ignore(void)
 {
     struct sigaction act;
-    act.sa_flags = 0;
-    act.sa_handler = SIG_DFL;
+    memset(&act, 0, sizeof(act));
     sigemptyset(&act.sa_mask);
+    act.sa_handler = SIG_DFL;
+    act.sa_flags = SA_RESTART;
     
     int r = 0;
     size_t i;
@@ -102,10 +105,13 @@ int xcc_signal_ignore(void)
     return r;
 }
 
-void xcc_signal_resend(siginfo_t* si)
+int xcc_signal_resend(siginfo_t* si)
 {
     if(SIGABRT == si->si_signo || SI_FROMUSER(si))
     {
-        syscall(SYS_rt_tgsigqueueinfo, getpid(), gettid(), si->si_signo, si);
+        if(0 != syscall(SYS_rt_tgsigqueueinfo, getpid(), gettid(), si->si_signo, si))
+            return XCC_ERRNO_SYS;
     }
+
+    return 0;
 }

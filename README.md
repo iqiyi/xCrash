@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.1.8-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.1.9-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -44,7 +44,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.8'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.9'
 }
 ```
 
@@ -89,7 +89,7 @@ class MyCustomApplication : Application() {
 }
 ```
 
-Tombstone files will be written to `Context#getFilesDir() + "/tombstones"` directory by default. (usually in: `/data/data/<APP_PACKAGE_NAME>/files/tombstones`)
+Tombstone files will be written to `Context#getFilesDir() + "/tombstones"` directory by default. (usually in: `/data/data/PACKAGE_NAME/files/tombstones`)
 
 There is a more practical and complex sample APP in the [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) folder.
 
@@ -120,8 +120,7 @@ cd ./src/java/xcrash/
 
 1. Check the [xcrash-sample](src/java/xcrash/xcrash_sample).
 2. Communicate on [GitHub issues](https://github.com/iqiyi/xCrash/issues).
-3. Mail: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
-4. WeChat: alan_choi
+3. Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
 
 
 ## Contributing

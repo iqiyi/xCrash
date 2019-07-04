@@ -380,7 +380,7 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
     xc_jni_callback(xc_core_log_fd, xc_core_log_pathname,
                     '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency);
 
-    xcc_signal_resend(si);
+    if(0 != xcc_signal_resend(si)) goto exit;
     
     pthread_mutex_unlock(&xc_core_mutex);
     return;

@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.1.8-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.1.9-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -44,7 +44,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.8'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.1.9'
 }
 ```
 
@@ -89,7 +89,7 @@ class MyCustomApplication : Application() {
 }
 ```
 
-Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` 目录。（通常在： `/data/data/<APP_PACKAGE_NAME>/files/tombstones`）
+Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` 目录。（通常在： `/data/data/PACKAGE_NAME/files/tombstones`）
 
 在 [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) 文件夹中，有一个更实际和复杂的示例 APP。
 
@@ -121,7 +121,6 @@ cd ./src/java/xcrash/
 1. 查看 [xcrash-sample](src/java/xcrash/xcrash_sample)。
 2. 在 [GitHub issues](https://github.com/iqiyi/xCrash/issues) 交流。
 3. 邮件: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
-4. 微信: alan_choi
 
 
 ## 贡献
