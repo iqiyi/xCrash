@@ -267,10 +267,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
         //append the command line
         Object[] commandArray = command.toArray();
-        if (commandArray != null) {
-            sb.append("--------- tail end of log ").append(bufferName);
-            sb.append(" (").append(android.text.TextUtils.join(" ", commandArray)).append(")\n");
-        }
+        sb.append("--------- tail end of log ").append(bufferName);
+        sb.append(" (").append(android.text.TextUtils.join(" ", commandArray)).append(")\n");
 
         //append logs
         BufferedReader br = null;

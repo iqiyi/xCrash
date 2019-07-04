@@ -645,15 +645,6 @@ public class TombstoneParser {
                             putKeyValue(map, keySignal, matcher.group(1));
                             putKeyValue(map, keyCode, matcher.group(2));
                             putKeyValue(map, keyFaultAddr, matcher.group(3));
-
-                            //special case
-                            if (next != null && (next.startsWith("    r0 ") || next.startsWith("    x0 ") || next.startsWith("    eax ") || next.startsWith("    rax "))) {
-                                status = Status.SECTION;
-                                sectionTitle = keyRegisters;
-                                sectionContentEnding = "";
-                                sectionContentOutdent = true;
-                                sectionContentAppend = false;
-                            }
                         }
                     } else {
                         //other items in head section
@@ -663,6 +654,16 @@ public class TombstoneParser {
                                 putKeyValue(map, matcher.group(1), matcher.group(2));
                             }
                         }
+                    }
+
+                    //special case
+                    if (next != null && (next.startsWith("    r0 ") || next.startsWith("    x0 ") || next.startsWith("    eax ") || next.startsWith("    rax "))) {
+                        //registers
+                        status = Status.SECTION;
+                        sectionTitle = keyRegisters;
+                        sectionContentEnding = "";
+                        sectionContentOutdent = true;
+                        sectionContentAppend = false;
                     }
 
                     if (next == null || next.isEmpty()) {
