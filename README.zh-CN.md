@@ -121,6 +121,10 @@ cd ./src/java/xcrash/
 1. 查看 [xcrash-sample](src/java/xcrash/xcrash_sample)。
 2. 在 [GitHub issues](https://github.com/iqiyi/xCrash/issues) 交流。
 3. 邮件: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
+4. 微信: alan_choi
+5. QQ 群: 603635869。二维码:
+
+<p align="left"><img src="doc/qq_group.jpeg" alt="qq group" width="320px"></p>
 
 
 ## 贡献
