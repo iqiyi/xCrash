@@ -481,7 +481,7 @@ int xcd_process_record(xcd_process_t *self, int log_fd,
             if(0 == xcd_thread_load_frames(&(thd->t), self->maps))
             {
                 if(0 != (r = xcd_thread_record_backtrace(&(thd->t), log_fd))) return r;
-                if(0 != (r = xcd_thread_record_buildid(&(thd->t), log_fd))) return r;
+                if(0 != (r = xcd_thread_record_buildid(&(thd->t), log_fd, xcc_util_signal_has_si_addr(self->si) ? (uintptr_t)self->si->si_addr : 0))) return r;
                 if(0 != (r = xcd_thread_record_stack(&(thd->t), log_fd))) return r;
                 if(0 != (r = xcd_thread_record_memory(&(thd->t), log_fd))) return r;
             }

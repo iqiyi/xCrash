@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "queue.h"
 #include "xcc_errno.h"
 #include "xcc_util.h"
@@ -319,30 +322,72 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, int log_fd)
     return 0;
 }
 
-int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd)
+static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, xcd_map_t *map, int log_fd)
 {
     xcd_elf_t   *elf;
-    xcd_frame_t *frame, *prev_frame;
-    char        *name, *prev_name;
+    struct stat  st;
+    char         file_size_buf[128];
     uint8_t      build_id[64];
     size_t       build_id_len = 0;
-    char         build_id_buf[64 * 2 + 1] = "\0";
-    size_t       offset;
+    char         build_id_buf[64 * 2 + 1];
+    size_t       offset = 0;
     size_t       i;
-    int          r;
+
+    //get build-id
+    memset(build_id_buf, 0, sizeof(build_id_buf));
+    if(NULL != (elf = xcd_map_get_elf(map, self->pid, (void *)self->maps)) &&
+       0 == xcd_elf_get_build_id(elf, build_id, sizeof(build_id), &build_id_len))
+    {
+        for(i = 0; i < build_id_len; i++)
+            offset += (size_t)snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
+    }
+    else
+    {
+        strncpy(build_id_buf, "none", sizeof(build_id_buf));
+    }
+
+    //get file size
+    errno = 0;
+    if(0 == stat(name, &st))
+        snprintf(file_size_buf, sizeof(file_size_buf), "%ld", (long)st.st_size);
+    else
+        snprintf(file_size_buf, sizeof(file_size_buf), "errno = %d, errmsg = %s", errno, strerror(errno));
+    
+    //dump
+    return xcc_util_write_format(log_fd, "    %s (BuildId: %s. FileSize: %s)\n", name, build_id_buf, file_size_buf);
+}
+
+int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_addr)
+{
+    xcd_frame_t *frame, *prev_frame;
+    char        *name, *prev_name, *fault_addr_name = NULL;
+    xcd_map_t   *map;
     int          repeated;
+    int          r;
 
     if(0 != (r = xcc_util_write_str(log_fd, "build id:\n"))) return r;
-    
+
+    if(fault_addr > 0)
+    {
+        if(NULL != (map = xcd_maps_find_map(self->maps, fault_addr)))
+        {
+            if(NULL != map->name || '\0' != map->name[0])
+            {
+                if(0 != (r = xcd_frames_record_buildid_line(self, map->name, map, log_fd))) return r;
+                fault_addr_name = map->name;
+            }
+        }
+    }
+
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
         if(NULL == frame->map || NULL == frame->map->name || '\0' == frame->map->name[0]) continue;
-        if(NULL == frame->map) continue;
         
         //get name
         name = frame->map->name;
 
         //check repeated
+        if(NULL != fault_addr_name && 0 == strcmp(name, fault_addr_name)) continue;
         repeated = 0;
         prev_frame = frame;
         while(NULL != (prev_frame = TAILQ_PREV(prev_frame, xcd_frame_queue, link)))
@@ -357,17 +402,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd)
         }
         if(repeated) continue;
 
-        //get elf
-        if(NULL == (elf = xcd_map_get_elf(frame->map, self->pid, (void *)self->maps))) continue;
-        
-        //get build id
-        if(0 != xcd_elf_get_build_id(elf, build_id, sizeof(build_id), &build_id_len)) continue;
-        offset = 0;
-        for(i = 0; i < build_id_len; i++)
-            offset += (size_t)snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
-
-        //dump
-        if(0 != (r = xcc_util_write_format(log_fd, "    %s (BuildId: %s)\n", name, build_id_buf))) return r;
+        if(0 != (r = xcd_frames_record_buildid_line(self, name, frame->map, log_fd))) return r;
     }
 
     if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;

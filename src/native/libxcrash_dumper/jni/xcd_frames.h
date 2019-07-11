@@ -39,7 +39,7 @@ int xcd_frames_create(xcd_frames_t **self, xcd_regs_t *regs, xcd_maps_t *maps, p
 void xcd_frames_destroy(xcd_frames_t **self);
 
 int xcd_frames_record_backtrace(xcd_frames_t *self, int log_fd);
-int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd);
+int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_addr);
 int xcd_frames_record_stack(xcd_frames_t *self, int log_fd);
 
 #ifdef __cplusplus

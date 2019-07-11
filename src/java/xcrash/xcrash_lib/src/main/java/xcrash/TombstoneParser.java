@@ -248,7 +248,7 @@ public class TombstoneParser {
     public static final String keyBacktrace = "backtrace";
 
     /**
-     * Native crash backtrace's library build-id.
+     * Native crash ELF's build-id and file size.
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyBuildId = "build id";
