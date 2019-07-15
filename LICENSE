@@ -10,7 +10,7 @@ A copy of the MIT License is included in this file.
 Source code have been placed in the public domain
 =================================================
 
-src/native/libxcrash_dumper/jni/lzma/*
+1. LZMA
 
 LZMA SDK is written and placed in the public domain by Igor Pavlov.
 
@@ -25,6 +25,31 @@ any purpose, commercial or non-commercial, and by any means.
 LZMA SDK code is compatible with open source licenses, for example, you can
 include it to GNU GPL or GNU LGPL code.
 
+
+2. MD5
+
+This is an OpenSSL-compatible implementation of the RSA Data Security, Inc.
+MD5 Message-Digest Algorithm (RFC 1321).
+
+Homepage:
+http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
+
+Author:
+Alexander Peslyak, better known as Solar Designer <solar at openwall.com>
+
+This software was written by Alexander Peslyak in 2001.  No copyright is
+claimed, and the software is hereby placed in the public domain.
+In case this attempt to disclaim copyright and place the software in the
+public domain is deemed null and void, then the software is
+Copyright (c) 2001 Alexander Peslyak and it is hereby released to the
+general public under the following terms:
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted.
+
+There's ABSOLUTELY NO WARRANTY, express or implied.
+
+See md5.c for more information.
 
 
 Source code Licensed under the BSD 2-Clause License
