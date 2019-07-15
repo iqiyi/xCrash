@@ -390,7 +390,10 @@ static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, 
     }
 
     //append md5
-    if(st.st_size > 0)
+    size_t name_len = strlen(name);
+    if(st.st_size > 0
+       && ((name_len > 3 && 0 == memcmp(name + name_len - 3, ".so", 3))
+           || (name_len > 12 && 0 == memcmp(name, "/system/bin/", 12))))
     {
         errno = 0;
         uint8_t *data = (uint8_t *)mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
