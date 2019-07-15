@@ -26,12 +26,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
+#include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "queue.h"
 #include "xcc_errno.h"
 #include "xcc_util.h"
 #include "xcd_frames.h"
+#include "xcd_md5.h"
 #include "xcd_util.h"
 #include "xcd_elf.h"
 #include "xcd_log.h"
@@ -324,37 +328,101 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, int log_fd)
 
 static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, xcd_map_t *map, int log_fd)
 {
-    xcd_elf_t   *elf;
-    struct stat  st;
-    char         file_size_buf[128];
-    uint8_t      build_id[64];
-    size_t       build_id_len = 0;
-    char         build_id_buf[64 * 2 + 1];
-    size_t       offset = 0;
-    size_t       i;
+    char    buf[1024];
+    size_t  offset, i;
+    char   *error_from = "?";
 
-    //get build-id
-    memset(build_id_buf, 0, sizeof(build_id_buf));
+    //pathname
+    offset = (size_t)snprintf(buf, sizeof(buf), "    %s (BuildId: ", name);
+    
+    //append build-id
+    xcd_elf_t *elf;
+    uint8_t build_id[64];
+    size_t  build_id_len = 0;
     if(NULL != (elf = xcd_map_get_elf(map, self->pid, (void *)self->maps)) &&
        0 == xcd_elf_get_build_id(elf, build_id, sizeof(build_id), &build_id_len))
     {
         for(i = 0; i < build_id_len; i++)
-            offset += (size_t)snprintf(build_id_buf + offset, sizeof(build_id_buf) - offset, "%02hhx", build_id[i]);
+            offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%02hhx", build_id[i]);
     }
     else
     {
-        strncpy(build_id_buf, "none", sizeof(build_id_buf));
+        offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%s", "unknown");
     }
 
-    //get file size
+    //open file
+    int fd;
     errno = 0;
-    if(0 == stat(name, &st))
-        snprintf(file_size_buf, sizeof(file_size_buf), "%ld", (long)st.st_size);
-    else
-        snprintf(file_size_buf, sizeof(file_size_buf), "errno = %d, errmsg = %s", errno, strerror(errno));
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
+    if(0 > (fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(name, O_RDONLY | O_CLOEXEC))))
+    {
+        error_from = "OPEN";
+        goto err;
+    }
+#pragma clang diagnostic pop
+
+    //get file status
+    struct stat st;
+    errno = 0; 
+    if(0 != fstat(fd, &st))
+    {
+        error_from = "FSTAT";
+        goto err;
+    }
     
-    //dump
-    return xcc_util_write_format(log_fd, "    %s (BuildId: %s. FileSize: %s)\n", name, build_id_buf, file_size_buf);
+    //append file-size
+    offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, ". FileSize: %ld",
+                               (long)st.st_size);
+
+    //append last-modified
+    struct tm tm;
+    if(NULL != localtime_r(&(st.st_mtim.tv_sec), &tm))
+    {
+        offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, ". LastModified: %04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld",
+                                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                                   tm.tm_hour, tm.tm_min, tm.tm_sec, st.st_mtim.tv_nsec / 1000000,
+                                   tm.tm_gmtoff < 0 ? '-' : '+', labs(tm.tm_gmtoff / 3600), labs(tm.tm_gmtoff % 3600));
+    }
+    else
+    {
+        offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, ". LastModified: %s", "unknown");
+    }
+
+    //append md5
+    if(st.st_size > 0)
+    {
+        errno = 0;
+        uint8_t *data = (uint8_t *)mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if(data == MAP_FAILED)
+        {
+            error_from = "MMAP";
+            goto err;
+        }
+        
+        uint8_t md5[16];
+        xcd_MD5_CTX ctx;
+        xcd_MD5_Init(&ctx);
+        xcd_MD5_Update(&ctx, data, (unsigned long)st.st_size);
+        xcd_MD5_Final(md5, &ctx);
+        
+        munmap(data, (size_t)st.st_size);
+        
+        offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%s", ". MD5: ");
+        for(i = 0; i < sizeof(md5); i++)
+            offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%02hhx", md5[i]);
+    }
+    snprintf(buf + offset, sizeof(buf) - offset, "%s", ")\n");
+
+    //done
+    goto end;
+
+ err:
+    snprintf(buf + offset, sizeof(buf) - offset, ". %s error: errno = %d, errmsg = %s)\n", error_from, errno, strerror(errno));
+
+ end:
+    if(fd >= 0) close(fd);
+    return xcc_util_write_str(log_fd, buf);
 }
 
 int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_addr)
@@ -381,7 +449,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_ad
 
     TAILQ_FOREACH(frame, &(self->frames), link)
     {
-        if(NULL == frame->map || NULL == frame->map->name || '\0' == frame->map->name[0]) continue;
+        if(NULL == frame->map || NULL == frame->map->name || '/' != frame->map->name[0]) continue;
         
         //get name
         name = frame->map->name;
