@@ -22,7 +22,6 @@
 // Created by caikelun on 2019-03-07.
 package xcrash;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.text.TextUtils;
 
@@ -46,22 +45,24 @@ class NativeCrashHandler {
         return instance;
     }
 
-    @SuppressLint("UnsafeDynamicallyLoadedCode")
     int initialize(Context ctx, String appVersion, String logDir, boolean rethrow,
                    int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                    boolean dumpMap, boolean dumpFds, boolean dumpAllThreads,
                    int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
-                   ICrashCallback callback) {
+                   ICrashCallback callback, ILibLoader libLoader) {
         //load lib
-        try {
-            System.loadLibrary("xcrash");
-        } catch (Throwable e) {
-            XCrash.getLogger().e(Util.TAG, "NativeCrashHandler System.loadLibrary failed", e);
+        if (libLoader == null) {
             try {
-                //for some unusual Android version
-                System.load(ctx.getFilesDir().getParent() + "/lib/libxcrash.so");
-            } catch (Throwable e2) {
-                XCrash.getLogger().e(Util.TAG, "NativeCrashHandler System.load failed", e);
+                System.loadLibrary("xcrash");
+            } catch (Throwable e) {
+                XCrash.getLogger().e(Util.TAG, "NativeCrashHandler System.loadLibrary failed", e);
+                return Errno.LOAD_LIBRARY_FAILED;
+            }
+        } else {
+            try {
+                libLoader.loadLibrary("xcrash");
+            } catch (Throwable e) {
+                XCrash.getLogger().e(Util.TAG, "NativeCrashHandler ILibLoader.loadLibrary failed", e);
                 return Errno.LOAD_LIBRARY_FAILED;
             }
         }

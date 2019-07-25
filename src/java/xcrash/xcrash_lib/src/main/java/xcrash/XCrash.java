@@ -149,7 +149,8 @@ public final class XCrash {
                 params.nativeDumpAllThreads,
                 params.nativeDumpAllThreadsCountMax,
                 params.nativeDumpAllThreadsWhiteList,
-                params.nativeCallback);
+                params.nativeCallback,
+                params.libLoader);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -163,10 +164,11 @@ public final class XCrash {
      */
     public static class InitParameters {
         //common
-        String  appVersion             = null;
-        String  logDir                 = null;
-        int     logFileMaintainDelayMs = 5000;
-        ILogger logger                 = null;
+        String     appVersion             = null;
+        String     logDir                 = null;
+        int        logFileMaintainDelayMs = 5000;
+        ILogger    logger                 = null;
+        ILibLoader libLoader              = null;
 
         /**
          * Set App version. You can use this method to set an internal test/gray version number.
@@ -214,6 +216,17 @@ public final class XCrash {
          */
         public InitParameters setLogger(ILogger logger) {
             this.logger = logger;
+            return this;
+        }
+
+        /**
+         * Set a libLoader implementation for xCrash to load native library.
+         *
+         * @param libLoader An instance of {@link xcrash.ILibLoader}.
+         * @return The InitParameters object.
+         */
+        public InitParameters setLibLoader(ILibLoader libLoader) {
+            this.libLoader = libLoader;
             return this;
         }
 
