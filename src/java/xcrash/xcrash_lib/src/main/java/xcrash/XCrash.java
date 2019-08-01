@@ -138,12 +138,14 @@ public final class XCrash {
         if (params.enableNativeCrashHandler) {
             r = NativeCrashHandler.getInstance().initialize(
                 ctx,
+                appId,
                 params.appVersion,
                 params.logDir,
                 params.nativeRethrow,
                 params.nativeLogcatSystemLines,
                 params.nativeLogcatEventsLines,
                 params.nativeLogcatMainLines,
+                params.nativeDumpElfHash,
                 params.nativeDumpMap,
                 params.nativeDumpFds,
                 params.nativeDumpAllThreads,
@@ -356,25 +358,15 @@ public final class XCrash {
         }
 
         /**
-         * Enable dumping threads info (stacktrace) for all threads (not just the thread that has crashed)
+         * Set if dumping threads info (stacktrace) for all threads (not just the thread that has crashed)
          * when a Java exception occurred. (Default: enable)
          *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings({"unused", "WeakerAccess"})
-        public InitParameters enableJavaDumpAllThreads() {
-            this.javaDumpAllThreads = true;
-            return this;
-        }
-
-        /**
-         * Disable dumping threads info (stacktrace) for all threads when a Java exception occurred. (Default: enable)
-         *
+         * @param flag True or false.
          * @return The InitParameters object.
          */
         @SuppressWarnings("unused")
-        public InitParameters disableJavaDumpAllThreads() {
-            this.javaDumpAllThreads = false;
+        public InitParameters setJavaDumpAllThreads(boolean flag) {
+            this.javaDumpAllThreads = flag;
             return this;
         }
 
@@ -382,7 +374,7 @@ public final class XCrash {
          * Set the maximum number of other threads to dump when a Java exception occurred.
          * "0" means no limit. (Default: 0)
          *
-         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#enableJavaDumpAllThreads()}.
+         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#setJavaDumpAllThreads(boolean)}.
          *
          * @param countMax The maximum number of other threads to dump.
          * @return The InitParameters object.
@@ -397,7 +389,7 @@ public final class XCrash {
          * Set a thread name (regular expression) whitelist to filter which threads need to be dumped when a Java exception occurred.
          * "null" means no filtering. (Default: null)
          *
-         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#enableJavaDumpAllThreads()}.
+         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#setJavaDumpAllThreads(boolean)}.
          *
          * @param whiteList A thread name (regular expression) whitelist.
          * @return The InitParameters object.
@@ -427,6 +419,7 @@ public final class XCrash {
         int            nativeLogcatSystemLines       = 50;
         int            nativeLogcatEventsLines       = 50;
         int            nativeLogcatMainLines         = 200;
+        boolean        nativeDumpElfHash             = true;
         boolean        nativeDumpMap                 = true;
         boolean        nativeDumpFds                 = true;
         boolean        nativeDumpAllThreads          = true;
@@ -518,69 +511,51 @@ public final class XCrash {
         }
 
         /**
-         * Enable dumping memory map when a native crash occurred. (Default: enable)
+         * Set if dumping ELF file's MD5 hash in Build-Id section when a native crash occurred. (Default: enable)
          *
+         * @param flag True or false.
          * @return The InitParameters object.
          */
         @SuppressWarnings("unused")
-        public InitParameters enableNativeDumpMap() {
-            this.nativeDumpMap = true;
+        public InitParameters setNativeDumpElfHash(boolean flag) {
+            this.nativeDumpElfHash = flag;
             return this;
         }
 
         /**
-         * Disable dumping memory map when a native crash occurred. (Default: enable)
+         * Set if dumping memory map when a native crash occurred. (Default: enable)
          *
+         * @param flag True or false.
          * @return The InitParameters object.
          */
         @SuppressWarnings("unused")
-        public InitParameters disableNativeDumpMap() {
-            this.nativeDumpMap = false;
+        public InitParameters setNativeDumpMap(boolean flag) {
+            this.nativeDumpMap = flag;
             return this;
         }
 
         /**
-         * Enable dumping FD list when a native crash occurred. (Default: enable)
+         * Set if dumping FD list when a native crash occurred. (Default: enable)
          *
+         * @param flag True or false.
          * @return The InitParameters object.
          */
         @SuppressWarnings("unused")
-        public InitParameters enableNativeDumpFds() {
-            this.nativeDumpFds = true;
+        public InitParameters setNativeDumpFds(boolean flag) {
+            this.nativeDumpFds = flag;
             return this;
         }
 
         /**
-         * Disable dumping FD list when a native crash occurred. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters disableNativeDumpFds() {
-            this.nativeDumpFds = false;
-            return this;
-        }
-
-        /**
-         * Enable dumping threads info (registers, backtrace and stack) for all threads (not just the thread that has crashed)
+         * Set if dumping threads info (registers, backtrace and stack) for all threads (not just the thread that has crashed)
          * when a native crash occurred. (Default: enable)
          *
+         * @param flag True or false.
          * @return The InitParameters object.
          */
-        @SuppressWarnings({"unused", "WeakerAccess"})
-        public InitParameters enableNativeDumpAllThreads() {
-            this.nativeDumpAllThreads = true;
-            return this;
-        }
-
-        /**
-         * Disable dumping threads info (registers, backtrace and stack) for all threads when a native crash occurred. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters disableNativeDumpAllThreads() {
-            this.nativeDumpAllThreads = false;
+        @SuppressWarnings({"unused"})
+        public InitParameters setNativeDumpAllThreads(boolean flag) {
+            this.nativeDumpAllThreads = flag;
             return this;
         }
 
@@ -588,7 +563,7 @@ public final class XCrash {
          * Set the maximum number of other threads to dump when a native crash occurred.
          * "0" means no limit. (Default: 0)
          *
-         * <p>Note: This option is only useful when "NativeDumpAllThreads" is enabled by calling {@link InitParameters#enableNativeDumpAllThreads()}.
+         * <p>Note: This option is only useful when "NativeDumpAllThreads" is enabled by calling {@link InitParameters#setNativeDumpAllThreads(boolean)}.
          *
          * @param countMax The maximum number of other threads to dump.
          * @return The InitParameters object.
@@ -603,7 +578,7 @@ public final class XCrash {
          * Set a thread name (regular expression) whitelist to filter which threads need to be dumped when a native crash occurred.
          * "null" means no filtering. (Default: null)
          *
-         * <p>Note: This option is only useful when "NativeDumpAllThreads" is enabled by calling {@link InitParameters#enableNativeDumpAllThreads()}.
+         * <p>Note: This option is only useful when "NativeDumpAllThreads" is enabled by calling {@link InitParameters#setNativeDumpAllThreads(boolean)}.
          *
          * <p>Warning: The regular expression used here only supports POSIX ERE (Extended Regular Expression).
          * Android bionic's regular expression is different from Linux libc's regular expression.

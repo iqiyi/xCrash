@@ -124,6 +124,7 @@ static int xcd_core_read_args()
                         "logcat_system_lines=%u, "
                         "logcat_events_lines=%u, "
                         "logcat_main_lines=%u, "
+                        "dump_elf_hash=%d, "
                         "dump_map=%d, "
                         "dump_fds=%d, "
                         "dump_all_threads=%d, "
@@ -143,6 +144,7 @@ static int xcd_core_read_args()
                         xcd_core_spot.logcat_system_lines,
                         xcd_core_spot.logcat_events_lines,
                         xcd_core_spot.logcat_main_lines,
+                        xcd_core_spot.dump_elf_hash,
                         xcd_core_spot.dump_map,
                         xcd_core_spot.dump_fds,
                         xcd_core_spot.dump_all_threads,
@@ -245,6 +247,7 @@ int main(int argc, char** argv)
                                xcd_core_spot.logcat_system_lines,
                                xcd_core_spot.logcat_events_lines,
                                xcd_core_spot.logcat_main_lines,
+                               xcd_core_spot.dump_elf_hash,
                                xcd_core_spot.dump_map,
                                xcd_core_spot.dump_fds,
                                xcd_core_spot.dump_all_threads,

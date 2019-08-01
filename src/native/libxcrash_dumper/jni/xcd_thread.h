@@ -68,7 +68,7 @@ int xcd_thread_load_frames(xcd_thread_t *self, xcd_maps_t *maps);
 int xcd_thread_record_info(xcd_thread_t *self, int log_fd, const char *pname);
 int xcd_thread_record_regs(xcd_thread_t *self, int log_fd);
 int xcd_thread_record_backtrace(xcd_thread_t *self, int log_fd);
-int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd, uintptr_t fault_addr);
+int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd, int dump_elf_hash, uintptr_t fault_addr);
 int xcd_thread_record_stack(xcd_thread_t *self, int log_fd);
 int xcd_thread_record_memory(xcd_thread_t *self, int log_fd);
 

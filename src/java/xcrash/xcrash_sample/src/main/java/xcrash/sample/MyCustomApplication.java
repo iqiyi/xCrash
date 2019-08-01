@@ -69,20 +69,20 @@ public class MyCustomApplication extends Application {
 
         // Initialize xCrash.
         XCrash.init(this, new XCrash.InitParameters()
-                .setAppVersion("1.2.3-beta456-patch789")
-                .setJavaRethrow(true)
-                .setJavaLogCountMax(10)
-                .setJavaDumpAllThreadsWhiteList(new String[]{"^main$", "^Binder:.*", ".*Finalizer.*"})
-                .setJavaDumpAllThreadsCountMax(10)
-                .setJavaCallback(callback)
-                .setNativeRethrow(true)
-                .setNativeLogCountMax(10)
-                .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
-                .setNativeDumpAllThreadsCountMax(10)
-                .setNativeCallback(callback)
-                .setPlaceholderCountMax(3)
-                .setPlaceholderSizeKb(512)
-                .setLogFileMaintainDelayMs(1000));
+            .setAppVersion("1.2.3-beta456-patch789")
+            .setJavaRethrow(true)
+            .setJavaLogCountMax(10)
+            .setJavaDumpAllThreadsWhiteList(new String[]{"^main$", "^Binder:.*", ".*Finalizer.*"})
+            .setJavaDumpAllThreadsCountMax(10)
+            .setJavaCallback(callback)
+            .setNativeRethrow(true)
+            .setNativeLogCountMax(10)
+            .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
+            .setNativeDumpAllThreadsCountMax(10)
+            .setNativeCallback(callback)
+            .setPlaceholderCountMax(3)
+            .setPlaceholderSizeKb(512)
+            .setLogFileMaintainDelayMs(1000));
 
         // Send all pending crash log files.
         new Thread(new Runnable() {

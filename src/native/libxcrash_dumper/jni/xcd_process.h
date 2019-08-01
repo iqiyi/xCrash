@@ -41,10 +41,17 @@ void xcd_process_resume_threads(xcd_process_t *self);
 
 int xcd_process_load_info(xcd_process_t *self);
 
-int xcd_process_record(xcd_process_t *self, int log_fd,
-                       unsigned int logcat_system_lines, unsigned int logcat_events_lines, unsigned int logcat_main_lines,
-                       int dump_map, int dump_fds, int dump_all_threads,
-                       int dump_all_threads_count_max, char *dump_all_threads_whitelist,
+int xcd_process_record(xcd_process_t *self,
+                       int log_fd,
+                       unsigned int logcat_system_lines,
+                       unsigned int logcat_events_lines,
+                       unsigned int logcat_main_lines,
+                       int dump_elf_hash,
+                       int dump_map,
+                       int dump_fds,
+                       int dump_all_threads,
+                       int dump_all_threads_count_max,
+                       char *dump_all_threads_whitelist,
                        int api_level);
 
 #ifdef __cplusplus

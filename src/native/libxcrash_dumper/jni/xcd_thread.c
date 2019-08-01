@@ -152,11 +152,11 @@ int xcd_thread_record_backtrace(xcd_thread_t *self, int log_fd)
     return xcd_frames_record_backtrace(self->frames, log_fd);
 }
 
-int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd, uintptr_t fault_addr)
+int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd, int dump_elf_hash, uintptr_t fault_addr)
 {
     if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
 
-    return xcd_frames_record_buildid(self->frames, log_fd, fault_addr);
+    return xcd_frames_record_buildid(self->frames, log_fd, dump_elf_hash, fault_addr);
 }
 
 int xcd_thread_record_stack(xcd_thread_t *self, int log_fd)

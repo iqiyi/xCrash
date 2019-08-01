@@ -40,7 +40,9 @@
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
 // log filename format:
-// prefix_01234567890123456789_version__pname[suffix]
+// tombstone_01234567890123456789_version__pname.native.xcrash
+#define XCD_RECORDER_LOG_PREFIX "tombstone"
+#define XCD_RECORDER_LOG_SUFFIX ".native.xcrash"
 
 struct xc_recorder
 {
@@ -51,14 +53,11 @@ struct xc_recorder
 };
 
 int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *app_version,
-                        const char *log_dir, const char *log_prefix, const char *log_suffix,
-                        char **log_pathname)
+                        const char *log_dir, char **log_pathname)
 {
-    const char *prefix = log_prefix ? log_prefix : "tombstone";
-    const char *suffix = log_suffix ? log_suffix : "";
-    char        buf[PATH_MAX];
-    char        process_name[256] = "\0";
-    int         r = 0;
+    char buf[PATH_MAX];
+    char process_name[256] = "\0";
+    int  r = 0;
     
     if(NULL == (*self = malloc(sizeof(xc_recorder_t)))) return XCC_ERRNO_NOMEM;
     if(NULL == ((*self)->log_dir = strdup(log_dir)))
@@ -78,8 +77,8 @@ int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *a
         strncpy(process_name, "unknown", sizeof(process_name));
     
     //save and return current log pathname
-    snprintf(buf, sizeof(buf), "%s/%s_%020"PRIu64"_%s__%s%s",
-             log_dir, prefix, start_time, app_version, process_name, suffix);
+    snprintf(buf, sizeof(buf), "%s/"XCD_RECORDER_LOG_PREFIX"_%020"PRIu64"_%s__%s"XCD_RECORDER_LOG_SUFFIX,
+             log_dir, start_time, app_version, process_name);
     if(NULL == ((*self)->log_pathname = strdup(buf)))
     {
         r =  XCC_ERRNO_NOMEM;

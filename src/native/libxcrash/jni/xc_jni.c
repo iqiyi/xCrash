@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <jni.h>
 #include <sys/types.h>
+#include <sys/eventfd.h>
 #include <android/log.h>
 #include "xcc_errno.h"
 #include "xcc_util.h"
@@ -34,6 +35,9 @@
 #include "xc_core.h"
 #include "xc_util.h"
 #include "xc_test.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
 #define XC_JNI_CLASS_NAME "xcrash/NativeCrashHandler"
 
@@ -45,333 +49,143 @@
             goto label;                                   \
         }                                                 \
     } while(0)
-        
+
 #define XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(v, label) \
     do {                                                  \
         XC_JNI_CHECK_PENDING_EXCEPTION(label);            \
         if(NULL == (v)) goto label;                       \
     } while(0)
 
-static JavaVM     *xc_jni_jvm          = NULL;
-static jclass      xc_jni_class_cb     = NULL;
-static jmethodID   xc_jni_method_cb    = NULL;
+#define XC_JNI_CALLBACK_CLASS_NAME  "xcrash/NativeCrashHandler"
+#define XC_JNI_CALLBACK_METHOD_NAME "callback"
+#define XC_JNI_CALLBACK_METHOD_SIG  "(Ljava/lang/String;Ljava/lang/String;ZZLjava/lang/String;)V"
 
-static pid_t       xc_jni_crash_tid    = 0;
-static char       *xc_jni_emergency    = NULL;
-static int         xc_jni_log_fd       = 0;
+//java class/methods cache
+static JavaVM     *xc_jni_vm           = NULL;
+static jclass      xc_jni_cb_class     = NULL;
+static jmethodID   xc_jni_cb_method    = NULL;
+
+static pthread_t   xc_jni_cb_thd;
+static int         xc_jni_evfd         = -1;
+
+static pid_t       xc_jni_crash_tid    = -1;
 static const char *xc_jni_log_pathname = NULL;
+static char       *xc_jni_emergency    = NULL;
 
-static int xc_jni_get_app_info(JNIEnv *env, jobject context, jstring *app_id, jstring *app_version, jstring *app_lib_dir, jstring *files_dir)
+static void *xc_jni_callback_thread(void *arg)
 {
-    jclass context_clazz = (*env)->GetObjectClass(env, context);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(context_clazz, err);
+    JNIEnv   *env = NULL;
+    uint64_t  data = 0;
+    jstring   j_pathname  = NULL;
+    jstring   j_emergency = NULL;
+    jboolean  j_is_java_thread = JNI_FALSE;
+    jboolean  j_is_main_thread = JNI_FALSE;
+    jstring   j_thread_name = NULL;
+    char      c_thread_name[16] = "\0";
     
-    //get app_lib_dir
-    jmethodID getApplicationInfo = (*env)->GetMethodID(env, context_clazz, "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getApplicationInfo, err);
-    jobject applicationInfo = (*env)->CallObjectMethod(env, context, getApplicationInfo);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(applicationInfo, err);
-    jclass applicationInfo_clazz = (*env)->GetObjectClass(env, applicationInfo);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(applicationInfo_clazz, err);
-    jfieldID nativeLibraryDir = (*env)->GetFieldID(env, applicationInfo_clazz, "nativeLibraryDir", "Ljava/lang/String;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(nativeLibraryDir, err);
-    *app_lib_dir = (jstring)(*env)->GetObjectField(env, applicationInfo, nativeLibraryDir);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(*app_lib_dir, err);
-
-    //get app_id
-    jmethodID getPackageName = (*env)->GetMethodID(env, context_clazz, "getPackageName", "()Ljava/lang/String;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getPackageName, skip);
-    *app_id = (jstring)(*env)->CallObjectMethod(env, context, getPackageName);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(*app_id, skip);
-
-    //get app_version
-    if(app_version)
-    {
-        jmethodID getPackageManager = (*env)->GetMethodID(env, context_clazz, "getPackageManager", "()Landroid/content/pm/PackageManager;");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getPackageManager, skip);
-        jobject packageManager = (*env)->CallObjectMethod(env, context, getPackageManager);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(packageManager, skip);
-        jclass packageManager_clazz = (*env)->GetObjectClass(env, packageManager);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(packageManager_clazz, skip);
-        jmethodID getPackageInfo = (*env)->GetMethodID(env, packageManager_clazz, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getPackageInfo, skip);
-        jobject packageInfo = (*env)->CallObjectMethod(env, packageManager, getPackageInfo, *app_id, 0);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(packageInfo, skip);
-        jclass packageInfo_clazz = (*env)->GetObjectClass(env, packageInfo);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(packageInfo_clazz, skip);
-        jfieldID versionName = (*env)->GetFieldID(env, packageInfo_clazz, "versionName", "Ljava/lang/String;");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(versionName, skip);
-        *app_version = (jstring)(*env)->GetObjectField(env, packageInfo, versionName);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(*app_version, skip);
-    }
-
- skip:
-
-    //get files_dir
-    if(files_dir)
-    {
-        jmethodID getFilesDir = (*env)->GetMethodID(env, context_clazz, "getFilesDir", "()Ljava/io/File;");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getFilesDir, err);
-        jobject file = (*env)->CallObjectMethod(env, context, getFilesDir);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(file, err);
-        jclass file_clazz = (*env)->GetObjectClass(env, file);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(file_clazz, err);
-        jmethodID getCanonicalPath = (*env)->GetMethodID(env, file_clazz, "getCanonicalPath", "()Ljava/lang/String;");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(getCanonicalPath, err);
-        *files_dir = (jstring)(*env)->CallObjectMethod(env, file, getCanonicalPath);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(*files_dir, err);
-    }
-
-    return 0;
-
- err:    
-    return XCC_ERRNO_JNI;
-}
-
-static void xc_jni_record_stack_trace(JNIEnv *env, int log_fd, pid_t crash_tid)
-{
-    int   is_main_thread = (getpid() == crash_tid ? 1 : 0);
-    char  tname[64] = "\0";
-    
-    //get thread name
-    if(!is_main_thread)
-    {
-        if(0 != xcc_util_get_thread_name(crash_tid, tname, sizeof(tname))) return;
-        if('\0' == tname[0]) return;
-    }
-
-    //java.lang.Thread
-    jclass class_Thread = (*env)->FindClass(env, "java/lang/Thread");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(class_Thread, err);
-    jmethodID method_getAllStackTraces = (*env)->GetStaticMethodID(env, class_Thread, "getAllStackTraces", "()Ljava/util/Map;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_getAllStackTraces, err);
-    jmethodID method_getStackTrace = (*env)->GetMethodID(env, class_Thread, "getStackTrace", "()[Ljava/lang/StackTraceElement;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_getStackTrace, err);
-    jmethodID method_getName = (*env)->GetMethodID(env, class_Thread, "getName", "()Ljava/lang/String;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_getName, err);
-
-    //java.lang.StackTraceElement
-    jclass class_StackTraceElement = (*env)->FindClass(env, "java/lang/StackTraceElement");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(class_StackTraceElement, err);
-    jmethodID method_toString = (*env)->GetMethodID(env, class_StackTraceElement, "toString", "()Ljava/lang/String;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_toString, err);
-
-    //java.util.Map
-    jclass class_Map = (*env)->FindClass(env, "java/util/Map");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(class_Map, err);
-    jmethodID method_keySet = (*env)->GetMethodID(env, class_Map, "keySet", "()Ljava/util/Set;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_keySet, err);
-
-    //java.util.Set
-    jclass class_Set = (*env)->FindClass(env, "java/util/Set");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(class_Set, err);
-    jmethodID method_toArray = (*env)->GetMethodID(env, class_Set, "toArray", "()[Ljava/lang/Object;");
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(method_toArray, err);
-    
-    jobject allStackTracesMap = (*env)->CallStaticObjectMethod(env, class_Thread, method_getAllStackTraces);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(allStackTracesMap, err);
-
-    jobject allStackTracesSet = (*env)->CallObjectMethod(env, allStackTracesMap, method_keySet);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(allStackTracesSet, err);
-    
-    jobjectArray allStackTracesArray = (jobjectArray)(*env)->CallObjectMethod(env, allStackTracesSet, method_toArray);
-    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(allStackTracesArray, err);
-    
-    jsize allStackTracesArrayLen = (*env)->GetArrayLength(env, allStackTracesArray);
-    XC_JNI_CHECK_PENDING_EXCEPTION(err);
-    
-    jsize i;
-    for(i = 0; i < allStackTracesArrayLen; i++)
-    {
-        jobject thread = (*env)->GetObjectArrayElement(env, allStackTracesArray, i);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(thread, err);
-
-        jstring name = (*env)->CallObjectMethod(env, thread, method_getName);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(name, err);
-
-        const char *c_name = (*env)->GetStringUTFChars(env, name, 0);
-
-        //Notice:
-        //TID from linux kernel and JVM are different things.
-        //Here we match thread by thread name.
-        if((is_main_thread && 0 == strcmp(c_name, "main")) ||
-           (!is_main_thread && strstr(c_name, tname)))
-        {
-            if(0 != xcc_util_write_str(log_fd, "java stacktrace:\n")) goto err;
-
-            jobjectArray stackTrace = (jobjectArray)(*env)->CallObjectMethod(env, thread, method_getStackTrace);
-            XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(stackTrace, err);
-            
-            jsize stackTraceLen = (*env)->GetArrayLength(env, stackTrace);
-            XC_JNI_CHECK_PENDING_EXCEPTION(err);
-
-            jsize j;
-            for(j = 0; j < stackTraceLen; j++)
-            {
-                jobject stackTraceElement = (*env)->GetObjectArrayElement(env, stackTrace, j);
-                XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(stackTraceElement, err);
-
-                jstring stackTraceElementStr = (*env)->CallObjectMethod(env, stackTraceElement, method_toString);
-                XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(stackTraceElementStr, err);
-
-                const char *c_stackTraceElementStr = (*env)->GetStringUTFChars(env, stackTraceElementStr, 0);
-                if(0 != xcc_util_write_str(log_fd, "    at ")) goto err;
-                if(0 != xcc_util_write_str(log_fd, c_stackTraceElementStr)) goto err;
-                if(0 != xcc_util_write_str(log_fd, "\n")) goto err;
-                (*env)->ReleaseStringUTFChars(env, stackTraceElementStr, c_stackTraceElementStr);
-            }
-            if(0 != xcc_util_write_str(log_fd, "\n")) goto err;
-            break;
-        }
-        
-        (*env)->ReleaseStringUTFChars(env, name, c_name);
-    }
-
- err:
-    return;
-}
-
-static void xc_jni_callback_java(JNIEnv *env, int log_fd, const char *log_pathname, char *emergency)
-{
-    const char *c_pathname = NULL;
-    jstring     j_pathname = NULL;
-    jstring     j_emergency  = NULL;
-    
-    if(NULL == xc_jni_class_cb || NULL == xc_jni_method_cb) return;
-
-    //get log pathname
-    if(log_fd >= 0)
-    {
-        c_pathname = log_pathname;
-    }
-    if(NULL != c_pathname)
-    {
-        j_pathname = (*env)->NewStringUTF(env, c_pathname);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(j_pathname, err);
-    }
-
-    //get emergency
-    if(NULL != emergency)
-    {
-        j_emergency = (*env)->NewStringUTF(env, emergency);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(j_emergency, err);
-    }
-    
-    (*env)->CallStaticVoidMethod(env, xc_jni_class_cb, xc_jni_method_cb, j_pathname, j_emergency);
-    XC_JNI_CHECK_PENDING_EXCEPTION(err);
-
- err:
-    (*env)->DeleteGlobalRef(env, xc_jni_class_cb);
-    XC_JNI_CHECK_PENDING_EXCEPTION(end);
-
- end:
-    return;
-}
-
-static void *xc_jni_callback_do(void *arg)
-{
-    JNIEnv *env      = NULL;
-    int     attached = 0;
-    jint    r, r2;
-
     (void)arg;
     
     pthread_setname_np(pthread_self(), "xcrash_callback");
-    
-    //get env
-    r = (*xc_jni_jvm)->GetEnv(xc_jni_jvm, (void **)&env, JNI_VERSION_1_6);
-    if(JNI_OK == r)
-    {
-        //OK
-    }
-    else if(JNI_EDETACHED == r)
-    {
-        //try attach current thread to JVM
-        r2 = (*xc_jni_jvm)->AttachCurrentThread(xc_jni_jvm, &env, NULL);
-        XC_JNI_CHECK_PENDING_EXCEPTION(err);
-        if(JNI_OK != r2) goto err;
-        attached = 1;
-    }
-    else
-    {
-        //error
-        goto err;
-    }
-    if(NULL == env) goto err;
 
-    //record java stack trace
-    if(xc_jni_log_fd >= 0) xc_jni_record_stack_trace(env, xc_jni_log_fd, xc_jni_crash_tid);
+    if(JNI_OK != (*xc_jni_vm)->AttachCurrentThread(xc_jni_vm, &env, NULL)) return NULL;
 
-    //callback to jvm
-    xc_jni_callback_java(env, xc_jni_log_fd, xc_jni_log_pathname, xc_jni_emergency);
+    //block until native crashed
+    if(sizeof(data) != XCC_UTIL_TEMP_FAILURE_RETRY(read(xc_jni_evfd, &data, sizeof(data)))) return NULL;
 
- err:
-    if(attached) (*xc_jni_jvm)->DetachCurrentThread(xc_jni_jvm);
+    //prepare callback parameters
+    if(NULL != xc_jni_log_pathname)
+    {
+        if(NULL == (j_pathname = (*env)->NewStringUTF(env, xc_jni_log_pathname))) goto clean;
+    }
+    if(NULL != xc_jni_emergency)
+    {
+        if(NULL == (j_emergency = (*env)->NewStringUTF(env, xc_jni_emergency))) goto clean;
+    }
+    j_is_java_thread = (xc_jni_crash_tid >= 0 ? JNI_TRUE : JNI_FALSE);
+    if(j_is_java_thread)
+    {
+        j_is_main_thread = (getpid() == xc_jni_crash_tid ? JNI_TRUE : JNI_FALSE);
+        if(!j_is_main_thread)
+        {
+            if(0 != xcc_util_get_thread_name(xc_jni_crash_tid, c_thread_name, sizeof(c_thread_name))) goto clean;
+            if(NULL == (j_thread_name = (*env)->NewStringUTF(env, c_thread_name))) goto clean;
+        }
+    }
+
+    //do callback
+    (*env)->CallStaticVoidMethod(env, xc_jni_cb_class, xc_jni_cb_method, j_pathname, j_emergency, j_is_java_thread, j_is_main_thread, j_thread_name);
+    XC_JNI_CHECK_PENDING_EXCEPTION(clean);
+
+ clean:
+    (*env)->DeleteGlobalRef(env, xc_jni_cb_class);
+    XC_JNI_CHECK_PENDING_EXCEPTION(end);
+
+ end:
     return NULL;
 }
 
-void xc_jni_callback(int log_fd, const char *log_pathname, char *emergency)
+void xc_jni_callback(const char *log_pathname, char *emergency)
 {
-    pthread_t thd;
+    uint64_t  data = 1;
+    JNIEnv   *env  = NULL;
 
-    if(NULL == xc_jni_jvm) return;
+    //if this is a java thread?
+    if(JNI_OK == (*xc_jni_vm)->GetEnv(xc_jni_vm, (void**)&env, JNI_VERSION_1_6))
+    {
+        XC_JNI_CHECK_PENDING_EXCEPTION(skip);
+        xc_jni_crash_tid = gettid();
+    }
 
-    xc_jni_crash_tid    = gettid();
-    xc_jni_emergency    = emergency;
-    xc_jni_log_fd       = log_fd;
+ skip:
     xc_jni_log_pathname = log_pathname;
+    xc_jni_emergency    = emergency;
     
-    if(0 != pthread_create(&thd, NULL, xc_jni_callback_do, NULL)) return;
-    pthread_join(thd, NULL);
+    //wake up the callback thread
+    if(sizeof(data) != XCC_UTIL_TEMP_FAILURE_RETRY(write(xc_jni_evfd, &data, sizeof(data)))) return;
+    
+    pthread_join(xc_jni_cb_thd, NULL);
 }
 
-static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean restore_signal_handler,
-                           jstring app_version, jstring log_dir, jstring log_prefix, jstring log_suffix,
-                           jint logcat_system_lines, jint logcat_events_lines, jint logcat_main_lines,
-                           jboolean dump_map, jboolean dump_fds, jboolean dump_all_threads,
-                           jint dump_all_threads_count_max, jobjectArray dump_all_threads_whitelist,
-                           jstring callback_class, jstring callback_method)
+static jint xc_jni_init(JNIEnv *env,
+                        jobject thiz,
+                        jboolean restore_signal_handler,
+                        jstring app_id,
+                        jstring app_version,
+                        jstring app_lib_dir,
+                        jstring log_dir,
+                        jint logcat_system_lines,
+                        jint logcat_events_lines,
+                        jint logcat_main_lines,
+                        jboolean dump_elf_hash,
+                        jboolean dump_map,
+                        jboolean dump_fds,
+                        jboolean dump_all_threads,
+                        jint dump_all_threads_count_max,
+                        jobjectArray dump_all_threads_whitelist)
 {
     const char  *c_app_id                         = NULL;
     const char  *c_app_version                    = NULL;
-    const char  *c_log_dir                        = NULL;
-    const char  *c_log_prefix                     = NULL;
-    const char  *c_log_suffix                     = NULL;
-    const char  *c_callback_class                 = NULL;
-    const char  *c_callback_method                = NULL;
     const char  *c_app_lib_dir                    = NULL;
-    const char  *c_files_dir                      = NULL;
-    
+    const char  *c_log_dir                        = NULL;
     const char **c_dump_all_threads_whitelist     = NULL;
     size_t       c_dump_all_threads_whitelist_len = 0;
+    int          r                                = XCC_ERRNO_JNI;
     size_t       len, i;
-
-    jstring      app_id                           = NULL;
-    jstring      app_lib_dir                      = NULL;
-    jstring      files_dir                        = NULL;
-    
-    const char  *p_log_dir                        = NULL;
-    char        *p_log_dir_tmp                    = NULL;
-    int          r                                = 0;
+    jclass       tmp_class;
+    jstring      tmp_str;
+    const char  *tmp_c_str;
 
     (void)thiz;
 
-    if(!env || !(*env) || !context || logcat_system_lines < 0 || logcat_events_lines < 0 || logcat_main_lines < 0) return XCC_ERRNO_INVAL;
+    if(!env || !(*env) || !app_id || !app_version || !app_lib_dir || !log_dir ||
+       logcat_system_lines < 0 || logcat_events_lines < 0 || logcat_main_lines < 0) return XCC_ERRNO_INVAL;
 
-    //get app_id, app_version, app_lib_dir, files_dir from context
-    if(0 != xc_jni_get_app_info(env, context, &app_id, (app_version ? NULL : &app_version), &app_lib_dir,
-                                (log_dir ? NULL : &files_dir))) return XCC_ERRNO_INVAL;
+    if(NULL == (c_app_id      = (*env)->GetStringUTFChars(env, app_id,      0))) goto clean;
+    if(NULL == (c_app_version = (*env)->GetStringUTFChars(env, app_version, 0))) goto clean;
+    if(NULL == (c_app_lib_dir = (*env)->GetStringUTFChars(env, app_lib_dir, 0))) goto clean;
+    if(NULL == (c_log_dir     = (*env)->GetStringUTFChars(env, log_dir,     0))) goto clean;
 
-    c_app_id = (app_id ? (*env)->GetStringUTFChars(env, app_id, 0) : NULL);
-    c_app_version = (app_version ? (*env)->GetStringUTFChars(env, app_version, 0) : NULL);
-    c_log_dir = (log_dir ? (*env)->GetStringUTFChars(env, log_dir, 0) : NULL);
-    c_log_prefix = (log_prefix ? (*env)->GetStringUTFChars(env, log_prefix, 0) : NULL);
-    c_log_suffix = (log_suffix ? (*env)->GetStringUTFChars(env, log_suffix, 0) : NULL);
-    c_callback_class = (callback_class ? (*env)->GetStringUTFChars(env, callback_class, 0) : NULL);
-    c_callback_method = (callback_method ? (*env)->GetStringUTFChars(env, callback_method, 0) : NULL);
-    c_app_lib_dir = (app_lib_dir ? (*env)->GetStringUTFChars(env, app_lib_dir, 0) : NULL);
-    c_files_dir = (files_dir ? (*env)->GetStringUTFChars(env, files_dir, 0) : NULL);
-
+    //threads whitelist
     if(dump_all_threads_whitelist)
     {
         len = (size_t)(*env)->GetArrayLength(env, dump_all_threads_whitelist);
@@ -382,95 +196,60 @@ static jint xc_jni_init_ex(JNIEnv *env, jobject thiz, jobject context, jboolean 
                 c_dump_all_threads_whitelist_len = len;
                 for(i = 0; i < len; i++)
                 {
-                    jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
-                    c_dump_all_threads_whitelist[i] = (wl ? (*env)->GetStringUTFChars(env, wl, 0) : NULL);
+                    tmp_str = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
+                    c_dump_all_threads_whitelist[i] = (tmp_str ? (*env)->GetStringUTFChars(env, tmp_str, 0) : NULL);
                 }
             }
         }
     }
+
+    //cache the callback class and method
+    tmp_class = (*env)->FindClass(env, XC_JNI_CALLBACK_CLASS_NAME);
+    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(tmp_class, clean);
+    xc_jni_cb_class = (*env)->NewGlobalRef(env, tmp_class);
+    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_jni_cb_class, clean);
+    xc_jni_cb_method = (*env)->GetStaticMethodID(env, xc_jni_cb_class, XC_JNI_CALLBACK_METHOD_NAME, XC_JNI_CALLBACK_METHOD_SIG);
+    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_jni_cb_method, clean);
+
+    //eventfd and a new thread for callback
+    if(0 > (xc_jni_evfd = eventfd(0, EFD_CLOEXEC))) goto clean;
+    if(0 != pthread_create(&xc_jni_cb_thd, NULL, xc_jni_callback_thread, NULL)) goto clean;
     
-    //check c_app_lib_dir
-    if(NULL == c_app_lib_dir)
-    {
-        r = XCC_ERRNO_INVAL;
-        goto end;
-    }
-    
-    //check & build log_dir
-    if(NULL == c_log_dir)
-    {
-        if(NULL == c_files_dir)
-        {
-            r = XCC_ERRNO_INVAL;
-            goto end;
-        }
-        if(NULL == (p_log_dir_tmp = xc_util_strdupcat(c_files_dir, "/tombstones")))
-        {
-            r = XCC_ERRNO_NOMEM;
-            goto end;
-        }
-        p_log_dir = (const char *)p_log_dir_tmp;
-    }
-    else
-    {
-        p_log_dir = c_log_dir;
-    }
-
-    //save callback class & method
-    if(NULL != c_callback_class && NULL != c_callback_method)
-    {
-        jclass class_cb = (*env)->FindClass(env, c_callback_class);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(class_cb, skip);
-
-        xc_jni_class_cb = (*env)->NewGlobalRef(env, class_cb);
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_jni_class_cb, skip);
-
-        xc_jni_method_cb = (*env)->GetStaticMethodID(env, xc_jni_class_cb, c_callback_method, "(Ljava/lang/String;Ljava/lang/String;)V");
-        XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_jni_method_cb, skip);
-    }
-    
- skip:
-
     //init native core
-    r = xc_core_init((int)restore_signal_handler, c_app_id, c_app_version, c_app_lib_dir,
-                     p_log_dir, c_log_prefix, c_log_suffix,
-                     (unsigned int)logcat_system_lines, (unsigned int)logcat_events_lines, (unsigned int)logcat_main_lines,
-                     (int)dump_map, (int)dump_fds, (int)dump_all_threads,
-                     (int)dump_all_threads_count_max, c_dump_all_threads_whitelist,
+    r = xc_core_init((int)restore_signal_handler,
+                     c_app_id,
+                     c_app_version,
+                     c_app_lib_dir,
+                     c_log_dir,
+                     (unsigned int)logcat_system_lines,
+                     (unsigned int)logcat_events_lines,
+                     (unsigned int)logcat_main_lines,
+                     (int)dump_elf_hash,
+                     (int)dump_map,
+                     (int)dump_fds,
+                     (int)dump_all_threads,
+                     (int)dump_all_threads_count_max,
+                     c_dump_all_threads_whitelist,
                      c_dump_all_threads_whitelist_len);
 
-    //free log_dir
-    if(NULL != p_log_dir_tmp)
-        free(p_log_dir_tmp);
-
- end:
-    if(app_id) (*env)->ReleaseStringUTFChars(env, app_id, c_app_id);
-    if(app_version) (*env)->ReleaseStringUTFChars(env, app_version, c_app_version);
-    if(log_dir) (*env)->ReleaseStringUTFChars(env, log_dir, c_log_dir);
-    if(log_prefix) (*env)->ReleaseStringUTFChars(env, log_prefix, c_log_prefix);
-    if(log_suffix) (*env)->ReleaseStringUTFChars(env, log_suffix, c_log_suffix);
-    if(callback_class) (*env)->ReleaseStringUTFChars(env, callback_class, c_callback_class);
-    if(callback_method) (*env)->ReleaseStringUTFChars(env, callback_method, c_callback_method);
-    if(app_lib_dir) (*env)->ReleaseStringUTFChars(env, app_lib_dir, c_app_lib_dir);
-    if(files_dir) (*env)->ReleaseStringUTFChars(env, files_dir, c_files_dir);
+ clean:
+    if(app_id      && c_app_id)      (*env)->ReleaseStringUTFChars(env, app_id,      c_app_id);
+    if(app_version && c_app_version) (*env)->ReleaseStringUTFChars(env, app_version, c_app_version);
+    if(app_lib_dir && c_app_lib_dir) (*env)->ReleaseStringUTFChars(env, app_lib_dir, c_app_lib_dir);
+    if(log_dir     && c_log_dir)     (*env)->ReleaseStringUTFChars(env, log_dir,     c_log_dir);
 
     if(dump_all_threads_whitelist && NULL != c_dump_all_threads_whitelist)
     {
         for(i = 0; i < c_dump_all_threads_whitelist_len; i++)
         {
-            jstring wl = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
-            const char *c_wl = c_dump_all_threads_whitelist[i];
-            if(wl && NULL != c_wl) (*env)->ReleaseStringUTFChars(env, wl, c_wl);
+            tmp_str = (jstring)((*env)->GetObjectArrayElement(env, dump_all_threads_whitelist, (jsize)i));
+            tmp_c_str = c_dump_all_threads_whitelist[i];
+            if(tmp_str && NULL != tmp_c_str) (*env)->ReleaseStringUTFChars(env, tmp_str, tmp_c_str);
         }
+        free(c_dump_all_threads_whitelist);
     }
     
     return r;
-}
-
-static jint xc_jni_init(JNIEnv *env, jobject thiz, jobject context)
-{
-    //use default values
-    return xc_jni_init_ex(env, thiz, context, 1, NULL, NULL, NULL, NULL, 50, 50, 200, 1, 1, 1, 0, NULL, NULL, NULL);
 }
 
 static void xc_jni_test(JNIEnv *env, jobject thiz, jint run_in_new_thread)
@@ -485,15 +264,6 @@ static JNINativeMethod xc_jni_methods[] = {
     {
         "init",
         "("
-        "Landroid/content/Context;"
-        ")"
-        "I",
-        (void *)xc_jni_init
-    },
-    {
-        "initEx",
-        "("
-        "Landroid/content/Context;"
         "Z"
         "Ljava/lang/String;"
         "Ljava/lang/String;"
@@ -502,16 +272,15 @@ static JNINativeMethod xc_jni_methods[] = {
         "I"
         "I"
         "I"
+        "Z"
         "Z"
         "Z"
         "Z"
         "I"
         "[Ljava/lang/String;"
-        "Ljava/lang/String;"
-        "Ljava/lang/String;"
         ")"
         "I",
-        (void *)xc_jni_init_ex
+        (void *)xc_jni_init
     },
     {
         "test",
@@ -530,8 +299,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
     (void)reserved;
 
-    //save the JVM handler
-    xc_jni_jvm = vm;
+    //save the VM handler
+    xc_jni_vm = vm;
 
     //get env
     if(JNI_OK != (*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6)) return -1;
@@ -544,3 +313,5 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     
     return JNI_VERSION_1_6;
 }
+
+#pragma clang diagnostic pop

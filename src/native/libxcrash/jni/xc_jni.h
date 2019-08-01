@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-void xc_jni_callback(int log_fd, const char *log_pathname, char *emergency);
+void xc_jni_callback(const char *log_pathname, char *emergency);
 
 #ifdef __cplusplus
 }

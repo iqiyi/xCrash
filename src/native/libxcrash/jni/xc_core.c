@@ -376,9 +376,11 @@ static void xc_core_signal_handler(int sig, siginfo_t *si, void *uc)
         }
     }
 
+    //we have written all the required information in the native layer, close the FD
+    if(xc_core_log_fd >= 0) close(xc_core_log_fd);
+
     //jni callback
-    xc_jni_callback(xc_core_log_fd, xc_core_log_pathname,
-                    '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency);
+    xc_jni_callback(xc_core_log_pathname, '\0' == xc_core_emergency[0] ? NULL : xc_core_emergency);
 
     if(0 != xcc_signal_resend(si)) goto exit;
     
@@ -455,11 +457,10 @@ int xc_core_init(int restore_signal_handler,
                  const char *app_version,
                  const char *app_lib_dir,
                  const char *log_dir,
-                 const char *log_prefix,
-                 const char *log_suffix,
                  unsigned int logcat_system_lines,
                  unsigned int logcat_events_lines,
                  unsigned int logcat_main_lines,
+                 int dump_elf_hash,
                  int dump_map,
                  int dump_fds,
                  int dump_all_threads,
@@ -480,26 +481,24 @@ int xc_core_init(int restore_signal_handler,
                         "app_version=%s, "
                         "app_lib_dir=%s, "
                         "log_dir=%s, "
-                        "log_prefix=%s, "
-                        "log_suffix=%s, "
                         "logcat_system_lines=%u, "
                         "logcat_events_lines=%u, "
                         "logcat_main_lines=%u, "
+                        "dump_elf_hash=%d, "
                         "dump_map=%d, "
                         "dump_fds=%d, "
                         "dump_all_threads=%d, "
                         "dump_all_threads_count_max=%d, "
                         "dump_all_threads_whitelist_len=%zu",
                         restore_signal_handler,
-                        app_id ? app_id : "(NULL)",
-                        app_version ? app_version : "(NULL)",
-                        app_lib_dir ? app_lib_dir : "(NULL)",
-                        log_dir ? log_dir : "(NULL)",
-                        log_prefix ? log_prefix : "(NULL)",
-                        log_suffix ? log_suffix : "(NULL)",
+                        app_id,
+                        app_version,
+                        app_lib_dir,
+                        log_dir,
                         logcat_system_lines,
                         logcat_events_lines,
                         logcat_main_lines,
+                        dump_elf_hash,
                         dump_map,
                         dump_fds,
                         dump_all_threads,
@@ -542,7 +541,7 @@ int xc_core_init(int restore_signal_handler,
     if(NULL == (xc_core_kernel_version = strdup(buf))) return XCC_ERRNO_NOMEM;
 
     //init the tombstone file recorder
-    if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, log_prefix, log_suffix, &xc_core_log_pathname))) return r;
+    if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, &xc_core_log_pathname))) return r;
 
     //strings passed to the dumper process
     if(NULL != app_id)
@@ -556,6 +555,7 @@ int xc_core_init(int restore_signal_handler,
     xc_core_spot.logcat_system_lines = logcat_system_lines;
     xc_core_spot.logcat_events_lines = logcat_events_lines;
     xc_core_spot.logcat_main_lines = logcat_main_lines;
+    xc_core_spot.dump_elf_hash = dump_elf_hash;
     xc_core_spot.dump_map = dump_map;
     xc_core_spot.dump_fds = dump_fds;
     xc_core_spot.dump_all_threads = dump_all_threads;

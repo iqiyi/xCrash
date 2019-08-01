@@ -326,7 +326,7 @@ int xcd_frames_record_backtrace(xcd_frames_t *self, int log_fd)
     return 0;
 }
 
-static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, xcd_map_t *map, int log_fd)
+static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, xcd_map_t *map, int log_fd, int dump_elf_hash)
 {
     char    buf[1024];
     size_t  offset, i;
@@ -390,31 +390,35 @@ static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, 
     }
 
     //append md5
-    size_t name_len = strlen(name);
-    if(st.st_size > 0
-       && ((name_len > 3 && 0 == memcmp(name + name_len - 3, ".so", 3))
-           || (name_len > 12 && 0 == memcmp(name, "/system/bin/", 12))))
+    if(dump_elf_hash)
     {
-        errno = 0;
-        uint8_t *data = (uint8_t *)mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if(data == MAP_FAILED)
+        size_t name_len = strlen(name);
+        if(st.st_size > 0
+           && ((name_len > 3 && 0 == memcmp(name + name_len - 3, ".so", 3))
+               || (name_len > 12 && 0 == memcmp(name, "/system/bin/", 12))))
         {
-            error_from = "MMAP";
-            goto err;
+            errno = 0;
+            uint8_t *data = (uint8_t *)mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+            if(data == MAP_FAILED)
+            {
+                error_from = "MMAP";
+                goto err;
+            }
+            
+            uint8_t md5[16];
+            xcd_MD5_CTX ctx;
+            xcd_MD5_Init(&ctx);
+            xcd_MD5_Update(&ctx, data, (unsigned long)st.st_size);
+            xcd_MD5_Final(md5, &ctx);
+            
+            munmap(data, (size_t)st.st_size);
+            
+            offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%s", ". MD5: ");
+            for(i = 0; i < sizeof(md5); i++)
+                offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%02hhx", md5[i]);
         }
-        
-        uint8_t md5[16];
-        xcd_MD5_CTX ctx;
-        xcd_MD5_Init(&ctx);
-        xcd_MD5_Update(&ctx, data, (unsigned long)st.st_size);
-        xcd_MD5_Final(md5, &ctx);
-        
-        munmap(data, (size_t)st.st_size);
-        
-        offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%s", ". MD5: ");
-        for(i = 0; i < sizeof(md5); i++)
-            offset += (size_t)snprintf(buf + offset, sizeof(buf) - offset, "%02hhx", md5[i]);
     }
+
     snprintf(buf + offset, sizeof(buf) - offset, "%s", ")\n");
 
     //done
@@ -428,7 +432,7 @@ static int xcd_frames_record_buildid_line(xcd_frames_t *self, const char *name, 
     return xcc_util_write_str(log_fd, buf);
 }
 
-int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_addr)
+int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, int dump_elf_hash, uintptr_t fault_addr)
 {
     xcd_frame_t *frame, *prev_frame;
     char        *name, *prev_name, *fault_addr_name = NULL;
@@ -444,7 +448,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_ad
         {
             if(NULL != map->name || '\0' != map->name[0])
             {
-                if(0 != (r = xcd_frames_record_buildid_line(self, map->name, map, log_fd))) return r;
+                if(0 != (r = xcd_frames_record_buildid_line(self, map->name, map, log_fd, dump_elf_hash))) return r;
                 fault_addr_name = map->name;
             }
         }
@@ -473,7 +477,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, uintptr_t fault_ad
         }
         if(repeated) continue;
 
-        if(0 != (r = xcd_frames_record_buildid_line(self, name, frame->map, log_fd))) return r;
+        if(0 != (r = xcd_frames_record_buildid_line(self, name, frame->map, log_fd, dump_elf_hash))) return r;
     }
 
     if(0 != (r = xcc_util_write_str(log_fd, "\n"))) return r;
