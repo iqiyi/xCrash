@@ -319,12 +319,12 @@ static size_t xc_fallback_get_regs(char *buf, size_t len, ucontext_t *uc)
 #endif
 }
 
-static size_t xc_fallback_get_backtrace(char *buf, size_t len, ucontext_t *uc, const char *ignore_lib)
+static size_t xc_fallback_get_backtrace(char *buf, size_t len, int api_level, siginfo_t *si, ucontext_t *uc)
 {
     size_t used = 0;
 
     used += xcc_fmt_snprintf(buf + used, len - used, "backtrace:\n");
-    used += xcc_unwind_get(uc, ignore_lib, buf + used, len - used);
+    used += xcc_unwind_get(api_level, si, uc, buf + used, len - used);
     if(used >= len - 1)
     {
         buf[len - 3] = '\n';
@@ -537,7 +537,7 @@ size_t xc_fallback_get_emergency(siginfo_t *si,
     used += xc_fallback_get_process_thread(buf + used, len - used, pid, tid);
     used += xc_fallback_get_signal(buf + used, len - used, si, pid);
     used += xc_fallback_get_regs(buf + used, len - used, uc);
-    used += xc_fallback_get_backtrace(buf + used, len - used, uc, XCC_UTIL_XCRASH_FILENAME);
+    used += xc_fallback_get_backtrace(buf + used, len - used, api_level, si, uc);
     return used;
 }
 

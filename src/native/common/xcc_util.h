@@ -26,13 +26,13 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define XCC_UTIL_XCRASH_FILENAME        "libxcrash.so"
 #define XCC_UTIL_XCRASH_DUMPER_FILENAME "libxcrash_dumper.so"
 
 #define XCC_UTIL_CRASH_TYPE "native"
@@ -114,6 +114,8 @@ int xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
 int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
 int xcc_util_is_root(void);
 void xcc_util_get_kernel_version(char *buf, size_t len);
+
+int xcc_util_ends_with(const char *str, const char *suffix);
 
 #ifdef __cplusplus
 }

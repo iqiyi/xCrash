@@ -43,7 +43,7 @@ typedef enum
 typedef struct xcd_dwarf xcd_dwarf_t;
 
 int xcd_dwarf_create(xcd_dwarf_t **self, xcd_memory_t *memory, pid_t pid, uintptr_t load_bias,
-                     size_t dwarf_offset, size_t dwarf_size, xcd_dwarf_type_t type);
+                     size_t offset, size_t size, xcd_dwarf_type_t type);
 
 int xcd_dwarf_step(xcd_dwarf_t *self, xcd_regs_t *regs, uintptr_t pc, int *finished);
 

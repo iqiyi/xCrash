@@ -32,7 +32,7 @@
 #include "xcc_signal.h"
 #include "xcc_errno.h"
 
-#define XCC_SIGNAL_STACK_SIZE (1024 * 32)
+#define XCC_SIGNAL_STACK_SIZE (1024 * 128)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
@@ -58,7 +58,7 @@ static xcc_signal_info_t xcc_signal_info[] =
 int xcc_signal_register(xcc_signal_handler_t handler)
 {
     stack_t ss;
-    if(NULL == (ss.ss_sp = malloc(XCC_SIGNAL_STACK_SIZE))) return XCC_ERRNO_NOMEM;
+    if(NULL == (ss.ss_sp = calloc(1, XCC_SIGNAL_STACK_SIZE))) return XCC_ERRNO_NOMEM;
     ss.ss_size  = XCC_SIGNAL_STACK_SIZE;
     ss.ss_flags = 0;
     if(0 != sigaltstack(&ss, NULL)) return XCC_ERRNO_SYS;

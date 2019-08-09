@@ -58,7 +58,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
-#define XC_CORE_EMERGENCY_BUF_LEN (20 * 1024)
+#define XC_CORE_EMERGENCY_BUF_LEN (30 * 1024)
 #define XC_CORE_ERR_TITLE         "\n\nxcrash error:\n"
 
 static pthread_mutex_t        xc_core_mutex   = PTHREAD_MUTEX_INITIALIZER;
@@ -542,6 +542,9 @@ int xc_core_init(int restore_signal_handler,
 
     //init the tombstone file recorder
     if(0 != (r = xcd_recorder_create(&xc_core_recorder, start_time, app_version, log_dir, &xc_core_log_pathname))) return r;
+
+    //init the local unwinder for fallback mode
+    xcc_unwind_init(xc_core_build_prop.api_level);
 
     //strings passed to the dumper process
     if(NULL != app_id)

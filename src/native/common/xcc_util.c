@@ -567,4 +567,18 @@ void xcc_util_get_kernel_version(char *buf, size_t len)
     snprintf(buf, len, "%s version %s %s (%s)", uts.sysname, uts.release, uts.version, uts.machine);
 }
 
+int xcc_util_ends_with(const char *str, const char *suffix)
+{
+    size_t str_len, suffix_len;
+    
+    if(NULL == str || NULL == suffix) return 0;
+
+    str_len = strlen(str);
+    suffix_len = strlen(suffix);
+    if(str_len < suffix_len) return 0;
+
+    return (0 == memcmp((const void *)(str + str_len - suffix_len), (const void *)suffix, suffix_len) ? 1 : 0);
+}
+
+
 #pragma clang diagnostic pop

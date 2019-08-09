@@ -175,7 +175,7 @@ int xcd_maps_record(xcd_maps_t *self, int log_fd)
     //get width of size and offset columns
     TAILQ_FOREACH(mi, &(self->maps), link)
     {
-        size = (mi->map.end - mi->map.start) / 1024;
+        size = mi->map.end - mi->map.start;
         if(size > max_size) max_size = size;
         if(mi->map.offset > max_offset) max_offset = mi->map.offset;
     }
@@ -226,11 +226,11 @@ int xcd_maps_record(xcd_maps_t *self, int log_fd)
         prev_name = mi->map.name;
 
         //update total size
-        size = (mi->map.end - mi->map.start) / 1024;
+        size = mi->map.end - mi->map.start;
         total_size += size;
 
         if(0 != (r = xcc_util_write_format(log_fd,
-                                           "    %0"XCC_UTIL_FMT_ADDR"-%0"XCC_UTIL_FMT_ADDR" %c%c%c %*"PRIxPTR" %*"PRIxPTR"K %s%s\n",
+                                           "    %0"XCC_UTIL_FMT_ADDR"-%0"XCC_UTIL_FMT_ADDR" %c%c%c %*"PRIxPTR" %*"PRIxPTR" %s%s\n",
                                            mi->map.start, mi->map.end,
                                            mi->map.flags & PROT_READ ? 'r' : '-',
                                            mi->map.flags & PROT_WRITE ? 'w' : '-',
@@ -240,7 +240,7 @@ int xcd_maps_record(xcd_maps_t *self, int log_fd)
                                            name, load_bias_buf))) return r;
     }
     if(0 != (r = xcc_util_write_format(log_fd, "    TOTAL SIZE: 0x%"PRIxPTR"K (%"PRIuPTR"K)\n\n",
-                                       total_size, total_size))) return r;
+                                       total_size / 1024, total_size / 1024))) return r;
 
     return 0;
 }

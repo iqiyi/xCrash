@@ -21,6 +21,9 @@
 
 // Created by caikelun on 2019-03-07.
 
+// .eh_frame & .eh_frame_hdr:
+// http://refspecs.linuxbase.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -64,7 +67,7 @@ typedef struct xcd_dwarf_cie
     size_t   offset;
     uint8_t  fde_address_encoding;
     uint8_t  segment_size;
-    char     augmentation_string[5]; //should be enough. legal characters are: 'z', 'P', 'L', 'R', '\0'
+    char     augmentation_string[8]; //should be enough. legal characters are: 'z', 'P', 'L', 'R', '\0'
     uint64_t cfa_instructions_offset;
     uint64_t cfa_instructions_end;
     uint64_t code_alignment_factor;
@@ -93,27 +96,31 @@ typedef struct
     xcd_dwarf_cie_t *cie;
 } xcd_dwarf_fde_t;
 
-//.eh_frame_hdr
-typedef struct
-{
-    uint8_t table_encoding;
-    size_t  entry_size;
-    size_t  fde_count;
-    size_t  entries_offset;
-    size_t  entries_end;
-} xcd_dwarf_eh_frame_hdr_t;
-
 //DWARF object
 struct xcd_dwarf
 {
-    xcd_memory_t             *memory;
+    xcd_dwarf_type_t          type;
     pid_t                     pid;
     uintptr_t                 load_bias;
-    size_t                    dwarf_offset;
-    size_t                    dwarf_end;
-    xcd_dwarf_type_t          type;
-    xcd_dwarf_eh_frame_hdr_t *eh_frame_hdr;
     xcd_dwarf_cie_tree_t      cie_cache;
+    
+    xcd_memory_t             *memory;
+    size_t                    memory_cur_offset;
+    size_t                    memory_pc_offset;
+    size_t                    memory_data_offset;
+    
+    size_t                    pc_offset;
+
+    //XCD_DWARF_TYPE_DEBUG_FRAME  mode: starting / ending offset of .debug_frame
+    //XCD_DWARF_TYPE_EH_FRAME     mode: starting / ending offset of .eh_frame
+    //XCD_DWARF_TYPE_EH_FRAME_HDR mode: starting / ending offset of binary search table in .eh_frame_hdr
+    size_t                    entries_offset;
+    size_t                    entries_end;
+
+    //for XCD_DWARF_TYPE_EH_FRAME_HDR mode only
+    size_t                    eh_frame_hdr_fde_count;
+    uint8_t                   eh_frame_hdr_table_encoding;
+    size_t                    eh_frame_hdr_table_entry_size;
 };
 
 //location rule type
@@ -510,7 +517,7 @@ static int xcd_dwarf_is_cie_32(xcd_dwarf_t *self, uint32_t v)
 static size_t xcd_dwarf_adjust_cie_offset(xcd_dwarf_t *self, size_t cur_field_offset, size_t v)
 {
     if(XCD_DWARF_TYPE_DEBUG_FRAME == self->type)
-        return self->dwarf_offset + v; //relative offset from .debug_frame
+        return self->entries_offset + v;
     else
         return cur_field_offset - v;
 }
@@ -520,28 +527,44 @@ static uintptr_t xcd_dwarf_adjust_pc_from_fde(xcd_dwarf_t *self, size_t cur_fiel
     if(XCD_DWARF_TYPE_DEBUG_FRAME == self->type)
         return v;
     else
-        return cur_field_offset + v;
+        return (uintptr_t)cur_field_offset + v;
 }
 
-static uintptr_t xcd_dwarf_adjust_pc_for_load_bias(xcd_dwarf_t *self, size_t cur_field_offset, uint8_t encoding, uintptr_t v)
+static int xcd_dwarf_read_bytes(xcd_dwarf_t *self, void *value, size_t size)
 {
-    switch(encoding & 0x70)
-    {
-    case DW_EH_PE_pcrel:
-        return v - cur_field_offset + self->load_bias;
-    case DW_EH_PE_datarel:
-    case DW_EH_PE_textrel:
-    case DW_EH_PE_funcrel:
-        return v + self->load_bias;
-    default:
-        return v;
-    }    
+    int r;
+    
+    if(0 != (r = xcd_memory_read_fully(self->memory, self->memory_cur_offset, value, size))) return r;
+    self->memory_cur_offset += size;
+    
+    return 0;
 }
 
-static int xcd_dwarf_read(xcd_dwarf_t *self, uintptr_t *offset, uint64_t *dst, uint8_t encoding)
+static int xcd_dwarf_read_uleb128(xcd_dwarf_t *self, uint64_t *value)
+{
+    size_t i;
+    int    r;
+    
+    if(0 != (r = xcd_memory_read_uleb128(self->memory, self->memory_cur_offset, value, &i))) return r;
+    self->memory_cur_offset += i;
+    
+    return 0;
+}
+
+static int xcd_dwarf_read_sleb128(xcd_dwarf_t *self, int64_t *value)
+{
+    size_t i;
+    int    r;
+
+    if(0 != (r = xcd_memory_read_sleb128(self->memory, self->memory_cur_offset, value, &i))) return r;
+    self->memory_cur_offset += i;
+    
+    return 0;
+}
+
+static int xcd_dwarf_read_encoded(xcd_dwarf_t *self, uint64_t *value, uint8_t encoding)
 {
     int       r;
-    size_t    i;
     uintptr_t vp;
     uint8_t   vu8;
     int8_t    vi8;
@@ -551,84 +574,69 @@ static int xcd_dwarf_read(xcd_dwarf_t *self, uintptr_t *offset, uint64_t *dst, u
     int32_t   vi32;
     uint64_t  vu64;
     int64_t   vi64;
-    uint64_t  init_offset = (uint64_t)(*offset);
 
-    *dst = 0;
+    *value = 0;
 
-    if(encoding == DW_EH_PE_omit)
-    {
-        return 0;
-    }
-    else if(encoding == DW_EH_PE_aligned)
+    if(encoding == DW_EH_PE_omit) return 0;
+    
+    if(encoding == DW_EH_PE_aligned)
     {
         //check overflow
-        if(__builtin_add_overflow(*offset, sizeof(uintptr_t) - 1, offset)) return XCC_ERRNO_RANGE;
+        if(__builtin_add_overflow(self->memory_cur_offset, sizeof(uintptr_t) - 1, &(self->memory_cur_offset))) return XCC_ERRNO_RANGE;
 
         //align
-        *offset &= -sizeof(uintptr_t);
+        self->memory_cur_offset &= -sizeof(uintptr_t);
 
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vp, sizeof(uintptr_t)))) return r;
-        *offset += sizeof(uintptr_t);
-        *dst = (uint64_t)vp;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vp, sizeof(uintptr_t)))) return r;
+        *value = (uint64_t)vp;
         return 0;
     }
 
     switch(encoding & 0x0f)
     {
     case DW_EH_PE_absptr:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vp, sizeof(uintptr_t)))) return r;
-        *offset += sizeof(uintptr_t);
-        *dst = (uint64_t)vp;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vp, sizeof(uintptr_t)))) return r;
+        *value = (uint64_t)vp;
         break;
     case DW_EH_PE_uleb128:
-        if(0 != (r = xcd_memory_read_uleb128(self->memory, *offset, &vu64, &i))) return r;
-        *offset += i;
-        *dst = (uint64_t)vu64;
+        if(0 != (r = xcd_dwarf_read_uleb128(self, &vu64))) return r;
+        *value = (uint64_t)vu64;
         break;
     case DW_EH_PE_sleb128:
-        if(0 != (r = xcd_memory_read_sleb128(self->memory, *offset, &vi64, &i))) return r;
-        *offset += i;
-        *dst = (uint64_t)vi64;
+        if(0 != (r = xcd_dwarf_read_sleb128(self, &vi64))) return r;
+        *value = (uint64_t)vi64;
         break;
     case DW_EH_PE_udata1:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vu8, 1))) return r;
-        *offset += 1;
-        *dst = (uint64_t)vu8;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vu8, 1))) return r;
+        *value = (uint64_t)vu8;
         break;
     case DW_EH_PE_sdata1:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vi8, 1))) return r;
-        *offset += 1;
-        *dst = (uint64_t)vi8;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vi8, 1))) return r;
+        *value = (uint64_t)vi8;
         break;
     case DW_EH_PE_udata2:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vu16, 2))) return r;
-        *offset += 2;
-        *dst = (uint64_t)vu16;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vu16, 2))) return r;
+        *value = (uint64_t)vu16;
         break;
     case DW_EH_PE_sdata2:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vi16, 2))) return r;
-        *offset += 2;
-        *dst = (uint64_t)vi16;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vi16, 2))) return r;
+        *value = (uint64_t)vi16;
         break;
     case DW_EH_PE_udata4:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vu32, 4))) return r;
-        *offset += 4;
-        *dst = (uint64_t)vu32;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vu32, 4))) return r;
+        *value = (uint64_t)vu32;
         break;
     case DW_EH_PE_sdata4:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vi32, 4))) return r;
-        *offset += 4;
-        *dst = (uint64_t)vi32;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vi32, 4))) return r;
+        *value = (uint64_t)vi32;
         break;
     case DW_EH_PE_udata8:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vu64, 8))) return r;
-        *offset += 8;
-        *dst = (uint64_t)vu64;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vu64, 8))) return r;
+        *value = (uint64_t)vu64;
         break;
     case DW_EH_PE_sdata8:
-        if(0 != (r = xcd_memory_read_fully(self->memory, *offset, &vi64, 8))) return r;
-        *offset += 8;
-        *dst = (uint64_t)vi64;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &vi64, 8))) return r;
+        *value = (uint64_t)vi64;
         break;
     default:
         return XCC_ERRNO_FORMAT;
@@ -639,26 +647,25 @@ static int xcd_dwarf_read(xcd_dwarf_t *self, uintptr_t *offset, uint64_t *dst, u
     case DW_EH_PE_absptr:
         return 0;
     case DW_EH_PE_pcrel:
-        *dst += init_offset;
+        if(((uintptr_t)-1) == self->memory_pc_offset) return XCC_ERRNO_NOTSPT;
+        *value += self->memory_pc_offset;
         return 0;
     case DW_EH_PE_datarel:
-        //offset from .eh_frame_hdr, .eh_frame or .debug_frame
-        *dst += self->dwarf_offset;
+        if(((uintptr_t)-1) == self->memory_data_offset) return XCC_ERRNO_NOTSPT;
+        *value += self->memory_data_offset;
         return 0;
     case DW_EH_PE_textrel:
     case DW_EH_PE_funcrel:
-        //do not support
         return XCC_ERRNO_NOTSPT;
     default:
         return XCC_ERRNO_FORMAT;
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////
 // get CIE
 
-static xcd_dwarf_cie_t *xcd_dwarf_get_cie(xcd_dwarf_t *self, size_t offset)
+static xcd_dwarf_cie_t *xcd_dwarf_get_cie_from_offset(xcd_dwarf_t *self, size_t offset)
 {
     xcd_dwarf_cie_t  cie_key = {.offset = offset};
     xcd_dwarf_cie_t *cie = NULL;
@@ -667,6 +674,8 @@ static xcd_dwarf_cie_t *xcd_dwarf_get_cie(xcd_dwarf_t *self, size_t offset)
     uint32_t         v32;
     uint64_t         v64;
     size_t           i;
+    
+    self->memory_cur_offset = offset;
 
     //check cache
     if(NULL != (cie = RB_FIND(xcd_dwarf_cie_tree, &(self->cie_cache), &cie_key))) return cie;
@@ -675,115 +684,101 @@ static xcd_dwarf_cie_t *xcd_dwarf_get_cie(xcd_dwarf_t *self, size_t offset)
     if(NULL == (cie = calloc(1, sizeof(xcd_dwarf_cie_t)))) goto err;
     cie->offset = offset; //key
     
-    //length
-    if(0 != xcd_memory_read_fully(self->memory, offset, &v32, 4)) goto err;
-    offset += 4;
+    //get length
+    if(0 != xcd_dwarf_read_bytes(self, &v32, 4)) goto err;
 
     if((uint32_t)(-1) == v32) //64bits DWARF FDE
     {
-        //extended length
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v64, 8)) goto err;
-        offset += 8;
+        //get extended length
+        if(0 != xcd_dwarf_read_bytes(self, &v64, 8)) goto err;
         if(v64 > SIZE_MAX) goto err;
 
-        cie->cfa_instructions_end = offset + (size_t)v64;
+        cie->cfa_instructions_end = self->memory_cur_offset + (size_t)v64;
         cie->fde_address_encoding = DW_EH_PE_sdata8;
         
-        //CIE ID
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v64, 8)) goto err;
-        offset += 8;
+        //get CIE ID
+        if(0 != xcd_dwarf_read_bytes(self, &v64, 8)) goto err;
         if(!xcd_dwarf_is_cie_64(self, v64)) goto err; //not a CIE
     }
     else //32bits DWARF FDE
     {
-        cie->cfa_instructions_end = offset + (size_t)v32;
+        cie->cfa_instructions_end = self->memory_cur_offset + (size_t)v32;
         cie->fde_address_encoding = DW_EH_PE_sdata4;
         
-        //CIE ID
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v32, 4)) goto err;
-        offset += 4;
+        //get CIE ID
+        if(0 != xcd_dwarf_read_bytes(self, &v32, 4)) goto err;
         if(!xcd_dwarf_is_cie_32(self, v32)) goto err; //not a CIE
     }
 
-    //version
-    if(0 != xcd_memory_read_fully(self->memory, offset, &cie_version, 1)) goto err;
-    offset += 1;
-    if(cie_version != 1 && cie_version != 3 && cie_version != 4) goto err;
+    //check version
+    if(0 != xcd_dwarf_read_bytes(self, &cie_version, 1)) goto err;
+    if(1 != cie_version && 3 != cie_version && 4 != cie_version && 5 != cie_version) goto err;
 
-    //augmentation string
+    //get augmentation string
     for(i = 0; i < sizeof(cie->augmentation_string); i++)
     {
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v8, 1)) goto err;
-        offset += 1;
+        if(0 != xcd_dwarf_read_bytes(self, &v8, 1)) goto err;
         cie->augmentation_string[i] = (char)v8;
         if('\0' == (char)v8) break;
     }
     if(i >= sizeof(cie->augmentation_string)) goto err; //augmentation string is too long
 
-    if(cie_version == 4)
+    if(4 == cie_version || 5 == cie_version)
     {
-        //SKIP address size
-        offset += 1;
+        //skip address size
+        self->memory_cur_offset += 1;
         
-        //segment size
-        if(0 != xcd_memory_read_fully(self->memory, offset, &(cie->segment_size), 1)) goto err;
-        offset += 1;
+        //get segment size
+        if(0 != xcd_dwarf_read_bytes(self, &(cie->segment_size), 1)) goto err;
     }
 
-    //code alignment factor
-    if(0 != xcd_memory_read_uleb128(self->memory, offset, &(cie->code_alignment_factor), &i)) goto err;
-    offset += i;
+    //get code alignment factor
+    if(0 != xcd_dwarf_read_uleb128(self, &(cie->code_alignment_factor))) goto err;
 
-    //data alignment factor
-    if(0 != xcd_memory_read_sleb128(self->memory, offset, &(cie->data_alignment_factor), &i)) goto err;
-    offset += i;
+    //get data alignment factor
+    if(0 != xcd_dwarf_read_sleb128(self, &(cie->data_alignment_factor))) goto err;
 
-    //return address register
-    if(cie_version == 1)
+    //get return address register
+    if(1 == cie_version)
     {
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v8, 1)) goto err;
-        offset += 1;
+        if(0 != xcd_dwarf_read_bytes(self, &v8, 1)) goto err;
         cie->return_address_register = (uint64_t)v8;
     }
     else
     {
-        if(0 != xcd_memory_read_uleb128(self->memory, offset, &(cie->return_address_register), &i)) goto err;
-        offset += i;
+        if(0 != xcd_dwarf_read_uleb128(self, &(cie->return_address_register))) goto err;
     }
     if(cie->return_address_register >= XCD_REGS_MACHINE_NUM) goto err;
 
-    if(cie->augmentation_string[0] != 'z')
+    if('z' != cie->augmentation_string[0])
     {
-        cie->cfa_instructions_offset = offset;
+        cie->cfa_instructions_offset = self->memory_cur_offset;
     }
     else
     {
-        //augmentation data length
-        if(0 != xcd_memory_read_uleb128(self->memory, offset, &v64, &i)) goto err;
-        offset += i;
+        //get augmentation data length
+        if(0 != xcd_dwarf_read_uleb128(self, &v64)) goto err;
         
-        cie->cfa_instructions_offset = offset + (size_t)v64;
+        cie->cfa_instructions_offset = self->memory_cur_offset + (size_t)v64;
 
         for(i = 1; i < sizeof(cie->augmentation_string); i++)
         {
-            switch (cie->augmentation_string[i])
+            switch(cie->augmentation_string[i])
             {
             case 'L':
-                //SKIP LSDA encoding
-                if(0 != xcd_memory_read_fully(self->memory, offset, &v8, 1)) goto err;
-                offset += 1;
+                //skip LSDA encoding
+                self->memory_cur_offset += 1;
                 break;
             case 'R':
-                //FDE address encoding
-                if(0 != xcd_memory_read_fully(self->memory, offset, &(cie->fde_address_encoding), 1)) goto err;
-                offset += 1;
+                //get FDE address encoding
+                if(0 != xcd_dwarf_read_bytes(self, &(cie->fde_address_encoding), 1)) goto err;
                 break;
             case 'P':
-                //personality routine encoding
-                if(0 != xcd_memory_read_fully(self->memory, offset, &v8, 1)) goto err;
-                offset += 1;
-                //SKIP personality routine
-                if(0 != xcd_dwarf_read(self, &offset, &v64, v8)) goto err;
+                //get personality routine encoding
+                if(0 != xcd_dwarf_read_bytes(self, &v8, 1)) goto err;
+                //skip personality routine
+                self->memory_pc_offset = self->pc_offset;
+                if(0 != xcd_dwarf_read_encoded(self, &v64, v8)) goto err;
                 break;
             default:
                 break;
@@ -802,7 +797,6 @@ static xcd_dwarf_cie_t *xcd_dwarf_get_cie(xcd_dwarf_t *self, size_t offset)
     return NULL;
 }
 
-
 //////////////////////////////////////////////////////////////////////
 // get FDE
 
@@ -811,79 +805,84 @@ static xcd_dwarf_fde_t *xcd_dwarf_get_fde_from_offset(xcd_dwarf_t *self, size_t 
     xcd_dwarf_fde_t *fde = NULL;
     xcd_dwarf_cie_t *cie;
     uint64_t         cfa_instructions_offset;
-    uint64_t         cfa_instructions_end = self->dwarf_end;
+    uint64_t         cfa_instructions_end = self->entries_end;
     uintptr_t        pc_start;
-    uintptr_t        pc_end;    
-    uint64_t         cie_offset;
+    uintptr_t        pc_end;
+    size_t           cur_offset;
+    size_t           cie_offset;
     uint32_t         v32;
     uint64_t         v64;
-    size_t           i;
     size_t           cur_field_offset;
 
-    //length
-    if(0 != xcd_memory_read_fully(self->memory, *offset, &v32, sizeof(v32))) goto end;
-    *offset += 4;
+    self->memory_cur_offset = *offset;
+
+    //get length
+    if(0 != xcd_dwarf_read_bytes(self, &v32, 4)) goto end;
     
     if((uint32_t)(-1) == v32) //64bits DWARF FDE
     {
-        //extended length
-        if(0 != xcd_memory_read_fully(self->memory, *offset, &v64, sizeof(v64))) goto end;
-        *offset += 8;
+        //get extended length
+        if(0 != xcd_dwarf_read_bytes(self, &v64, 8)) goto end;
         if(v64 > SIZE_MAX) goto end;
-        cfa_instructions_end = *offset + (size_t)v64;
+        cfa_instructions_end = self->memory_cur_offset + (size_t)v64;
 
-        //CIE offset
-        cur_field_offset = *offset;
-        if(0 != xcd_memory_read_fully(self->memory, *offset, &v64, sizeof(v64))) goto end;
-        *offset += 8;
+        //get CIE offset
+        cur_field_offset = self->memory_cur_offset;
+        if(0 != xcd_dwarf_read_bytes(self, &v64, 8)) goto end;
         if(xcd_dwarf_is_cie_64(self, v64)) goto end; //ignore cie
         if(v64 > SIZE_MAX) goto end;
         cie_offset = xcd_dwarf_adjust_cie_offset(self, cur_field_offset, (size_t)v64);
     }
     else //32bits DWARF FDE
     {
-        cfa_instructions_end = *offset + (size_t)v32;
+        cfa_instructions_end = self->memory_cur_offset + (size_t)v32;
         
-        //CIE offset
-        cur_field_offset = *offset;
-        if(0 != xcd_memory_read_fully(self->memory, *offset, &v32, sizeof(v32))) goto end;
-        *offset += 4;
+        //get CIE offset
+        cur_field_offset = self->memory_cur_offset;
+        if(0 != xcd_dwarf_read_bytes(self, &v32, 4)) goto end;
         if(xcd_dwarf_is_cie_32(self, v32)) goto end; //ignore cie
         cie_offset = xcd_dwarf_adjust_cie_offset(self, cur_field_offset, (size_t)v32);
     }
 
-    //CIE
-    if(NULL == (cie = xcd_dwarf_get_cie(self, (size_t)cie_offset))) goto end;
+    //get CIE
+    cur_offset = self->memory_cur_offset;
+    cie = xcd_dwarf_get_cie_from_offset(self, cie_offset);
+    self->memory_cur_offset = cur_offset;
+    if(NULL == cie) goto end;
 
-    //SKIP segment selector
-    *offset += cie->segment_size;
+    //skip segment selector
+    self->memory_cur_offset += cie->segment_size;
 
-    //PC start
-    cur_field_offset = *offset;
-    if(0 != xcd_dwarf_read(self, offset, &v64, cie->fde_address_encoding)) goto end;
-    pc_start = xcd_dwarf_adjust_pc_for_load_bias(self, cur_field_offset, cie->fde_address_encoding, (uintptr_t)v64);
-    pc_start = xcd_dwarf_adjust_pc_from_fde(self, cur_field_offset, pc_start);
+    //get PC start
+    cur_field_offset = self->memory_cur_offset;
+    self->memory_pc_offset = self->load_bias;
+    if(0 != xcd_dwarf_read_encoded(self, &v64, cie->fde_address_encoding)) goto end;
+    pc_start = xcd_dwarf_adjust_pc_from_fde(self, cur_field_offset, (uintptr_t)v64);
 
-    //PC end (PC Range is always an absolute value)
-    if(0 != xcd_dwarf_read(self, offset, &v64, cie->fde_address_encoding & 0x0f)) goto end;
+    //get PC Range
+    self->memory_pc_offset = 0; //PC Range is always an absolute value
+    if(0 != xcd_dwarf_read_encoded(self, &v64, cie->fde_address_encoding)) goto end;
+
+    //get PC end
     pc_end = pc_start + (uintptr_t)v64;
 
-    //check PC
+    //check current PC
     if(pc < pc_start || pc >= pc_end) goto end;
 
     if(cie->augmentation_string[0] == 'z')
     {
-        //augmentation data length
-        if(0 != xcd_memory_read_uleb128(self->memory, *offset, &v64, &i)) goto end;
-        *offset += i;
+        //get augmentation data length
+        if(0 != xcd_dwarf_read_uleb128(self, &v64)) goto end;
 
-        //SKIP augmentation data
-        *offset += v64;
+        //skip augmentation data
+        self->memory_cur_offset += (size_t)v64;
     }
-    
-    cfa_instructions_offset = *offset;
+
+    //get CFA instructions offset
+    cfa_instructions_offset = self->memory_cur_offset;
     if(cfa_instructions_offset > cfa_instructions_end) goto end;
 
+    //build FDE info object
     if(NULL == (fde = malloc(sizeof(xcd_dwarf_fde_t)))) goto end;
     fde->cfa_instructions_offset = cfa_instructions_offset;
     fde->cfa_instructions_end = cfa_instructions_end;
@@ -898,43 +897,43 @@ static xcd_dwarf_fde_t *xcd_dwarf_get_fde_from_offset(xcd_dwarf_t *self, size_t 
 
 static xcd_dwarf_fde_t *xcd_dwarf_get_fde_no_hdr(xcd_dwarf_t *self, uintptr_t pc)
 {
-    xcd_dwarf_fde_t *fde;
-    size_t offset = (size_t)self->dwarf_offset;
+    xcd_dwarf_fde_t *fde = NULL;
+    size_t           offset = self->entries_offset;
 
-    while(offset < self->dwarf_end)
+    while(offset < self->entries_end)
     {
-        if(NULL != (fde = xcd_dwarf_get_fde_from_offset(self, &offset, pc))) return fde;
+        if(NULL != (fde = xcd_dwarf_get_fde_from_offset(self, &offset, pc))) break;
     }
-    return NULL;
+    return fde;
 }
 
-static int xcd_dwarf_get_fde_offset_binary(xcd_dwarf_t *self, uintptr_t pc, size_t *offset)
+static int xcd_dwarf_get_fde_offset_from_pc(xcd_dwarf_t *self, uintptr_t pc, size_t *fde_offset)
 {
     int r;
-    xcd_dwarf_eh_frame_hdr_t *hdr = self->eh_frame_hdr;
-    size_t first = 0;
-    size_t last = hdr->fde_count;
-    size_t cur;
-    size_t cur_offset;
-    uint64_t cur_pc;
     uint64_t v64;
-    size_t cur_field_offset;
+    int is_rel_encoded = ((self->eh_frame_hdr_table_encoding & 0x70) <= DW_EH_PE_funcrel ? 1 : 0);
+    size_t first = 0;
+    size_t last = self->eh_frame_hdr_fde_count;
+    size_t cur;
+    uintptr_t cur_pc;
 
     while(first < last)
     {
         cur = (first + last) / 2;
-        cur_offset = hdr->entries_offset + 2 * cur * hdr->entry_size;
 
-        //PC
-        cur_field_offset = cur_offset;
-        if(0 != (r = xcd_dwarf_read(self, &cur_offset, &v64, hdr->table_encoding))) return r;
-        cur_pc = xcd_dwarf_adjust_pc_for_load_bias(self, cur_field_offset, hdr->table_encoding, (uintptr_t)v64);
+        //get current pc
+        self->memory_cur_offset = self->entries_offset + cur * self->eh_frame_hdr_table_entry_size * 2;
+        self->memory_pc_offset = 0;
+        if(0 != (r = xcd_dwarf_read_encoded(self, &v64, self->eh_frame_hdr_table_encoding))) return r;
+        cur_pc = (uintptr_t)v64;
+        if(is_rel_encoded) cur_pc += self->load_bias;
         
         if(pc == cur_pc)
         {
-            //offset
-            if(0 != (r = xcd_dwarf_read(self, &cur_offset, &v64, hdr->table_encoding))) return r;
-            *offset = (size_t)v64;
+            //get fde offset
+            self->memory_pc_offset = 0;
+            if(0 != (r = xcd_dwarf_read_encoded(self, &v64, self->eh_frame_hdr_table_encoding))) return r;
+            *fde_offset = (size_t)v64;
             return 0;
         }
         else if(pc < cur_pc)
@@ -945,105 +944,26 @@ static int xcd_dwarf_get_fde_offset_binary(xcd_dwarf_t *self, uintptr_t pc, size
     
     if(last != 0)
     {
-        cur_offset = hdr->entries_offset + 2 * (last - 1) * hdr->entry_size + hdr->entry_size;
-
-        //offset
-        if(0 != (r = xcd_dwarf_read(self, &cur_offset, &v64, hdr->table_encoding))) return r;
-        *offset = (size_t)v64;
+        //get fde offset
+        self->memory_cur_offset = self->entries_offset + (last - 1) * self->eh_frame_hdr_table_entry_size * 2 + self->eh_frame_hdr_table_entry_size;
+        self->memory_pc_offset = 0;
+        if(0 != (r = xcd_dwarf_read_encoded(self, &v64, self->eh_frame_hdr_table_encoding))) return r;
+        *fde_offset = (size_t)v64;
         return 0;
     }
     
     return XCC_ERRNO_NOTFND;
-}
-
-static int xcd_dwarf_get_fde_offset_linear(xcd_dwarf_t *self, uintptr_t pc, size_t *offset)
-{
-    int r;
-    xcd_dwarf_eh_frame_hdr_t *hdr = self->eh_frame_hdr;
-    size_t cur;
-    size_t cur_offset = hdr->entries_offset;
-    uintptr_t cur_pc = 0;
-    uint64_t v64;
-    uint64_t prev_v64 = 0;
-    size_t cur_field_offset;
-
-    if(0 == hdr->fde_count) return XCC_ERRNO_NOTFND;
-
-    for(cur = 0; cur < hdr->fde_count; cur++)
-    {
-        //PC
-        cur_field_offset = cur_offset;
-        if(0 != (r = xcd_dwarf_read(self, &cur_offset, &v64, hdr->table_encoding))) return r;
-        cur_pc = xcd_dwarf_adjust_pc_for_load_bias(self, cur_field_offset, hdr->table_encoding, (uintptr_t)v64);
-
-        //offset
-        if(0 != (r = xcd_dwarf_read(self, &cur_offset, &v64, hdr->table_encoding))) return r;
-        
-        if(pc < cur_pc && cur > 0)
-        {
-            *offset = (size_t)prev_v64;
-            return 0;
-        }
-        prev_v64 = v64;
-    }
-
-    if(pc >= cur_pc && cur == hdr->fde_count)
-    {
-        *offset = (size_t)prev_v64;
-        return 0;
-    }
-
-    return XCC_ERRNO_NOTFND;
-}
-
-static int xcd_dwarf_get_fde_offset(xcd_dwarf_t *self, uintptr_t pc, size_t *offset)
-{
-    int r;
-    
-    if(0 == self->eh_frame_hdr->fde_count)
-    {
-#if XCD_DWARF_DEBUG
-        XCD_LOG_DEBUG("DWARF: .eh_frame_hdr fde_count=0");
-#endif
-        return XCC_ERRNO_NOTFND;
-    }
-
-    if(self->eh_frame_hdr->entry_size > 0)
-    {
-        //entry size is fixed
-        if(0 != (r = xcd_dwarf_get_fde_offset_binary(self, pc, offset)))
-        {
-#if XCD_DWARF_DEBUG
-            XCD_LOG_DEBUG("DWARF: .eh_frame_hdr binary search NOT found, pc=%"PRIxPTR, pc);
-#endif
-            return r;
-        }
-    }
-    else
-    {
-        //entry size is variable
-        if(0 != (r = xcd_dwarf_get_fde_offset_linear(self, pc, offset)))
-        {
-#if XCD_DWARF_DEBUG
-            XCD_LOG_DEBUG("DWARF: .eh_frame_hdr linear search NOT found, pc=%"PRIxPTR, pc);
-#endif
-            return r;
-        }
-    }
-
-    //OK
-    return 0;
 }
 
 static xcd_dwarf_fde_t *xcd_dwarf_get_fde_with_hdr(xcd_dwarf_t *self, uintptr_t pc)
 {
-    size_t fde_offset;
+    size_t offset;
 
     //get FDE-offset from PC
-    if(0 != xcd_dwarf_get_fde_offset(self, pc, &fde_offset)) return NULL;
+    if(0 != xcd_dwarf_get_fde_offset_from_pc(self, pc, &offset)) return NULL;
 
     //get FDE from FDE-offset
-    return xcd_dwarf_get_fde_from_offset(self, &fde_offset, pc);
+    return xcd_dwarf_get_fde_from_offset(self, &offset, pc);
 }
 
 static xcd_dwarf_fde_t *xcd_dwarf_get_fde(xcd_dwarf_t *self, uintptr_t pc)
@@ -1058,7 +978,6 @@ static xcd_dwarf_fde_t *xcd_dwarf_get_fde(xcd_dwarf_t *self, uintptr_t pc)
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////
 // get LOC
 
@@ -1071,18 +990,20 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
     size_t fde_instr_start = (size_t)fde->cfa_instructions_offset;
     size_t fde_instr_end = (size_t)fde->cfa_instructions_end;
     
-    size_t    offset = cie_instr_start;
     uintptr_t cur_pc = fde->pc_start;
     
     uint8_t  v8, cfa_op, cfa_op_ext;
     uint64_t v64;
-    size_t   i, j;
+    size_t   i;
 
     xcd_dwarf_cfa_t *cfa;
     uintptr_t operands[2];
 
     xcd_dwarf_loc_node_t *loc_node, *loc_node_tmp;
     xcd_dwarf_loc_node_stack_t loc_node_stack = TAILQ_HEAD_INITIALIZER(loc_node_stack);
+
+    //start from instructions in CIE
+    self->memory_cur_offset = cie_instr_start;
 
     if(NULL == (loc_init = calloc(1, sizeof(xcd_dwarf_loc_t)))) return NULL;
     loc = loc_init;
@@ -1093,13 +1014,13 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
         
         if(loc == loc_init)
         {
-            if(offset >= cie_instr_end)
+            if(self->memory_cur_offset >= cie_instr_end)
             {
                 if(NULL == (loc_pc = calloc(1, sizeof(xcd_dwarf_loc_t)))) goto err;
                 loc = loc_pc;
 
                 //jump to FDE instructions
-                offset = fde_instr_start;
+                self->memory_cur_offset = fde_instr_start;
 
                 //save init instructions for DW_CFA_restore and DW_CFA_restore_extended
                 memcpy(loc_pc, loc_init, sizeof(xcd_dwarf_loc_t));
@@ -1107,14 +1028,13 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
         }
         else
         {
-            if(offset >= fde_instr_end)
+            if(self->memory_cur_offset >= fde_instr_end)
             {
                 break; //no more instructions
             }
         }
         
-        if(0 != xcd_memory_read_fully(self->memory, offset, &v8, 1)) goto err;
-        offset += 1;
+        if(0 != xcd_dwarf_read_bytes(self, &v8, 1)) goto err;
         cfa_op = v8 >> 6;
         cfa_op_ext = v8 & 0x3f;
 
@@ -1126,8 +1046,7 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
             break;
         case 0x2: //DW_CFA_offset
             if((uint16_t)cfa_op_ext >= XCD_DWARF_REG_NUM) goto err;
-            if(0 != xcd_memory_read_uleb128(self->memory, offset, &v64, &i)) goto err;
-            offset += i;
+            if(0 != xcd_dwarf_read_uleb128(self, &v64)) goto err;
             loc->reg_rules[cfa_op_ext].type = DW_LOC_OFFSET;
             loc->reg_rules[cfa_op_ext].values[0] = (uint64_t)((int64_t)v64 * fde->cie->data_alignment_factor);
             break;
@@ -1140,21 +1059,20 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
             cfa = &(xcd_dwarf_cfa_table[cfa_op_ext]);
             if(1 == cfa->illegal) goto err;
             //read operands
-            for(j = 0; j < 2; j++)
+            for(i = 0; i < 2; i++)
             {
-                if(DW_EH_PE_omit == cfa->operand_types[j])
+                if(DW_EH_PE_omit == cfa->operand_types[i])
                     break;
-                else if(DW_EH_PE_block == cfa->operand_types[j])
+                else if(DW_EH_PE_block == cfa->operand_types[i])
                 {
-                    if(0 != xcd_memory_read_uleb128(self->memory, offset, &v64, &i)) goto err;
-                    offset += i;
-                    operands[j] = (uintptr_t)v64;
-                    offset += (size_t)v64;
+                    if(0 != xcd_dwarf_read_uleb128(self, &v64)) goto err;
+                    operands[i] = (uintptr_t)v64;
+                    self->memory_cur_offset += (size_t)v64;
                 }
                 else
                 {
-                    if(0 != xcd_dwarf_read(self, &offset, &v64, cfa->operand_types[j])) goto err;
-                    operands[j] = (uintptr_t)v64;
+                    if(0 != xcd_dwarf_read_encoded(self, &v64, cfa->operand_types[i])) goto err;
+                    operands[i] = (uintptr_t)v64;
                 }
             }
             //extended opcode
@@ -1226,13 +1144,13 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
             case 0x0f: //DW_CFA_def_cfa_expression
                 loc->cfa_rule.type = DW_LOC_VAL_EXPRESSION;
                 loc->cfa_rule.values[0] = operands[0]; //expression length
-                loc->cfa_rule.values[1] = offset; //expression end
+                loc->cfa_rule.values[1] = self->memory_cur_offset; //expression end
                 break;
             case 0x10: //DW_CFA_expression
                 if(operands[0] >= XCD_DWARF_REG_NUM) goto err;
                 loc->reg_rules[operands[0]].type = DW_LOC_EXPRESSION;
                 loc->reg_rules[operands[0]].values[0] = operands[1]; //expression length
-                loc->reg_rules[operands[0]].values[1] = offset; //expression end
+                loc->reg_rules[operands[0]].values[1] = self->memory_cur_offset; //expression end
                 break;
             case 0x11: //DW_CFA_offset_extended_sf
                 if(operands[0] >= XCD_DWARF_REG_NUM) goto err;
@@ -1258,7 +1176,7 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
                 if(operands[0] >= XCD_DWARF_REG_NUM) goto err;
                 loc->reg_rules[operands[0]].type = DW_LOC_VAL_EXPRESSION;
                 loc->reg_rules[operands[0]].values[0] = operands[1]; //expression length
-                loc->reg_rules[operands[0]].values[1] = offset; //expression end
+                loc->reg_rules[operands[0]].values[1] = self->memory_cur_offset; //expression end
                 break;
             case 0x2e: //DW_CFA_GNU_args_size
                 break;
@@ -1322,14 +1240,15 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
 #define push(x) do{if(stack_idx >= 64) return XCC_ERRNO_NOSPACE; stack[stack_idx++] = (x);}while(0)
 #define pick(n) ({if(stack_idx - 1 - n >= 64) return XCC_ERRNO_FORMAT; stack[stack_idx - 1 - n];})
 
+    self->memory_cur_offset = offset;
+
     //decode
-    while(offset < end)
+    while(self->memory_cur_offset < end)
     {
         if(j++ > 1000) return XCC_ERRNO_RANGE;
             
         //read operation code
-        if(0 != (r = xcd_memory_read_fully(self->memory, offset, &op_code, 1))) return r;
-        offset += 1;
+        if(0 != (r = xcd_dwarf_read_bytes(self, &op_code, 1))) return r;
 
         //get operation info
         op = &(xcd_dwarf_op_table[op_code]);
@@ -1347,7 +1266,7 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
                 break;
             else
             {
-                if(0 != (r = xcd_dwarf_read(self, &offset, &vu64, op->operand_types[i]))) return r;
+                if(0 != (r = xcd_dwarf_read_encoded(self, &vu64, op->operand_types[i]))) return r;
                 operands[i] = (uintptr_t)vu64;
             }
         }
@@ -1478,9 +1397,9 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
         case 0x28: //DW_OP_bra
             vup1 = pop();
             if(0 != vup1)
-                offset = (size_t)((ssize_t)offset + (ssize_t)operands[0]);
+                self->memory_cur_offset = (size_t)((ssize_t)self->memory_cur_offset + (ssize_t)operands[0]);
             else
-                offset = (size_t)((ssize_t)offset - (ssize_t)operands[0]);
+                self->memory_cur_offset = (size_t)((ssize_t)self->memory_cur_offset - (ssize_t)operands[0]);
             break;
         case 0x29: //DW_OP_eq
             vup1 = pop();
@@ -1513,7 +1432,7 @@ static int xcd_dwarf_eval_expression(xcd_dwarf_t *self, xcd_regs_t *regs, size_t
             push((intptr_t)vup1 != (intptr_t)vup2 ? 1 : 0);
             break;
         case 0x2f: //DW_OP_skip
-            offset = (size_t)((ssize_t)offset + (ssize_t)operands[0]);
+            self->memory_cur_offset = (size_t)((ssize_t)self->memory_cur_offset + (ssize_t)operands[0]);
             break;
         case 0x30: //DW_OP_lit0
         case 0x31: //DW_OP_lit1
@@ -1677,89 +1596,86 @@ static int xcd_dwarf_eval(xcd_dwarf_t *self, xcd_dwarf_fde_t *fde, xcd_dwarf_loc
 static int xcd_dwarf_init_eh_frame_hdr(xcd_dwarf_t *self)
 {
     int      r;
-    size_t   offset = self->dwarf_offset;
-    uint8_t  data[4];
     uint64_t v64;
+    uint8_t  data[4];
+    uint8_t  version;
+    uint8_t  ptr_encoding;
+    uint8_t  fde_count_encoding;
+    uint8_t  table_encoding;
 
-    if(NULL == (self->eh_frame_hdr = calloc(1, sizeof(xcd_dwarf_eh_frame_hdr_t)))) return XCC_ERRNO_NOMEM;
-
-    if(0 != (r = xcd_memory_read_fully(self->memory, offset, data, 4))) goto err;
-    offset += 4;
+    if(0 != (r = xcd_dwarf_read_bytes(self, data, 4))) return r;
+    version = data[0];
+    ptr_encoding = data[1];
+    fde_count_encoding = data[2];
+    table_encoding = data[3];
 
     //check version
-    if(data[0] != 1)
-    {
-        r = XCC_ERRNO_FORMAT;
-        goto err;
-    }
+    if(1 != version) return XCC_ERRNO_FORMAT;
 
-    //entry encoding
-    self->eh_frame_hdr->table_encoding = data[3];
+    //save table encoding
+    self->eh_frame_hdr_table_encoding = table_encoding;
 
-    //entry size
-    switch(data[3] & 0x0f)
+    //save table entry size
+    switch(table_encoding & 0x0f)
     {
     case DW_EH_PE_absptr:
-        self->eh_frame_hdr->entry_size = sizeof(uintptr_t);
+        self->eh_frame_hdr_table_entry_size = sizeof(uintptr_t);
         break;
     case DW_EH_PE_udata1:
     case DW_EH_PE_sdata1:
-        self->eh_frame_hdr->entry_size = 1;
+        self->eh_frame_hdr_table_entry_size = 1;
         break;
     case DW_EH_PE_udata2:
     case DW_EH_PE_sdata2:
-        self->eh_frame_hdr->entry_size = 2;
+        self->eh_frame_hdr_table_entry_size = 2;
         break;
     case DW_EH_PE_udata4:
     case DW_EH_PE_sdata4:
-        self->eh_frame_hdr->entry_size = 4;
+        self->eh_frame_hdr_table_entry_size = 4;
         break;
     case DW_EH_PE_udata8:
     case DW_EH_PE_sdata8:
-        self->eh_frame_hdr->entry_size = 8;
+        self->eh_frame_hdr_table_entry_size = 8;
         break;
     case DW_EH_PE_uleb128:
     case DW_EH_PE_sleb128:
     default:
-        self->eh_frame_hdr->entry_size = 0;
-        break;
+        return XCC_ERRNO_FORMAT; //using .eh_frame for linear search
     }
     
-    //SKIP .eh_frame ptr
-    if(0 != (r = xcd_dwarf_read(self, &offset, &v64, data[1]))) goto err;
+    //skip .eh_frame ptr
+    self->memory_pc_offset = self->memory_cur_offset;
+    if(0 != (r = xcd_dwarf_read_encoded(self, &v64, ptr_encoding))) return r;
 
-    //fde count
-    if(0 != (r = xcd_dwarf_read(self, &offset, &v64, data[2]))) goto err;
-    if(0 == v64)
-    {
-        r = XCC_ERRNO_FORMAT;
-        goto err;
-    }
-    self->eh_frame_hdr->fde_count = (size_t)v64;
+    //get fde count
+    self->memory_pc_offset = self->memory_cur_offset;
+    if(0 != (r = xcd_dwarf_read_encoded(self, &v64, fde_count_encoding))) return r;
+    if(0 == v64) return XCC_ERRNO_FORMAT;
+    self->eh_frame_hdr_fde_count = (size_t)v64;
 
-    //binary search table
-    self->eh_frame_hdr->entries_offset = offset;
-    self->eh_frame_hdr->entries_end = self->dwarf_offset + self->dwarf_end;
+    //set entries_offset to the start of binary search table
+    self->entries_offset = self->memory_cur_offset;
+    
     return 0;
-
- err:
-    if(NULL != self->eh_frame_hdr) free(self->eh_frame_hdr);
-    return r;
 }
 
 int xcd_dwarf_create(xcd_dwarf_t **self, xcd_memory_t *memory, pid_t pid, uintptr_t load_bias,
-                     size_t dwarf_offset, size_t dwarf_size, xcd_dwarf_type_t type)
+                     size_t offset, size_t size, xcd_dwarf_type_t type)
 {
     int r = 0;
     
     if(NULL == (*self = calloc(1, sizeof(xcd_dwarf_t)))) return XCC_ERRNO_NOMEM;
-    (*self)->memory = memory;
+    (*self)->type = type;
     (*self)->pid = pid;
     (*self)->load_bias = load_bias;
-    (*self)->dwarf_offset = dwarf_offset;
-    (*self)->dwarf_end = dwarf_offset + dwarf_size;
-    (*self)->type = type;
     RB_INIT(&((*self)->cie_cache));
+    (*self)->memory = memory;
+    (*self)->memory_cur_offset = offset;
+    (*self)->memory_pc_offset = (size_t)-1;
+    (*self)->memory_data_offset = offset;
+    (*self)->pc_offset = offset;
+    (*self)->entries_offset = offset;
+    (*self)->entries_end = offset + size;
 
     //for .eh_frame_hdr
     if(XCD_DWARF_TYPE_EH_FRAME_HDR == type)
@@ -1775,7 +1691,6 @@ int xcd_dwarf_create(xcd_dwarf_t **self, xcd_memory_t *memory, pid_t pid, uintpt
     }
     return r;
 }
-
 
 //////////////////////////////////////////////////////////////////////
 // get step

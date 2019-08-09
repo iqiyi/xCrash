@@ -19,21 +19,21 @@
 // SOFTWARE.
 //
 
-// Created by caikelun on 2019-03-07.
+// Created by caikelun on 2019-08-02.
 
-#ifndef XCC_FMT_H
-#define XCC_FMT_H 1
+#ifndef XCC_UNWIND_LIBUNWIND_H
+#define XCC_UNWIND_LIBUNWIND_H 1
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <stdarg.h>
+#include <ucontext.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-size_t xcc_fmt_snprintf(char *buffer, size_t buffer_size, const char *format, ...);
-size_t xcc_fmt_vsnprintf(char *buffer, size_t buffer_size, const char *format, va_list args);
+void xcc_unwind_libunwind_init(void);
+size_t xcc_unwind_libunwind_record(ucontext_t *uc, char *buf, size_t buf_len);
 
 #ifdef __cplusplus
 }

@@ -119,7 +119,6 @@ class NativeCrashHandler {
         if (!TextUtils.isEmpty(logPath)) {
 
             //append java stacktrace
-            XCrash.getLogger().e(Util.TAG, "----- " + isJavaThread + "," + isMainThread + "," + threadName);
             if (isJavaThread) {
                 String stacktrace = getStacktraceByThreadName(isMainThread, threadName);
                 if (!TextUtils.isEmpty(stacktrace)) {

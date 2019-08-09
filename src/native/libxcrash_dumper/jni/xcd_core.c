@@ -184,7 +184,7 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
                                            "xcrash error debug:\n"
                                            "dumper has crashed (signal: %d, code: %d)\n",
                                            si->si_signo, si->si_code)) goto err;
-        if(0 != xcc_unwind_get(uc, NULL, buf, sizeof(buf))) goto err;
+        if(0 != xcc_unwind_get(xcd_core_build_prop.api_level, si, uc, buf, sizeof(buf))) goto err;
         if(0 != xcc_util_write_str(xcd_core_log_fd, buf)) goto err;
     }
 
@@ -210,6 +210,9 @@ int main(int argc, char** argv)
     //read args from stdin
     if(0 != xcd_core_read_args()) exit(1);
 
+    //load build property
+    xcc_util_load_build_prop(&xcd_core_build_prop);
+
     //open log file
     if(0 > (xcd_core_log_fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(xcd_core_log_pathname, O_WRONLY | O_CLOEXEC)))) exit(2);
 
@@ -225,9 +228,6 @@ int main(int argc, char** argv)
 
     //suspend all threads in the process
     xcd_process_suspend_threads(xcd_core_proc);
-
-    //load build property
-    xcc_util_load_build_prop(&xcd_core_build_prop);
 
     //load process info
     if(0 != xcd_process_load_info(xcd_core_proc)) exit(4);

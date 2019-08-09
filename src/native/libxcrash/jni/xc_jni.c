@@ -121,6 +121,7 @@ static void *xc_jni_callback_thread(void *arg)
     XC_JNI_CHECK_PENDING_EXCEPTION(end);
 
  end:
+    (*xc_jni_vm)->DetachCurrentThread(xc_jni_vm);
     return NULL;
 }
 

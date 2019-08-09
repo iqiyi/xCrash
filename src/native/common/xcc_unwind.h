@@ -32,7 +32,9 @@
 extern "C" {
 #endif
 
-size_t xcc_unwind_get(ucontext_t *uc, const char *ignore_lib, char *buf, size_t buf_len);
+void xcc_unwind_init(int api_level);
+
+size_t xcc_unwind_get(int api_level, siginfo_t *si, ucontext_t *uc, char *buf, size_t buf_len);
 
 #ifdef __cplusplus
 }

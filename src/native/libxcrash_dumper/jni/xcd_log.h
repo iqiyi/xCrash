@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-#define XCD_LOG_PRIO ANDROID_LOG_WARN //ANDROID_LOG_DEBUG
+#define XCD_LOG_PRIO ANDROID_LOG_WARN
 
 #define XCD_LOG_TAG "xcrash_dumper"
 
