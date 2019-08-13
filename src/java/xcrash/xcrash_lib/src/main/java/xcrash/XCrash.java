@@ -26,7 +26,7 @@ import android.content.Context;
 import android.text.TextUtils;
 
 /**
- * xCrash is a crash reporting library for Android.
+ * xCrash is a crash reporting library for Android APP.
  */
 @SuppressWarnings("unused")
 public final class XCrash {
