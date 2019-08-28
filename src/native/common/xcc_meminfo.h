@@ -19,10 +19,10 @@
 // SOFTWARE.
 //
 
-// Created by caikelun on 2019-03-07.
+// Created by caikelun on 2019-03-22.
 
-#ifndef XC_RECORDER_H
-#define XC_RECORDER_H 1
+#ifndef XCC_MEMINFO_H
+#define XCC_MEMINFO_H 1
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -31,15 +31,7 @@
 extern "C" {
 #endif
 
-typedef struct xc_recorder xc_recorder_t;
-
-int xcd_recorder_create(xc_recorder_t **self, uint64_t start_time, const char *app_version,
-                        const char *log_dir, char **log_pathname);
-
-int xc_recorder_create_and_open(xc_recorder_t *self);
-int xc_recorder_seek_to_end(xc_recorder_t *self, int log_fd);
-
-int xc_recorder_check_backtrace_valid(xc_recorder_t *self);
+int xcc_meminfo_record(int log_fd, pid_t pid);
 
 #ifdef __cplusplus
 }

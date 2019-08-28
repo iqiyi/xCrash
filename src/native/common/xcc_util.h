@@ -28,20 +28,62 @@
 #include <sys/types.h>
 #include <inttypes.h>
 #include <signal.h>
+#include <sys/syscall.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define XCC_UTIL_TOMB_HEAD  "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***\n"
+#define XCC_UTIL_THREAD_SEP "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---\n"
+#define XCC_UTIL_THREAD_END "+++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++\n"
+
 #define XCC_UTIL_XCRASH_DUMPER_FILENAME "libxcrash_dumper.so"
 
-#define XCC_UTIL_CRASH_TYPE "native"
+#define XCC_UTIL_CRASH_TYPE_NATIVE "native"
+#define XCC_UTIL_CRASH_TYPE_ANR    "anr"
+
+#if defined(__arm__)
+#define XCC_UTIL_ABI_STRING "arm"
+#elif defined(__aarch64__)
+#define XCC_UTIL_ABI_STRING "arm64"
+#elif defined(__i386__)
+#define XCC_UTIL_ABI_STRING "x86"
+#elif defined(__x86_64__)
+#define XCC_UTIL_ABI_STRING "x86_64"
+#else
+#define XCC_UTIL_ABI_STRING "unknown"
+#endif
 
 #if defined(__LP64__)
 #define XCC_UTIL_FMT_ADDR "16"PRIxPTR
 #else
 #define XCC_UTIL_FMT_ADDR "8"PRIxPTR
 #endif
+
+#ifndef __LP64__
+#define XCC_UTIL_SYSCALL_GETDENTS SYS_getdents
+#else
+#define XCC_UTIL_SYSCALL_GETDENTS SYS_getdents64
+#endif
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+typedef struct
+{
+#ifndef __LP64__
+    unsigned long  d_ino;
+    unsigned long  d_off;
+    unsigned short d_reclen;
+#else
+    ino64_t        d_ino;
+    off64_t        d_off;
+    unsigned short d_reclen;
+    unsigned char  d_type;
+#endif
+    char           d_name[1];
+} xcc_util_dirent_t;
+#pragma clang diagnostic pop
 
 #define XCC_UTIL_MAX(a,b) ({         \
             __typeof__ (a) _a = (a); \
@@ -61,38 +103,22 @@ extern "C" {
             } while (_rc == -1 && errno == EINTR);  \
             _rc; })
 
-#if defined(__arm__)
-#define XCC_UTIL_ABI_STRING "arm"
-#elif defined(__aarch64__)
-#define XCC_UTIL_ABI_STRING "arm64"
-#elif defined(__i386__)
-#define XCC_UTIL_ABI_STRING "x86"
-#elif defined(__x86_64__)
-#define XCC_UTIL_ABI_STRING "x86_64"
-#else
-#define XCC_UTIL_ABI_STRING "unknown"
-#endif
+#define XCC_UTIL_LIBC   "/libc.so"
+#define XCC_UTIL_LIBCPP "/libc++.so"
+#define XCC_UTIL_LIBART "/libart.so"
 
-#define XCC_UTIL_TOMB_HEAD  "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***\n"
-#define XCC_UTIL_THREAD_SEP "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---\n"
-#define XCC_UTIL_THREAD_END "+++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++\n"
+#define XCC_UTIL_LIBC_ABORT_MSG_PTR      "__abort_message_ptr"
+#define XCC_UTIL_LIBCPP_CERR             "_ZNSt3__14cerrE"
+#define XCC_UTIL_LIBART_RUNTIME_INSTANCE "_ZN3art7Runtime9instance_E"
+#define XCC_UTIL_LIBART_RUNTIME_DUMP     "_ZN3art7Runtime14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE"
+#define XCC_UTIL_LIBART_THREAD_CURRENT   "_ZN3art6Thread14CurrentFromGdbEv"
+#define XCC_UTIL_LIBART_THREAD_DUMP      "_ZNK3art6Thread13DumpJavaStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE"
+#define XCC_UTIL_LIBART_THREAD_DUMP2     "_ZNK3art6Thread13DumpJavaStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbb"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-typedef struct
-{
-    int   api_level;
-    char *os_version;
-    char *abi_list;
-    char *manufacturer;
-    char *brand;
-    char *model;
-    char *build_fingerprint;
-    char *revision;
-} xcc_util_build_prop_t;
-#pragma clang diagnostic pop
-
-void xcc_util_load_build_prop(xcc_util_build_prop_t *prop);
+typedef void  (*xcc_util_libart_runtime_dump_t)(void *runtime, void *ostream);
+typedef void *(*xcc_util_libart_thread_current_t)(void);
+typedef void  (*xcc_util_libart_thread_dump_t)(void *thread, void *ostream);
+typedef void  (*xcc_util_libart_thread_dump2_t)(void *thread, void *ostream, int check_suspended, int dump_locks);
 
 const char* xcc_util_get_signame(const siginfo_t* si);
 const char* xcc_util_get_sigcodename(const siginfo_t* si);
@@ -110,12 +136,37 @@ int xcc_util_write_format_safe(int fd, const char *format, ...);
 char *xcc_util_gets(char *s, size_t size, int fd);
 int xcc_util_read_file_line(const char *path, char *buf, size_t len);
 
-int xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
-int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
+void xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
+void xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
 int xcc_util_is_root(void);
-void xcc_util_get_kernel_version(char *buf, size_t len);
 
 int xcc_util_ends_with(const char *str, const char *suffix);
+
+size_t xcc_util_get_dump_header(char *buf,
+                                size_t buf_len,
+                                const char *crash_type,
+                                long time_zone,
+                                uint64_t start_time,
+                                uint64_t crash_time,
+                                const char *app_id,
+                                const char *app_version,
+                                int api_level,
+                                const char *os_version,
+                                const char *kernel_version,
+                                const char *abi_list,
+                                const char *manufacturer,
+                                const char *brand,
+                                const char *model,
+                                const char *build_fingerprint);
+
+int xcc_util_record_logcat(int fd,
+                           pid_t pid,
+                           int api_level,
+                           unsigned int logcat_system_lines,
+                           unsigned int logcat_events_lines,
+                           unsigned int logcat_main_lines);
+
+int xcc_util_record_fds(int fd, pid_t pid);
 
 #ifdef __cplusplus
 }

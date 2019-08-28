@@ -1,4 +1,5 @@
--keep class xcrash.NativeCrashHandler {
+-keep class xcrash.NativeHandler {
     native <methods>;
-    void callback(...);
+    void crashCallback(...);
+    void anrCallback(...);
 }

@@ -18,8 +18,13 @@ public class MyService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent.getStringExtra("type").equals("native")) {
             XCrash.testNativeCrash(false);
-        } else {
+        } else if (intent.getStringExtra("type").equals("java")) {
             XCrash.testJavaCrash(false);
+        } else {
+            try {
+                Thread.sleep(25 * 1000);
+            } catch (Exception ignored) {
+            }
         }
         return START_NOT_STICKY;
     }

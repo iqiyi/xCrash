@@ -43,10 +43,12 @@ public class MyCustomApplication extends Application {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
 
-        // The callback when App process crashed.
+        // callback for java crash, native crash and ANR
         ICrashCallback callback = new ICrashCallback() {
             @Override
             public void onCrash(String logPath, String emergency) {
+                Log.d(TAG, "log path: " + (logPath != null ? logPath : "(null)") + ", emergency: " + (emergency != null ? emergency : "(null)"));
+
                 if (emergency != null) {
                     debug(logPath, emergency);
 
@@ -82,7 +84,8 @@ public class MyCustomApplication extends Application {
             .setNativeCallback(callback)
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
-            .setLogFileMaintainDelayMs(1000));
+            .setLogFileMaintainDelayMs(1000)
+            .setAnrCallback(callback));
 
         // Send all pending crash log files.
         new Thread(new Runnable() {
@@ -112,8 +115,6 @@ public class MyCustomApplication extends Application {
     }
 
     private void debug(String logPath, String emergency) {
-        Log.d(TAG, "logPath: " + (logPath != null ? logPath : "(null)") + ", emergency: " + (emergency != null ? emergency : "(null)"));
-
         // Parse and save the crash info to a JSON file for debugging.
         FileWriter writer = null;
         try {

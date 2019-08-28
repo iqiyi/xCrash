@@ -21,8 +21,8 @@
 
 // Created by caikelun on 2019-03-07.
 
-#ifndef XCC_SIGNAL_H
-#define XCC_SIGNAL_H 1
+#ifndef XCC_SIGNAL_CRASH_H
+#define XCC_SIGNAL_CRASH_H 1
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,12 +32,13 @@
 extern "C" {
 #endif
 
-typedef void (* xcc_signal_handler_t)(int, siginfo_t *, void *);
+int xcc_signal_crash_register(void (*handler)(int, siginfo_t *, void *));
+int xcc_signal_crash_unregister(void);
+int xcc_signal_crash_ignore(void);
+int xcc_signal_crash_queue(siginfo_t* si);
 
-int xcc_signal_register(xcc_signal_handler_t handler);
-int xcc_signal_unregister(void);
-int xcc_signal_ignore(void);
-int xcc_signal_resend(siginfo_t* si);
+int xcc_signal_anr_register(void (*handler)(int, siginfo_t *, void *));
+void xcc_signal_anr_unregister(void);
 
 #ifdef __cplusplus
 }

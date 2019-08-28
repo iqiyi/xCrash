@@ -55,7 +55,7 @@ public class TombstoneParser {
     public static final String keyTombstoneMaker = "Tombstone maker";
 
     /**
-     * Crash type. ("java" or "native")
+     * Crash type. ("java" or "native" or "anr")
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyCrashType = "Crash type";
@@ -67,7 +67,7 @@ public class TombstoneParser {
     public static final String keyStartTime = "Start time";
 
     /**
-     * Crash time. (Format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+     * Crash or ANR time. (Format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyCrashTime = "Crash time";
@@ -84,42 +84,6 @@ public class TombstoneParser {
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyAppVersion = "App version";
-
-    /**
-     * CPU load average. (From: /proc/loadavg)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyCpuLoadavg = "CPU loadavg";
-
-    /**
-     * Online CPU. (From: /sys/devices/system/cpu/online)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyCpuOnline = "CPU online";
-
-    /**
-     * Offline CPU. (From: /sys/devices/system/cpu/offline)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyCpuOffline = "CPU offline";
-
-    /**
-     * Total physical memory size. (From: /proc/meminfo)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keySystemMemoryTotal = "System memory total";
-
-    /**
-     * Memory used by the entire system. (From: /proc/meminfo)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keySystemMemoryUsed = "System memory used";
-
-    /**
-     * The number of threads in the current process. (From: /proc/PID/task)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyNumberOfThreads = "Number of threads";
 
     /**
      * Whether this device has been rooted(jailbroken). ("Yes" or "No")
@@ -174,12 +138,6 @@ public class TombstoneParser {
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyBuildFingerprint = "Build fingerprint";
-
-    /**
-     * Revision. (From: ro.revision)
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static final String keyRevision = "Revision";
 
     /**
      * Current ABI. ("arm" or "arm64" or "x86" or "x86_64")
@@ -272,13 +230,13 @@ public class TombstoneParser {
     public static final String keyMemoryMap = "memory map";
 
     /**
-     * Native crash logcat.
+     * Logcat.
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyLogcat = "logcat";
 
     /**
-     * Native crash FD list.
+     * FD list.
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyOpenFiles = "open files";
@@ -290,7 +248,7 @@ public class TombstoneParser {
     public static final String keyMemoryInfo = "memory info";
 
     /**
-     * Native crash other threads information.
+     * Other threads information for native crash, or traces which including all threads information for ANR.
      */
     @SuppressWarnings("WeakerAccess")
     public static final String keyOtherThreads = "other threads";
@@ -315,6 +273,7 @@ public class TombstoneParser {
 
     private static final Pattern patHeadItem = Pattern.compile("^(.*):\\s'(.*?)'$");
     private static final Pattern patProcessThread = Pattern.compile("^pid:\\s(.*),\\stid:\\s(.*),\\sname:\\s(.*)\\s+>>>\\s(.*)\\s<<<$");
+    private static final Pattern patProcess = Pattern.compile("^pid:\\s(.*)\\s+>>>\\s(.*)\\s<<<$");
     private static final Pattern patSignalCode = Pattern.compile("^signal\\s(.*),\\scode\\s(.*),\\sfault\\saddr\\s(.*)$");
     private static final Pattern patAppVersionProcessName = Pattern.compile("^(\\d{20})_(.*)__(.*)$");
 
@@ -325,12 +284,6 @@ public class TombstoneParser {
         keyCrashTime,
         keyAppId,
         keyAppVersion,
-        keyCpuLoadavg,
-        keyCpuOnline,
-        keyCpuOffline,
-        keySystemMemoryTotal,
-        keySystemMemoryUsed,
-        keyNumberOfThreads,
         keyRooted,
         keyApiLevel,
         keyOsVersion,
@@ -340,7 +293,6 @@ public class TombstoneParser {
         keyBrand,
         keyModel,
         keyBuildFingerprint,
-        keyRevision,
         keyAbi,
         keyAbortMessage
     ));
@@ -478,6 +430,11 @@ public class TombstoneParser {
                     map.put(keyCrashType, Util.nativeCrashType);
                 }
                 filename = filename.substring(0, filename.length() - Util.nativeLogSuffix.length());
+            } else if (filename.endsWith(Util.anrLogSuffix)) {
+                if (TextUtils.isEmpty(crashType)) {
+                    map.put(keyCrashType, Util.anrCrashType);
+                }
+                filename = filename.substring(0, filename.length() - Util.anrLogSuffix.length());
             } else {
                 return;
             }
@@ -630,6 +587,7 @@ public class TombstoneParser {
                     break;
                 case HEAD:
                     if (line.startsWith("pid: ")) {
+                        //try parse for native/java crash
                         matcher = patProcessThread.matcher(line);
                         if (matcher.find() && matcher.groupCount() == 4) {
                             //pid, process name, tid, thread name
@@ -637,6 +595,14 @@ public class TombstoneParser {
                             putKeyValue(map, keyThreadId, matcher.group(2));
                             putKeyValue(map, keyThreadName, matcher.group(3));
                             putKeyValue(map, keyProcessName, matcher.group(4));
+                        } else {
+                            //try parse for ANR
+                            matcher = patProcess.matcher(line);
+                            if (matcher.find() && matcher.groupCount() == 2) {
+                                //pid, process name
+                                putKeyValue(map, keyProcessId, matcher.group(1));
+                                putKeyValue(map, keyProcessName, matcher.group(2));
+                            }
                         }
                     } else if (line.startsWith("signal ")) {
                         matcher = patSignalCode.matcher(line);
@@ -677,8 +643,12 @@ public class TombstoneParser {
                         sectionContent.setLength(0);
                         status = Status.UNKNOWN;
                     } else {
-                        if (sectionContentOutdent && line.startsWith("    ")) {
-                            line = line.substring(4);
+                        if (sectionContentOutdent) {
+                            if (sectionTitle.equals(keyJavaStacktrace)) {
+                                line = line.trim();
+                            } else if (line.startsWith("    ")) {
+                                line = line.substring(4);
+                            }
                         }
                         sectionContent.append(line).append('\n');
                     }

@@ -44,6 +44,7 @@ class FileManager {
     private String logDir = null;
     private int javaLogCountMax = 0;
     private int nativeLogCountMax = 0;
+    private int anrLogCountMax = 0;
     private int placeholderCountMax = 0;
     private int placeholderSizeKb = 0;
     private int delayMs = 0;
@@ -57,10 +58,11 @@ class FileManager {
         return instance;
     }
 
-    void initialize(String logDir, int javaLogCountMax, int nativeLogCountMax, int placeholderCountMax, int placeholderSizeKb, int delayMs) {
+    void initialize(String logDir, int javaLogCountMax, int nativeLogCountMax, int anrLogCountMax, int placeholderCountMax, int placeholderSizeKb, int delayMs) {
         this.logDir = logDir;
         this.javaLogCountMax = javaLogCountMax;
         this.nativeLogCountMax = nativeLogCountMax;
+        this.anrLogCountMax = anrLogCountMax;
         this.placeholderCountMax = placeholderCountMax;
         this.placeholderSizeKb = placeholderSizeKb;
         this.delayMs = delayMs;
@@ -77,6 +79,7 @@ class FileManager {
 
             int javaLogCount = 0;
             int nativeLogCount = 0;
+            int anrLogCount = 0;
             int placeholderCleanCount = 0;
             int placeholderDirtyCount = 0;
             for (final File file : files) {
@@ -87,6 +90,8 @@ class FileManager {
                             javaLogCount++;
                         } else if (name.endsWith(Util.nativeLogSuffix)) {
                             nativeLogCount++;
+                        } else if (name.endsWith(Util.anrLogSuffix)) {
+                            anrLogCount++;
                         }
                     } else if (name.startsWith(placeholderPrefix + "_")) {
                         if (name.endsWith(placeholderCleanSuffix)) {
@@ -100,12 +105,14 @@ class FileManager {
 
             if (javaLogCount <= this.javaLogCountMax
                 && nativeLogCount <= this.nativeLogCountMax
+                && anrLogCount <= this.anrLogCountMax
                 && placeholderCleanCount == this.placeholderCountMax
                 && placeholderDirtyCount == 0) {
                 //everything OK, need to do nothing
                 this.delayMs = -1;
             } else if (javaLogCount > this.javaLogCountMax + 10
                 || nativeLogCount > this.nativeLogCountMax + 10
+                || anrLogCount > this.anrLogCountMax + 10
                 || placeholderCleanCount > this.placeholderCountMax + 10
                 || placeholderDirtyCount > 10) {
                 //too many unwanted files, clean up now
@@ -113,6 +120,7 @@ class FileManager {
                 this.delayMs = -1;
             } else if (javaLogCount > this.javaLogCountMax
                 || nativeLogCount > this.nativeLogCountMax
+                || anrLogCount > this.anrLogCountMax
                 || placeholderCleanCount > this.placeholderCountMax
                 || placeholderDirtyCount > 0) {
                 //have some unwanted files, clean up as soon as possible
@@ -326,6 +334,12 @@ class FileManager {
                 return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.javaLogSuffix);
             }
         });
+        File[] anrFiles = dir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.anrLogSuffix);
+            }
+        });
 
         //delete unwanted files
         if (nativeFiles != null && nativeFiles.length >= nativeLogCountMax) {
@@ -348,6 +362,17 @@ class FileManager {
             });
             for (int i = 0; i < javaFiles.length - javaLogCountMax; i++) {
                 recycleLogFile(javaFiles[i]);
+            }
+        }
+        if (anrFiles != null && anrFiles.length >= anrLogCountMax) {
+            Arrays.sort(anrFiles, new Comparator<File>() {
+                @Override
+                public int compare(File f1, File f2) {
+                    return f1.getName().compareTo(f2.getName());
+                }
+            });
+            for (int i = 0; i < anrFiles.length - anrLogCountMax; i++) {
+                recycleLogFile(anrFiles[i]);
             }
         }
     }

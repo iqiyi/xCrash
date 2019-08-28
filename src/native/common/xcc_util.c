@@ -29,17 +29,106 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <time.h>
+#include <sys/time.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <sys/system_properties.h>
+#include "xcc_util.h"
 #include "xcc_errno.h"
 #include "xcc_fmt.h"
-#include "xcc_util.h"
+#include "xcc_version.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
+#pragma clang diagnostic ignored "-Wcast-align"
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+
+#define XCC_UTIL_TIME_FORMAT "%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld"
+
+/* Nonzero if YEAR is a leap year (every 4 years,
+   except every 100th isn't, and every 400th is).  */
+#define XCC_UTIL_ISLEAP(year)         ((year) % 4 == 0 && ((year) % 100 != 0 || (year) % 400 == 0))
+
+#define XCC_UTIL_SECS_PER_HOUR        (60 * 60)
+#define XCC_UTIL_SECS_PER_DAY         (XCC_UTIL_SECS_PER_HOUR * 24)
+#define XCC_UTIL_DIV(a, b)            ((a) / (b) - ((a) % (b) < 0))
+#define XCC_UTIL_LEAPS_THRU_END_OF(y) (XCC_UTIL_DIV(y, 4) - XCC_UTIL_DIV(y, 100) + XCC_UTIL_DIV(y, 400))
+
+static const unsigned short int xcc_util_mon_yday[2][13] =
+{
+    /* Normal years.  */
+    { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
+    /* Leap years.  */
+    { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
+};
+
+/* Compute the `struct tm' representation of *T,
+   offset GMTOFF seconds east of UTC,
+   and store year, yday, mon, mday, wday, hour, min, sec into *RESULT.
+   Return RESULT if successful.  */
+static struct tm *xcc_util_time2tm(const time_t timev, long gmtoff, struct tm *result)
+{
+    time_t days, rem, y;
+    const unsigned short int *ip;
+
+    if(NULL == result) return NULL;
+
+    result->tm_gmtoff = gmtoff;
+
+    days = timev / XCC_UTIL_SECS_PER_DAY;
+    rem = timev % XCC_UTIL_SECS_PER_DAY;
+    rem += gmtoff;
+    while (rem < 0)
+    {
+        rem += XCC_UTIL_SECS_PER_DAY;
+        --days;
+    }
+    while (rem >= XCC_UTIL_SECS_PER_DAY)
+    {
+        rem -= XCC_UTIL_SECS_PER_DAY;
+        ++days;
+    }
+    result->tm_hour = (int)(rem / XCC_UTIL_SECS_PER_HOUR);
+    rem %= XCC_UTIL_SECS_PER_HOUR;
+    result->tm_min = (int)(rem / 60);
+    result->tm_sec = rem % 60;
+    /* January 1, 1970 was a Thursday.  */
+    result->tm_wday = (4 + days) % 7;
+    if (result->tm_wday < 0)
+        result->tm_wday += 7;
+    y = 1970;
+
+    while (days < 0 || days >= (XCC_UTIL_ISLEAP(y) ? 366 : 365))
+    {
+        /* Guess a corrected year, assuming 365 days per year.  */
+        time_t yg = y + days / 365 - (days % 365 < 0);
+
+        /* Adjust DAYS and Y to match the guessed year.  */
+        days -= ((yg - y) * 365
+                 + XCC_UTIL_LEAPS_THRU_END_OF (yg - 1)
+                 - XCC_UTIL_LEAPS_THRU_END_OF (y - 1));
+
+        y = yg;
+    }
+    result->tm_year = (int)(y - 1900);
+    if (result->tm_year != y - 1900)
+    {
+        /* The year cannot be represented due to overflow.  */
+        errno = EOVERFLOW;
+        return NULL;
+    }
+    result->tm_yday = (int)days;
+    ip = xcc_util_mon_yday[XCC_UTIL_ISLEAP(y)];
+    for (y = 11; days < (long int) ip[y]; --y)
+        continue;
+    days -= ip[y];
+    result->tm_mon = (int)y;
+    result->tm_mday = (int)(days + 1);
+    return result;
+}
 
 const char* xcc_util_get_signame(const siginfo_t* si)
 {
@@ -290,12 +379,7 @@ int xcc_util_write_format(int fd, const char *format, ...)
     if(fd < 0) return XCC_ERRNO_INVAL;
     
     va_start(ap, format);
-    
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-    len = vsnprintf(buf, sizeof(buf), format, ap);
-#pragma clang diagnostic pop
-    
+    len = vsnprintf(buf, sizeof(buf), format, ap);    
     va_end(ap);
     
     if(len <= 0) return 0;
@@ -392,22 +476,24 @@ static int xcc_util_get_process_thread_name(const char *path, char *buf, size_t 
     return 0;
 }
 
-int xcc_util_get_process_name(pid_t pid, char *buf, size_t len)
+void xcc_util_get_process_name(pid_t pid, char *buf, size_t len)
 {
     char path[128];
 
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
     
-    return xcc_util_get_process_thread_name(path, buf, len);
+    if(0 != xcc_util_get_process_thread_name(path, buf, len))
+        strncpy(buf, "unknown", len);
 }
 
-int xcc_util_get_thread_name(pid_t tid, char *buf, size_t len)
+void xcc_util_get_thread_name(pid_t tid, char *buf, size_t len)
 {
     char path[128];
     
     xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/comm", tid);
     
-    return xcc_util_get_process_thread_name(path, buf, len);
+    if(0 != xcc_util_get_process_thread_name(path, buf, len))
+        strncpy(buf, "unknown", len);
 }
 
 static const char *xcc_util_su_pathnames[] =
@@ -424,147 +510,25 @@ static const char *xcc_util_su_pathnames[] =
     "/sbin/su",
     "/su/bin/su"
 };
+static int xcc_util_is_root_saved = -1;
 
 int xcc_util_is_root(void)
 {
     size_t i;
+
+    if(xcc_util_is_root_saved >= 0) return xcc_util_is_root_saved;
+    
     for(i = 0; i < sizeof(xcc_util_su_pathnames) / sizeof(xcc_util_su_pathnames[0]); i++)
+    {
         if(0 == access(xcc_util_su_pathnames[i], F_OK))
-            return 1;
-
-    return 0;
-}
-
-static char *xcc_util_parse_prop(char *buf, const char *key)
-{
-    size_t  buf_len = strlen(buf);
-    size_t  key_len = strlen(key);
-    char   *val;
-
-    if(buf_len <= key_len + 1) return NULL;
-    if(0 != memcmp(buf, key, key_len)) return NULL;
-    if('=' != buf[key_len]) return NULL;
-
-    val = xcc_util_trim(buf + (key_len + 1));
-    if(NULL == val || 0 == strlen(val)) return NULL;
-    return val;
-}
-
-static char *xcc_util_parse_prop_str(char *buf, const char *key)
-{
-    char *val = xcc_util_parse_prop(buf, key);
-
-    return NULL == val ? NULL : strdup(val);
-}
-
-static int xcc_util_parse_prop_int(char *buf, const char *key)
-{
-    char *val = xcc_util_parse_prop(buf, key);
-    int   val_int = 0;
-
-    if(NULL == val) return 0; //failed
-    if(0 != xcc_util_atoi(val, &val_int)) return 0; //failed
-    return val_int;
-}
-
-static char *xcc_util_get_prop_str(const char *key)
-{
-    char buf[PROP_VALUE_MAX];
-    memset(buf, 0, PROP_VALUE_MAX);
-
-    __system_property_get(key, buf);
-    if('\0' == buf[0]) return NULL;
-
-    return strdup(buf);
-}
-
-static int xcc_util_get_prop_int(const char *key)
-{
-    char buf[PROP_VALUE_MAX];
-    memset(buf, 0, PROP_VALUE_MAX);
-
-    __system_property_get(key, buf);
-    if('\0' == buf[0]) return 0;
-
-    int val = 0;
-    if(0 != xcc_util_atoi(buf, &val)) return 0;
-    return val;
-}
-
-void xcc_util_load_build_prop(xcc_util_build_prop_t *prop)
-{
-    FILE   *fp;
-    char    buf[256];
-    char   *abi = NULL;
-    char   *abi2 = NULL;
-    size_t  len = 0;
-
-    memset(prop, 0, sizeof(xcc_util_build_prop_t));
-
-    //read props from build.prop
-    if(NULL != (fp = fopen("/system/build.prop", "r")))
-    {
-        while(fgets(buf, sizeof(buf), fp))
         {
-            if(0 == prop->api_level)                   prop->api_level         = xcc_util_parse_prop_int(buf, "ro.build.version.sdk");
-            if(NULL == prop->os_version)               prop->os_version        = xcc_util_parse_prop_str(buf, "ro.build.version.release");
-            if(NULL == prop->manufacturer)             prop->manufacturer      = xcc_util_parse_prop_str(buf, "ro.product.manufacturer");
-            if(NULL == prop->brand)                    prop->brand             = xcc_util_parse_prop_str(buf, "ro.product.brand");
-            if(NULL == prop->model)                    prop->model             = xcc_util_parse_prop_str(buf, "ro.product.model");
-            if(NULL == prop->build_fingerprint)        prop->build_fingerprint = xcc_util_parse_prop_str(buf, "ro.build.fingerprint");
-            if(NULL == prop->revision)                 prop->revision          = xcc_util_parse_prop_str(buf, "ro.revision");
-            if(NULL == prop->abi_list)                 prop->abi_list          = xcc_util_parse_prop_str(buf, "ro.product.cpu.abilist");
-            if(NULL == prop->abi_list && NULL == abi)  abi                     = xcc_util_parse_prop_str(buf, "ro.product.cpu.abi");
-            if(NULL == prop->abi_list && NULL == abi2) abi2                    = xcc_util_parse_prop_str(buf, "ro.product.cpu.abi2");
+            xcc_util_is_root_saved = 1;
+            return 1;
         }
-        fclose(fp);
     }
 
-    //read props from __system_property_get
-    if(0 == prop->api_level)                   prop->api_level         = xcc_util_get_prop_int("ro.build.version.sdk");
-    if(NULL == prop->os_version)               prop->os_version        = xcc_util_get_prop_str("ro.build.version.release");
-    if(NULL == prop->manufacturer)             prop->manufacturer      = xcc_util_get_prop_str("ro.product.manufacturer");
-    if(NULL == prop->brand)                    prop->brand             = xcc_util_get_prop_str("ro.product.brand");
-    if(NULL == prop->model)                    prop->model             = xcc_util_get_prop_str("ro.product.model");
-    if(NULL == prop->build_fingerprint)        prop->build_fingerprint = xcc_util_get_prop_str("ro.build.fingerprint");
-    if(NULL == prop->revision)                 prop->revision          = xcc_util_get_prop_str("ro.revision");
-    if(NULL == prop->abi_list)                 prop->abi_list          = xcc_util_get_prop_str("ro.product.cpu.abilist");
-    if(NULL == prop->abi_list && NULL == abi)  abi                     = xcc_util_get_prop_str("ro.product.cpu.abi");
-    if(NULL == prop->abi_list && NULL == abi2) abi2                    = xcc_util_get_prop_str("ro.product.cpu.abi2");
-
-    //build abi_list from abi and abi2
-    if(NULL == prop->abi_list && (NULL != abi || NULL != abi2))
-    {
-        if(NULL != abi)  len = (size_t)snprintf(buf, sizeof(buf), "%s", abi);
-        if(NULL != abi2) snprintf(buf + len, sizeof(buf) - len, ",%s", abi2);
-        prop->abi_list = strdup(buf);
-    }
-
-    //default value
-    if(NULL == prop->os_version)        prop->os_version = "";
-    if(NULL == prop->manufacturer)      prop->manufacturer = "";
-    if(NULL == prop->brand)             prop->brand = "";
-    if(NULL == prop->model)             prop->model = "";
-    if(NULL == prop->build_fingerprint) prop->build_fingerprint = "";
-    if(NULL == prop->revision)          prop->revision = "";
-    if(NULL == prop->abi_list)          prop->abi_list = "";
-
-    if(NULL != abi)  free(abi);
-    if(NULL != abi2) free(abi2);
-}
-
-void xcc_util_get_kernel_version(char *buf, size_t len)
-{
-    struct utsname uts;
-
-    if(0 != uname(&uts))
-    {
-        strncpy(buf, "unknown", len);
-        buf[len - 1] = '\0';
-        return;
-    }
-
-    snprintf(buf, len, "%s version %s %s (%s)", uts.sysname, uts.release, uts.version, uts.machine);
+    xcc_util_is_root_saved = 0;
+    return 0;
 }
 
 int xcc_util_ends_with(const char *str, const char *suffix)
@@ -580,5 +544,204 @@ int xcc_util_ends_with(const char *str, const char *suffix)
     return (0 == memcmp((const void *)(str + str_len - suffix_len), (const void *)suffix, suffix_len) ? 1 : 0);
 }
 
+size_t xcc_util_get_dump_header(char *buf,
+                                size_t buf_len,
+                                const char *crash_type,
+                                long time_zone,
+                                uint64_t start_time,
+                                uint64_t crash_time,
+                                const char *app_id,
+                                const char *app_version,
+                                int api_level,
+                                const char *os_version,
+                                const char *kernel_version,
+                                const char *abi_list,
+                                const char *manufacturer,
+                                const char *brand,
+                                const char *model,
+                                const char *build_fingerprint)
+{
+    time_t       start_sec  = (time_t)(start_time / 1000000);
+    suseconds_t  start_usec = (time_t)(start_time % 1000000);
+    struct tm    start_tm;
+    time_t       crash_sec   = (time_t)(crash_time / 1000000);
+    suseconds_t  crash_usec = (time_t)(crash_time % 1000000);
+    struct tm    crash_tm;
+
+    //convert times
+    memset(&start_tm, 0, sizeof(start_tm));
+    memset(&crash_tm, 0, sizeof(crash_tm));
+    xcc_util_time2tm(start_sec, time_zone, &start_tm);
+    xcc_util_time2tm(crash_sec, time_zone, &crash_tm);
+
+    return xcc_fmt_snprintf(buf, buf_len,
+                            XCC_UTIL_TOMB_HEAD
+                            "Tombstone maker: '"XCC_VERSION_STR"'\n"
+                            "Crash type: '%s'\n"
+                            "Start time: '"XCC_UTIL_TIME_FORMAT"'\n"
+                            "Crash time: '"XCC_UTIL_TIME_FORMAT"'\n"
+                            "App ID: '%s'\n"
+                            "App version: '%s'\n"
+                            "Rooted: '%s'\n"
+                            "API level: '%d'\n"
+                            "OS version: '%s'\n"
+                            "Kernel version: '%s'\n"
+                            "ABI list: '%s'\n"
+                            "Manufacturer: '%s'\n"
+                            "Brand: '%s'\n"
+                            "Model: '%s'\n"
+                            "Build fingerprint: '%s'\n"
+                            "ABI: '"XCC_UTIL_ABI_STRING"'\n",
+                            crash_type,
+                            start_tm.tm_year + 1900, start_tm.tm_mon + 1, start_tm.tm_mday,
+                            start_tm.tm_hour, start_tm.tm_min, start_tm.tm_sec, start_usec / 1000,
+                            time_zone < 0 ? '-' : '+', labs(time_zone / 3600), labs(time_zone % 3600),
+                            crash_tm.tm_year + 1900, crash_tm.tm_mon + 1, crash_tm.tm_mday,
+                            crash_tm.tm_hour, crash_tm.tm_min, crash_tm.tm_sec, crash_usec / 1000,
+                            time_zone < 0 ? '-' : '+', labs(time_zone / 3600), labs(time_zone % 3600),
+                            app_id,
+                            app_version,
+                            xcc_util_is_root() ? "Yes" : "No",
+                            api_level,
+                            os_version,
+                            kernel_version,
+                            abi_list,
+                            manufacturer,
+                            brand,
+                            model,
+                            build_fingerprint);
+}
+
+static int xcc_util_record_logcat_buffer(int fd, pid_t pid, int api_level,
+                                         const char *buffer, unsigned int lines, char priority)
+{
+    FILE *fp;
+    char  cmd[128];
+    char  buf[1025];
+    int   with_pid;
+    char  pid_filter[64] = "";
+    char  pid_label[32] = "";
+    int   r = 0;
+
+    //Since Android 7.0 Nougat (API level 24), logcat has --pid filter option.
+    with_pid = (api_level >= 24 ? 1 : 0);
+
+    if(with_pid)
+    {
+        //API level >= 24, filtered by --pid option
+        xcc_fmt_snprintf(pid_filter, sizeof(pid_filter), "--pid %d ", pid);
+    }
+    else
+    {
+        //API level < 24, filtered by ourself, so we need to read more lines
+        lines = (unsigned int)(lines * 1.2);
+        xcc_fmt_snprintf(pid_label, sizeof(pid_label), " %d ", pid);
+    }
+    
+    xcc_fmt_snprintf(cmd, sizeof(cmd), "/system/bin/logcat -b %s -d -v threadtime -t %u %s*:%c",
+                     buffer, lines, pid_filter, priority);
+
+    if(0 != (r = xcc_util_write_format_safe(fd, "--------- tail end of log %s (%s)\n", buffer, cmd))) return r;
+
+    if(NULL != (fp = popen(cmd, "r")))
+    {
+        buf[sizeof(buf) - 1] = '\0';
+        while(NULL != fgets(buf, sizeof(buf) - 1, fp))
+            if(with_pid || NULL != strstr(buf, pid_label))
+                if(0 != (r = xcc_util_write_str(fd, buf))) break;
+        pclose(fp);
+    }
+    
+    return r;
+}
+
+int xcc_util_record_logcat(int fd,
+                           pid_t pid,
+                           int api_level,
+                           unsigned int logcat_system_lines,
+                           unsigned int logcat_events_lines,
+                           unsigned int logcat_main_lines)
+{
+    int r;
+    
+    if(0 == logcat_system_lines && 0 == logcat_events_lines && 0 == logcat_main_lines) return 0;
+    
+    if(0 != (r = xcc_util_write_str(fd, "logcat:\n"))) return r;
+
+    if(logcat_main_lines > 0)
+        if(0 != (r = xcc_util_record_logcat_buffer(fd, pid, api_level, "main", logcat_main_lines, 'D'))) return r;
+    
+    if(logcat_system_lines > 0)
+        if(0 != (r = xcc_util_record_logcat_buffer(fd, pid, api_level, "system", logcat_system_lines, 'W'))) return r;
+
+    if(logcat_events_lines > 0)
+        if(0 != (r = xcc_util_record_logcat_buffer(fd, pid, api_level, "events", logcat_events_lines, 'I'))) return r;
+
+    if(0 != (r = xcc_util_write_str(fd, "\n"))) return r;
+
+    return 0;
+}
+
+int xcc_util_record_fds(int fd, pid_t pid)
+{
+    int                fd2 = -1;
+    char               path[128];
+    char               fd_path[512];
+    char               buf[512];
+    long               n, i;
+    int                fd_num;
+    size_t             total = 0;
+    xcc_util_dirent_t *ent;
+    ssize_t            len;
+    int                r = 0;
+
+    if(0 != (r = xcc_util_write_str(fd, "open files:\n"))) return r;
+
+    xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+    if((fd2 = XCC_UTIL_TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
+    
+    while((n = syscall(XCC_UTIL_SYSCALL_GETDENTS, fd2, buf, sizeof(buf))) > 0)
+    {
+        for(i = 0; i < n;)
+        {
+            ent = (xcc_util_dirent_t *)(buf + i);
+
+            //get the fd
+            if('\0' == ent->d_name[0]) goto next;
+            if(0 == memcmp(ent->d_name, ".", 1)) goto next;
+            if(0 == memcmp(ent->d_name, "..", 2)) goto next;
+            if(0 != xcc_util_atoi(ent->d_name, &fd_num)) goto next;
+            if(fd_num < 0) goto next;
+
+            //count
+            total++;
+            if(total > 1024) goto next;
+
+            //read link of the path
+            xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/fd/%d", pid, fd_num);
+            len = readlink(path, fd_path, sizeof(fd_path) - 1);
+            if(len <= 0 || len > (ssize_t)(sizeof(fd_path) - 1))
+                strncpy(path, "???", sizeof(path));
+            else
+                fd_path[len] = '\0';
+            
+            //dump
+            if(0 != (r = xcc_util_write_format_safe(fd, "    fd %d: %s\n", fd_num, fd_path))) goto clean;
+            
+        next:
+            i += ent->d_reclen;
+        }
+    }
+
+ end:
+    if(total > 1024)
+        if(0 != (r = xcc_util_write_str(fd, "    ......\n"))) goto clean;
+    if(0 != (r = xcc_util_write_format_safe(fd, "    (number of FDs: %zu)\n", total))) goto clean;
+    r = xcc_util_write_str(fd, "\n");
+
+ clean:
+    if(fd2 >= 0) close(fd2);
+    return r;
+}
 
 #pragma clang diagnostic pop

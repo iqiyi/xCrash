@@ -25,7 +25,8 @@
             android:name=".MyService"
             android:process=":bg"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false">
+        </service>
 
     </application>
 

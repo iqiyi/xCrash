@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include "xc_recorder.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,29 +33,13 @@ extern "C" {
 
 size_t xc_fallback_get_emergency(siginfo_t *si,
                                  ucontext_t *uc,
-                                 pid_t pid,
                                  pid_t tid,
-                                 long tz,
-                                 uint64_t start_time,
                                  uint64_t crash_time,
-                                 const char *app_id,
-                                 const char *app_version,
-                                 int api_level,
-                                 const char *os_version,
-                                 const char *kernel_version,
-                                 const char *abi_list,
-                                 const char *manufacturer,
-                                 const char *brand,
-                                 const char *model,
-                                 const char *build_fingerprint,
-                                 const char *revision,
                                  char *emergency,
                                  size_t emergency_len);
 
 int xc_fallback_record(int log_fd,
                        char *emergency,
-                       pid_t pid,
-                       int api_level,
                        unsigned int logcat_system_lines,
                        unsigned int logcat_events_lines,
                        unsigned int logcat_main_lines);

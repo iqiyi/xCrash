@@ -19,10 +19,10 @@
 // SOFTWARE.
 //
 
-// Created by caikelun on 2019-03-07.
+// Created by caikelun on 2019-08-16.
 
-#ifndef XC_CORE_H
-#define XC_CORE_H 1
+#ifndef XC_DL_H
+#define XC_DL_H 1
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -31,21 +31,12 @@
 extern "C" {
 #endif
 
-int xc_core_init(int restore_signal_handler,
-                 const char *app_id,
-                 const char *app_version,
-                 const char *app_lib_dir,
-                 const char *log_dir,
-                 unsigned int logcat_system_lines,
-                 unsigned int logcat_events_lines,
-                 unsigned int logcat_main_lines,
-                 int dump_elf_hash,
-                 int dump_map,
-                 int dump_fds,
-                 int dump_all_threads,
-                 int dump_all_threads_count_max,
-                 const char **dump_all_threads_whitelist,
-                 size_t dump_all_threads_whitelist_len);
+typedef struct xc_dl xc_dl_t;
+
+xc_dl_t *xc_dl_create(const char *sub_pathname);
+void xc_dl_destroy(xc_dl_t **self);
+
+void *xc_dl_sym(xc_dl_t *self, const char *symbol);
 
 #ifdef __cplusplus
 }

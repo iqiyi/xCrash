@@ -13,10 +13,12 @@ LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden
 LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
 LOCAL_STATIC_LIBRARIES := test
 LOCAL_LDLIBS           := -llog -ldl
-LOCAL_SRC_FILES        := xc_core.c     \
+LOCAL_SRC_FILES        := xc_jni.c      \
+                          xc_common.c   \
+                          xc_crash.c    \
+                          xc_anr.c      \
+                          xc_dl.c       \
                           xc_fallback.c \
-                          xc_recorder.c \
-                          xc_jni.c      \
                           xc_util.c     \
                           $(wildcard $(LOCAL_PATH)/../../common/*.c)
 include $(BUILD_SHARED_LIBRARY)

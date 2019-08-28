@@ -31,13 +31,7 @@ import android.text.TextUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static android.content.Context.ACTIVITY_SERVICE;
 
 class Util {
 
@@ -47,7 +41,7 @@ class Util {
     private static final String memInfoFmt = "%21s %8s\n";
     private static final String memInfoFmt2 = "%21s %8s %21s %8s\n";
 
-    static final String TAG = "xcrash_" + Version.version;
+    static final String TAG = "xcrash";
 
     static final String sepHead = "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***";
     static final String sepOtherThreads = "--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---";
@@ -57,120 +51,12 @@ class Util {
 
     static final String javaCrashType = "java";
     static final String nativeCrashType = "native";
+    static final String anrCrashType = "anr";
 
     static final String logPrefix = "tombstone";
     static final String javaLogSuffix = ".java.xcrash";
     static final String nativeLogSuffix = ".native.xcrash";
-
-    static String readFileLine(String path) {
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(path), 1024);
-            return br.readLine().trim();
-        } catch (IOException ignored) {
-            return "unknown";
-        } finally {
-            try {
-                if (br != null) br.close();
-            } catch (IOException ignored) {
-            }
-        }
-    }
-
-    private static final Pattern patMemTotal = Pattern.compile("^MemTotal:\\s+(\\d*)\\s+kB$");
-    private static final Pattern patMemFree = Pattern.compile("^MemFree:\\s+(\\d*)\\s+kB$");
-    private static final Pattern patBuffers = Pattern.compile("^Buffers:\\s+(\\d*)\\s+kB$");
-    private static final Pattern patCached = Pattern.compile("^Cached:\\s+(\\d*)\\s+kB$");
-
-    static class SystemMemoryInfo {
-        SystemMemoryInfo() {
-            totalKb = 0;
-            usedKb = 0;
-        }
-        long totalKb;
-        long usedKb;
-    }
-
-    static SystemMemoryInfo getSystemMemoryInfo(Context ctx) {
-        Util.SystemMemoryInfo memoryInfo = new Util.SystemMemoryInfo();
-
-        //get system total and used memory
-        if (android.os.Build.VERSION.SDK_INT >= 16) {
-            try {
-                ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-                ActivityManager activityManager = (ActivityManager) ctx.getSystemService(ACTIVITY_SERVICE);
-                if (activityManager != null) {
-                    activityManager.getMemoryInfo(mi);
-                    memoryInfo.totalKb = mi.totalMem / 1024;
-                    memoryInfo.usedKb = (mi.totalMem - mi.availMem) / 1024;
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        if (memoryInfo.totalKb == 0 || memoryInfo.usedKb == 0) {
-            BufferedReader br = null;
-            String line;
-            Matcher matcher;
-            long memTotal = 0;
-            long memFree = 0;
-            long memBuffers = 0;
-            long memCached = 0;
-            try {
-                br = new BufferedReader(new FileReader("/proc/meminfo"));
-                while (null != (line = br.readLine())) {
-                    matcher = patMemTotal.matcher(line);
-                    if (matcher.find() && matcher.groupCount() == 1) {
-                        memTotal = Long.parseLong(matcher.group(1), 10);
-                        continue;
-                    }
-                    matcher = patMemFree.matcher(line);
-                    if (matcher.find() && matcher.groupCount() == 1) {
-                        memFree = Long.parseLong(matcher.group(1), 10);
-                        continue;
-                    }
-                    matcher = patBuffers.matcher(line);
-                    if (matcher.find() && matcher.groupCount() == 1) {
-                        memBuffers = Long.parseLong(matcher.group(1), 10);
-                        continue;
-                    }
-                    matcher = patCached.matcher(line);
-                    if (matcher.find() && matcher.groupCount() == 1) {
-                        memCached = Long.parseLong(matcher.group(1), 10);
-                    }
-                }
-                memoryInfo.totalKb = memTotal;
-                memoryInfo.usedKb = memTotal - memFree - memBuffers - memCached;
-            } catch (Exception e) {
-                memoryInfo.totalKb = 0;
-                memoryInfo.usedKb = 0;
-                XCrash.getLogger().i(Util.TAG, "Util getSystemMemoryInfo failed", e);
-            } finally {
-                if (br != null) {
-                    try {
-                        br.close();
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-
-        return memoryInfo;
-    }
-
-    static int getNumberOfThreads(int pid) {
-        try {
-            File dir = new File("/proc/" + pid + "/task");
-            File[] files = dir.listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return android.text.TextUtils.isDigitsOnly(name);
-                }
-            });
-            return files == null ? 0 : files.length;
-        } catch (Exception ignored) {
-            return 0;
-        }
-    }
+    static final String anrLogSuffix = ".anr.xcrash";
 
     static String getProcessName(Context ctx, int pid) {
         try {
@@ -277,6 +163,31 @@ class Util {
             XCrash.getLogger().i(Util.TAG, "Util getProcessMemoryInfo failed", e);
         }
 
+        return sb.toString();
+    }
+
+    static String getFile(String pathname) {
+        StringBuilder sb = new StringBuilder();
+        BufferedReader br = null;
+        String line;
+        try {
+            br = new BufferedReader(new FileReader(pathname));
+            while (null != (line = br.readLine())) {
+                String p = line.trim();
+                if (p.length() > 0) {
+                    sb.append("  ").append(p).append("\n");
+                }
+            }
+        } catch (Exception e) {
+            XCrash.getLogger().i(Util.TAG, "Util getInfo(" + pathname + ") failed", e);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
         return sb.toString();
     }
 

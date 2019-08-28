@@ -33,6 +33,23 @@
 extern "C" {
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+typedef struct
+{
+    int   api_level;
+    char *os_version;
+    char *abi_list;
+    char *manufacturer;
+    char *brand;
+    char *model;
+    char *build_fingerprint;
+    char *revision;
+} xcd_util_build_prop_t;
+#pragma clang diagnostic pop
+
+void xcd_util_load_build_prop(xcd_util_build_prop_t *prop);
+
 int xcd_util_ptrace_read_long(pid_t pid, uintptr_t addr, long *value);
 size_t xcd_util_ptrace_read(pid_t pid, uintptr_t addr, void *dst, size_t bytes);
 int xcd_util_ptrace_read_fully(pid_t pid, uintptr_t addr, void *dst, size_t bytes);

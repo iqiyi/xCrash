@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <android/log.h>
@@ -102,6 +103,11 @@ void xc_test_crash(int run_in_new_thread)
         pthread_create(&tid, NULL, &xc_test_new_thread, NULL);
     else
         xc_test_call_1();
+}
+
+void xc_test_anr(void)
+{
+    kill(getpid(), SIGQUIT);
 }
 
 #pragma clang diagnostic pop

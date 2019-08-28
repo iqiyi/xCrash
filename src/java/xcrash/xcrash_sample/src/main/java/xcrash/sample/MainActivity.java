@@ -24,6 +24,7 @@ package xcrash.sample;
 
 import android.content.Intent;
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.os.Bundle;
 import android.view.View;
 
@@ -68,5 +69,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void testJavaCrashInAnotherProcess_onClick(View view) {
         startService(new Intent(this, MyService.class).putExtra("type", "java"));
+    }
+
+    public void testAnrSigquit_onClick(View view) {
+        XCrash.testAnr();
+    }
+
+    public void testAnrInput_onClick(View view) {
+        try {
+            Thread.sleep(10 * 1000);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void testAnrService_onClick(View view) {
+        startService(new Intent(this, MyService.class).putExtra("type", "anr"));
     }
 }

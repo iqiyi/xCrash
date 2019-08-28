@@ -50,7 +50,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     private final Date startTime = new Date();
 
-    private Context ctx;
     private int pid;
     private String processName;
     private String appId;
@@ -77,7 +76,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
-        this.ctx = ctx;
         this.pid = android.os.Process.myPid();
         this.processName = Util.getProcessName(ctx, this.pid);
         this.appId = appId;
@@ -151,13 +149,11 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
                 //write logcat
                 if (logcatMainLines > 0 || logcatSystemLines > 0 || logcatEventsLines > 0) {
-                    raf.write(getLogcat(pid).getBytes("UTF-8"));
+                    raf.write(getLogcat().getBytes("UTF-8"));
                 }
 
                 //write memory info
-                raf.write("memory info:\n".getBytes("UTF-8"));
-                raf.write(Util.getProcessMemoryInfo().getBytes("UTF-8"));
-                raf.write("\n".getBytes("UTF-8"));
+                raf.write(getMemoryInfo().getBytes("UTF-8"));
 
                 //write other threads info
                 if (dumpAllThreads) {
@@ -185,8 +181,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     }
 
     private String getEmergency(Date crashTime, Thread thread, Throwable throwable) {
-        //memory info
-        Util.SystemMemoryInfo mi = Util.getSystemMemoryInfo(ctx);
 
         //stack stace
         StringWriter sw = new StringWriter();
@@ -203,12 +197,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 + "Crash time: '" + timeFormatter.format(crashTime) + "'\n"
                 + "App ID: '" + appId + "'\n"
                 + "App version: '" + appVersion + "'\n"
-                + "CPU loadavg: '" + Util.readFileLine("/proc/loadavg") + "'\n"
-                + "CPU online: '" + Util.readFileLine("/sys/devices/system/cpu/online") + "'\n"
-                + "CPU offline: '" + Util.readFileLine("/sys/devices/system/cpu/offline") + "'\n"
-                + "System memory total: '" + mi.totalKb + " kB'\n"
-                + "System memory used: '" + mi.usedKb + " kB'\n"
-                + "Number of threads: '" + Util.getNumberOfThreads(pid) + "'\n"
                 + "Rooted: '" + (Util.isRoot() ? "Yes" : "No") + "'\n"
                 + "API level: '" + Build.VERSION.SDK_INT + "'\n"
                 + "OS version: '" + Build.VERSION.RELEASE + "'\n"
@@ -224,19 +212,34 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 + "\n";
     }
 
-    private String getLogcat(int pid) {
+    private String getMemoryInfo() {
+        return "memory info:\n"
+            + " System Summary (From: /proc/meminfo)\n"
+            + Util.getFile("/proc/meminfo")
+            + "-\n"
+            + " Process Status (From: /proc/PID/status)\n"
+            + Util.getFile("/proc/" + pid + "/status")
+            + "-\n"
+            + " Process Limits (From: /proc/PID/limits)\n"
+            + Util.getFile("/proc/" + pid + "/limits")
+            + "-\n"
+            + Util.getProcessMemoryInfo()
+            + "\n";
+    }
+
+    private String getLogcat() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("logcat:\n");
 
         if (logcatMainLines > 0) {
-            getLogcatByBufferName(sb, pid, "main", logcatMainLines, 'D');
+            getLogcatByBufferName(sb, "main", logcatMainLines, 'D');
         }
         if (logcatSystemLines > 0) {
-            getLogcatByBufferName(sb, pid, "system", logcatSystemLines, 'W');
+            getLogcatByBufferName(sb, "system", logcatSystemLines, 'W');
         }
         if (logcatEventsLines > 0) {
-            getLogcatByBufferName(sb, pid, "events", logcatSystemLines, 'I');
+            getLogcatByBufferName(sb, "events", logcatSystemLines, 'I');
         }
 
         sb.append("\n");
@@ -244,7 +247,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         return sb.toString();
     }
 
-    private void getLogcatByBufferName(StringBuilder sb, int pid, String bufferName, int lines, char priority) {
+    private void getLogcatByBufferName(StringBuilder sb, String bufferName, int lines, char priority) {
         boolean withPid = (android.os.Build.VERSION.SDK_INT >= 24);
         String pidString = Integer.toString(pid);
         String pidLabel = " " + pidString + " ";

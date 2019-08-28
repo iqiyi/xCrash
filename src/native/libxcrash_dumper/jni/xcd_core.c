@@ -55,15 +55,22 @@
 
 static int                    xcd_core_handled      = 0;
 static int                    xcd_core_log_fd       = -1;
-static xcc_util_build_prop_t  xcd_core_build_prop;
 static xcd_process_t         *xcd_core_proc         = NULL;
+
 static xcc_spot_t             xcd_core_spot;
-static char                  *xcd_core_log_pathname = NULL;
-static char                  *xcd_core_app_id       = NULL;
-static char                  *xcd_core_app_version  = NULL;
+static char                  *xcd_core_log_pathname      = NULL;
+static char                  *xcd_core_os_version        = NULL;
+static char                  *xcd_core_kernel_version    = NULL;
+static char                  *xcd_core_abi_list          = NULL;
+static char                  *xcd_core_manufacturer      = NULL;
+static char                  *xcd_core_brand             = NULL;
+static char                  *xcd_core_model             = NULL;
+static char                  *xcd_core_build_fingerprint = NULL;
+static char                  *xcd_core_app_id            = NULL;
+static char                  *xcd_core_app_version       = NULL;
 static char                  *xcd_core_dump_all_threads_whitelist = NULL;
 
-static int xcd_core_read_stdin(const char *what, void *buf, size_t len)
+static int xcd_core_read_stdin(void *buf, size_t len)
 {
     size_t  nread = 0;
     ssize_t n;
@@ -71,101 +78,45 @@ static int xcd_core_read_stdin(const char *what, void *buf, size_t len)
     while(len - nread > 0)
     {
         n = XCC_UTIL_TEMP_FAILURE_RETRY(read(STDIN_FILENO, (void *)((uint8_t *)buf + nread), len - nread));
-        if(n < 0)
-        {
-            XCD_LOG_ERROR("CORE: read %s failed, errno=%d", what, errno);
-            return XCC_ERRNO_SYS;
-        }
-        else if(0 == n)
-        {
-            XCD_LOG_ERROR("CORE: read %s failed, expect %zu, read %zu", what, len, nread);
-            return XCC_ERRNO_SYS;
-        }
-        else
-        {
-            nread += (size_t)n;
-        }
+        if(n <= 0) return XCC_ERRNO_SYS;
+        nread += (size_t)n;
     }
     
     return 0;
+}
+
+static int xcd_core_read_stdin_extra(char **buf, size_t len)
+{
+    if(0 == len) return XCC_ERRNO_INVAL;
+    if(NULL == ((*buf) = (char *)calloc(1, len + 1))) return XCC_ERRNO_NOMEM;
+    return xcd_core_read_stdin((void *)(*buf), len);
 }
 
 static int xcd_core_read_args()
 {
     int r;
     
-    if(0 != (r = xcd_core_read_stdin("spot", (void *)&xcd_core_spot, sizeof(xcc_spot_t)))) return r;
-
-    if(0 == xcd_core_spot.log_pathname_len) return XCC_ERRNO_INVAL;
-    if(NULL == (xcd_core_log_pathname = calloc(1, xcd_core_spot.log_pathname_len + 1))) return XCC_ERRNO_NOMEM;
-    if(0 != (r = xcd_core_read_stdin("path", (void *)xcd_core_log_pathname, xcd_core_spot.log_pathname_len))) return r;
-    
-    if(0 == xcd_core_spot.app_id_len) return XCC_ERRNO_INVAL;
-    if(NULL == (xcd_core_app_id = calloc(1, xcd_core_spot.app_id_len + 1))) return XCC_ERRNO_NOMEM;
-    if(0 != (r = xcd_core_read_stdin("appid", (void *)xcd_core_app_id, xcd_core_spot.app_id_len))) return r;
-    
-    if(0 == xcd_core_spot.app_version_len) return XCC_ERRNO_INVAL;
-    if(NULL == (xcd_core_app_version = calloc(1, xcd_core_spot.app_version_len + 1))) return XCC_ERRNO_NOMEM;
-    if(0 != (r = xcd_core_read_stdin("appver", (void *)xcd_core_app_version, xcd_core_spot.app_version_len))) return r;
-
+    if(0 != (r = xcd_core_read_stdin((void *)&xcd_core_spot, sizeof(xcc_spot_t)))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_log_pathname, xcd_core_spot.log_pathname_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_os_version, xcd_core_spot.os_version_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_kernel_version, xcd_core_spot.kernel_version_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_abi_list, xcd_core_spot.abi_list_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_manufacturer, xcd_core_spot.manufacturer_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_brand, xcd_core_spot.brand_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_model, xcd_core_spot.model_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_build_fingerprint, xcd_core_spot.build_fingerprint_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_app_id, xcd_core_spot.app_id_len))) return r;
+    if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_app_version, xcd_core_spot.app_version_len))) return r;
     if(xcd_core_spot.dump_all_threads_whitelist_len > 0)
-    {
-        if(NULL == (xcd_core_dump_all_threads_whitelist = calloc(1, xcd_core_spot.dump_all_threads_whitelist_len + 1))) return XCC_ERRNO_NOMEM;
-        if(0 != (r = xcd_core_read_stdin("whitelist", (void *)xcd_core_dump_all_threads_whitelist, xcd_core_spot.dump_all_threads_whitelist_len))) return r;
-    }
+        if(0 != (r = xcd_core_read_stdin_extra(&xcd_core_dump_all_threads_whitelist, xcd_core_spot.dump_all_threads_whitelist_len))) return r;
     
-#if 0
-    __android_log_print(ANDROID_LOG_DEBUG, "xcrash_dumper",
-                        "CORE: read args OK, "
-                        "crash_pid=%d, "
-                        "crash_tid=%d, "
-                        "start_time=%"PRIu64", "
-                        "crash_time=%"PRIu64", "
-                        "logcat_system_lines=%u, "
-                        "logcat_events_lines=%u, "
-                        "logcat_main_lines=%u, "
-                        "dump_elf_hash=%d, "
-                        "dump_map=%d, "
-                        "dump_fds=%d, "
-                        "dump_all_threads=%d, "
-                        "dump_all_threads_count_max=%d, "
-                        "log_pathname_len=%zu, "
-                        "app_id_len=%zu, "
-                        "app_version_len=%zu, "
-                        "dump_all_threads_whitelist_len=%zu, "
-                        "log_pathname=%s, "
-                        "app_id=%s, "
-                        "app_version=%s, "
-                        "dump_all_threads_whitelist=%s",
-                        xcd_core_spot.crash_pid,
-                        xcd_core_spot.crash_tid,
-                        xcd_core_spot.start_time,
-                        xcd_core_spot.crash_time,
-                        xcd_core_spot.logcat_system_lines,
-                        xcd_core_spot.logcat_events_lines,
-                        xcd_core_spot.logcat_main_lines,
-                        xcd_core_spot.dump_elf_hash,
-                        xcd_core_spot.dump_map,
-                        xcd_core_spot.dump_fds,
-                        xcd_core_spot.dump_all_threads,
-                        xcd_core_spot.dump_all_threads_count_max,
-                        xcd_core_spot.log_pathname_len,
-                        xcd_core_spot.app_id_len,
-                        xcd_core_spot.app_version_len,
-                        xcd_core_spot.dump_all_threads_whitelist_len,
-                        xcd_core_log_pathname,
-                        xcd_core_app_id,
-                        xcd_core_app_version,
-                        NULL != xcd_core_dump_all_threads_whitelist ? xcd_core_dump_all_threads_whitelist : "(NULL)"
-                        );
-#endif
-
     return 0;
 }
 
 static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
 {
     char buf[2048] = "\0";
+    size_t len;
 
     (void)sig;
 
@@ -174,7 +125,7 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
     xcd_core_handled = 1;
 
     //restore the signal handler
-    if(0 != xcc_signal_unregister()) goto end;
+    if(0 != xcc_signal_crash_unregister()) _exit(10);
 
     if(xcd_core_log_fd >= 0)
     {
@@ -183,20 +134,15 @@ static void xcd_core_signal_handler(int sig, siginfo_t *si, void *uc)
                                            "\n\n"
                                            "xcrash error debug:\n"
                                            "dumper has crashed (signal: %d, code: %d)\n",
-                                           si->si_signo, si->si_code)) goto err;
-        if(0 != xcc_unwind_get(xcd_core_build_prop.api_level, si, uc, buf, sizeof(buf))) goto err;
-        if(0 != xcc_util_write_str(xcd_core_log_fd, buf)) goto err;
-    }
+                                           si->si_signo, si->si_code)) goto end;
+        if(0 < (len = xcc_unwind_get(xcd_core_spot.api_level, si, uc, buf, sizeof(buf))))
+            xcc_util_write(xcd_core_log_fd, buf, len);
 
- err:
-    if(xcd_core_log_fd >= 0)
-    {
+    end:
         xcc_util_write_str(xcd_core_log_fd, "\n\n");
     }
-    
- end:
-    xcc_signal_resend(si);
-    return;
+
+    xcc_signal_crash_queue(si);
 }
 
 int main(int argc, char** argv)
@@ -210,14 +156,12 @@ int main(int argc, char** argv)
     //read args from stdin
     if(0 != xcd_core_read_args()) exit(1);
 
-    //load build property
-    xcc_util_load_build_prop(&xcd_core_build_prop);
-
     //open log file
     if(0 > (xcd_core_log_fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(xcd_core_log_pathname, O_WRONLY | O_CLOEXEC)))) exit(2);
 
     //register signal handler for catching self-crashing
-    xcc_signal_register(xcd_core_signal_handler);
+    xcc_unwind_init(xcd_core_spot.api_level);
+    xcc_signal_crash_register(xcd_core_signal_handler);
 
     //create process object
     if(0 != xcd_process_create(&xcd_core_proc,
@@ -234,12 +178,19 @@ int main(int argc, char** argv)
 
     //record system info
     if(0 != xcd_sys_record(xcd_core_log_fd,
+                           xcd_core_spot.time_zone,
                            xcd_core_spot.start_time,
                            xcd_core_spot.crash_time,
                            xcd_core_app_id,
                            xcd_core_app_version,
-                           &xcd_core_build_prop,
-                           xcd_process_get_number_of_threads(xcd_core_proc))) exit(5);
+                           xcd_core_spot.api_level,
+                           xcd_core_os_version,
+                           xcd_core_kernel_version,
+                           xcd_core_abi_list,
+                           xcd_core_manufacturer,
+                           xcd_core_brand,
+                           xcd_core_model,
+                           xcd_core_build_fingerprint)) exit(5);
 
     //record process info
     if(0 != xcd_process_record(xcd_core_proc,
@@ -253,7 +204,7 @@ int main(int argc, char** argv)
                                xcd_core_spot.dump_all_threads,
                                xcd_core_spot.dump_all_threads_count_max,
                                xcd_core_dump_all_threads_whitelist,
-                               xcd_core_build_prop.api_level)) exit(6);
+                               xcd_core_spot.api_level)) exit(6);
 
     //resume all threads in the process
     xcd_process_resume_threads(xcd_core_proc);

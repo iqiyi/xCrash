@@ -41,6 +41,7 @@
 #define XCC_ERRNO_NOTSPT   1013
 #define XCC_ERRNO_STATE    1014
 #define XCC_ERRNO_JNI      1015
+#define XCC_ERRNO_FD       1016
 
 #define XCC_ERRNO_SYS     ((0 != errno) ? errno : XCC_ERRNO_UNKNOWN)
 

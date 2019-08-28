@@ -88,9 +88,8 @@ void xcd_thread_load_info(xcd_thread_t *self)
 {
     char buf[64] = "\0";
     
-    if(0 != xcc_util_get_thread_name(self->tid, buf, sizeof(buf)) ||
-       NULL == (self->tname = strdup(buf)))
-        self->tname = "<unknown>";
+    xcc_util_get_thread_name(self->tid, buf, sizeof(buf));
+    if(NULL == (self->tname = strdup(buf))) self->tname = "unknown";
 }
 
 void xcd_thread_load_regs(xcd_thread_t *self)

@@ -134,7 +134,7 @@ xcd_map_t *xcd_maps_get_prev_map(xcd_maps_t *self, xcd_map_t *cur_map)
     return (NULL == prev_mi ? NULL : &(prev_mi->map));
 }
 
-uintptr_t xcd_maps_find_pc(xcd_maps_t *self, const char *pathname, const char *symbol)
+uintptr_t xcd_maps_find_pc(xcd_maps_t *self, const char *sub_pathname, const char *symbol)
 {
     xcd_maps_item_t *mi;
     xcd_elf_t       *elf;
@@ -142,7 +142,7 @@ uintptr_t xcd_maps_find_pc(xcd_maps_t *self, const char *pathname, const char *s
 
     TAILQ_FOREACH(mi, &(self->maps), link)
     {
-        if(NULL != mi->map.name && 0 == strcmp(mi->map.name, pathname))
+        if(NULL != mi->map.name && xcc_util_ends_with(mi->map.name, sub_pathname))
         {
             //get ELF
             if(NULL == (elf = xcd_map_get_elf(&(mi->map), self->pid, (void *)self))) return 0;

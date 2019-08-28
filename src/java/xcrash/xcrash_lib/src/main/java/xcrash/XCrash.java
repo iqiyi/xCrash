@@ -112,6 +112,7 @@ public final class XCrash {
             params.logDir,
             params.javaLogCountMax,
             params.nativeLogCountMax,
+            params.anrLogCountMax,
             params.placeholderCountMax,
             params.placeholderSizeKb,
             params.logFileMaintainDelayMs);
@@ -133,14 +134,16 @@ public final class XCrash {
                 params.javaCallback);
         }
 
-        //init native crash handler
+        //init native crash / ANR handler
         int r = Errno.OK;
-        if (params.enableNativeCrashHandler) {
-            r = NativeCrashHandler.getInstance().initialize(
+        if (params.enableNativeCrashHandler || params.enableAnrHandler) {
+            r = NativeHandler.getInstance().initialize(
                 ctx,
+                params.libLoader,
                 appId,
                 params.appVersion,
                 params.logDir,
+                params.enableNativeCrashHandler,
                 params.nativeRethrow,
                 params.nativeLogcatSystemLines,
                 params.nativeLogcatEventsLines,
@@ -152,7 +155,12 @@ public final class XCrash {
                 params.nativeDumpAllThreadsCountMax,
                 params.nativeDumpAllThreadsWhiteList,
                 params.nativeCallback,
-                params.libLoader);
+                params.enableAnrHandler,
+                params.anrLogCountMax,
+                params.anrLogcatSystemLines,
+                params.anrLogcatEventsLines,
+                params.anrLogcatMainLines,
+                params.anrCallback);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -165,6 +173,7 @@ public final class XCrash {
      * An initialization parameter set.
      */
     public static class InitParameters {
+
         //common
         String     appVersion             = null;
         String     logDir                 = null;
@@ -262,7 +271,7 @@ public final class XCrash {
             return this;
         }
 
-        //java
+        //java crash
         boolean        enableJavaCrashHandler      = true;
         boolean        javaRethrow                 = true;
         int            javaLogCountMax             = 10;
@@ -364,7 +373,7 @@ public final class XCrash {
          * @param flag True or false.
          * @return The InitParameters object.
          */
-        @SuppressWarnings("unused")
+        @SuppressWarnings({"unused", "WeakerAccess"})
         public InitParameters setJavaDumpAllThreads(boolean flag) {
             this.javaDumpAllThreads = flag;
             return this;
@@ -412,7 +421,7 @@ public final class XCrash {
             return this;
         }
 
-        //native
+        //native crash
         boolean        enableNativeCrashHandler      = true;
         boolean        nativeRethrow                 = true;
         int            nativeLogCountMax             = 10;
@@ -553,7 +562,7 @@ public final class XCrash {
          * @param flag True or false.
          * @return The InitParameters object.
          */
-        @SuppressWarnings({"unused"})
+        @SuppressWarnings({"unused", "WeakerAccess"})
         public InitParameters setNativeDumpAllThreads(boolean flag) {
             this.nativeDumpAllThreads = flag;
             return this;
@@ -602,6 +611,96 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setNativeCallback(ICrashCallback callback) {
             this.nativeCallback = callback;
+            return this;
+        }
+
+        //anr
+        boolean        enableAnrHandler     = true;
+        int            anrLogCountMax       = 10;
+        int            anrLogcatSystemLines = 50;
+        int            anrLogcatEventsLines = 50;
+        int            anrLogcatMainLines   = 200;
+        ICrashCallback anrCallback          = null;
+
+        /**
+         * Enable the ANR capture feature. (Default: enable)
+         *
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters enableAnrCrashHandler() {
+            this.enableAnrHandler = true;
+            return this;
+        }
+
+        /**
+         * Disable the ANR capture feature. (Default: enable)
+         *
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters disableAnrCrashHandler() {
+            this.enableAnrHandler = false;
+            return this;
+        }
+
+        /**
+         * Set the maximum number of ANR log files to save in the log directory. (Default: 10)
+         *
+         * @param countMax The maximum number of ANR log files.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrLogCountMax(int countMax) {
+            this.anrLogCountMax = (countMax < 1 ? 1 : countMax);
+            return this;
+        }
+
+        /**
+         * Set the maximum number of rows to get from "logcat -b system" when an ANR occurred. (Default: 50)
+         *
+         * @param logcatSystemLines The maximum number of rows.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrLogcatSystemLines(int logcatSystemLines) {
+            this.anrLogcatSystemLines = logcatSystemLines;
+            return this;
+        }
+
+        /**
+         * Set the maximum number of rows to get from "logcat -b events" when an ANR occurred. (Default: 50)
+         *
+         * @param logcatEventsLines The maximum number of rows.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrLogcatEventsLines(int logcatEventsLines) {
+            this.anrLogcatEventsLines = logcatEventsLines;
+            return this;
+        }
+
+        /**
+         * Set the maximum number of rows to get from "logcat -b main" when an ANR occurred. (Default: 200)
+         *
+         * @param logcatMainLines The maximum number of rows.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrLogcatMainLines(int logcatMainLines) {
+            this.anrLogcatMainLines = logcatMainLines;
+            return this;
+        }
+
+        /**
+         * Set a callback to be executed when an ANR occurred. (If not set, nothing will be happened.)
+         *
+         * @param callback An instance of {@link xcrash.ICrashCallback}.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrCallback(ICrashCallback callback) {
+            this.anrCallback = callback;
             return this;
         }
     }
@@ -655,6 +754,16 @@ public final class XCrash {
      */
     @SuppressWarnings("unused")
     public static void testNativeCrash(boolean runInNewThread) {
-        NativeCrashHandler.getInstance().testNativeCrash(runInNewThread);
+        NativeHandler.getInstance().testNativeCrash(runInNewThread);
+    }
+
+    /**
+     * Force an ANR.
+     *
+     * <p>Warning: This method is for testing purposes only. Don't call it in a release version of your APP.
+     */
+    @SuppressWarnings("unused")
+    public static void testAnr() {
+        NativeHandler.getInstance().testAnr();
     }
 }

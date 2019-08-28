@@ -15,11 +15,9 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
-            useProguard false
         }
         release {
             minifyEnabled false
-            useProguard false
         }
     }
     sourceSets {
