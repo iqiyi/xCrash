@@ -542,7 +542,8 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
                                        xc_crash_emergency,
                                        xc_crash_spot.logcat_system_lines,
                                        xc_crash_spot.logcat_events_lines,
-                                       xc_crash_spot.logcat_main_lines))
+                                       xc_crash_spot.logcat_main_lines,
+                                       xc_crash_spot.dump_fds))
             {
                 close(xc_crash_log_fd);
                 xc_crash_log_fd = -1;

@@ -42,7 +42,8 @@ int xc_fallback_record(int log_fd,
                        char *emergency,
                        unsigned int logcat_system_lines,
                        unsigned int logcat_events_lines,
-                       unsigned int logcat_main_lines);
+                       unsigned int logcat_main_lines,
+                       int dump_fds);
 
 #ifdef __cplusplus
 }
