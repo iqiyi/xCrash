@@ -116,6 +116,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private void handleException(Thread thread, Throwable throwable) {
         Date crashTime = new Date();
 
+        //notify the java crash to native layer
+        NativeHandler.getInstance().notifyJavaCrashed();
+
         //create log file
         File logFile = null;
         try {

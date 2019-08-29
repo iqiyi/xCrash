@@ -34,6 +34,7 @@ class NativeHandler {
 
     private ICrashCallback crashCallback = null;
     private ICrashCallback anrCallback = null;
+    private boolean anrEnable = false;
 
     private NativeHandler() {
     }
@@ -84,6 +85,7 @@ class NativeHandler {
 
         this.crashCallback = crashCallback;
         this.anrCallback = anrCallback;
+        this.anrEnable = (anrEnable && Build.VERSION.SDK_INT >= 21);
 
         //init native lib
         try {
@@ -110,7 +112,7 @@ class NativeHandler {
                 crashDumpAllThreads,
                 crashDumpAllThreadsCountMax,
                 crashDumpAllThreadsWhiteList,
-                anrEnable,
+                this.anrEnable,
                 anrLogCountMax,
                 anrLogcatSystemLines,
                 anrLogcatEventsLines,
@@ -123,6 +125,12 @@ class NativeHandler {
         } catch (Throwable e) {
             XCrash.getLogger().e(Util.TAG, "NativeHandler init failed", e);
             return Errno.INIT_LIBRARY_FAILED;
+        }
+    }
+
+    void notifyJavaCrashed() {
+        if (this.anrEnable) {
+            NativeHandler.nativeNotifyJavaCrashed();
         }
     }
 
@@ -154,11 +162,11 @@ class NativeHandler {
 
     // do NOT obfuscate this method
     @SuppressWarnings("unused")
-    private static void crashCallback(String logPath, String emergency, boolean isJavaThread, boolean isMainThread, String threadName) {
+    private static void crashCallback(String logPath, String emergency, boolean dumpJavaStacktrace, boolean isMainThread, String threadName) {
         if (!TextUtils.isEmpty(logPath)) {
 
             //append java stacktrace
-            if (isJavaThread) {
+            if (dumpJavaStacktrace) {
                 String stacktrace = getStacktraceByThreadName(isMainThread, threadName);
                 if (!TextUtils.isEmpty(stacktrace)) {
                     TombstoneManager.appendSection(logPath, "java stacktrace", stacktrace);
@@ -225,6 +233,8 @@ class NativeHandler {
             int anrLogcatSystemLines,
             int anrLogcatEventsLines,
             int anrLogcatMainLines);
+
+    private static native void nativeNotifyJavaCrashed();
 
     private static native void nativeTestCrash(int runInNewThread);
 

@@ -79,7 +79,7 @@ static char             xc_crash_log_pathname[1024] = "\0";
 
 //the crash
 static pid_t            xc_crash_tid = 0;
-static int              xc_crash_is_java_thread = 0;
+static int              xc_crash_dump_java_stacktrace = 0; //try to dump java stacktrace in java layer
 static uint64_t         xc_crash_time = 0;
 
 //callback
@@ -243,7 +243,7 @@ static void xc_xcrash_record_java_stacktrace()
         return;
 
     //yes, this is a java thread
-    xc_crash_is_java_thread = 1;
+    xc_crash_dump_java_stacktrace = 1;
 
     //in Dalvik, get java stacktrace on the java layer
     if(xc_common_api_level < 21) return;
@@ -268,7 +268,7 @@ static void xc_xcrash_record_java_stacktrace()
     if(NULL == (thread = current())) goto end;
 
     //everything seems OK, do not dump java stacktrace again on the java layer
-    xc_crash_is_java_thread = 0;
+    xc_crash_dump_java_stacktrace = 0;
 
     //dump java stacktrace
     if(0 != xcc_util_write_str(xc_crash_log_fd, "\n\njava stacktrace:\n")) goto end;
@@ -291,7 +291,7 @@ static void *xc_crash_callback_thread(void *arg)
     uint64_t  data = 0;
     jstring   j_pathname  = NULL;
     jstring   j_emergency = NULL;
-    jboolean  j_is_java_thread = JNI_FALSE;
+    jboolean  j_dump_java_stacktrace = JNI_FALSE;
     jboolean  j_is_main_thread = JNI_FALSE;
     jstring   j_thread_name = NULL;
     char      c_thread_name[16] = "\0";
@@ -311,8 +311,8 @@ static void *xc_crash_callback_thread(void *arg)
     {
         if(NULL == (j_emergency = (*env)->NewStringUTF(env, xc_crash_emergency))) goto end;
     }
-    j_is_java_thread = (xc_crash_is_java_thread ? JNI_TRUE : JNI_FALSE);
-    if(j_is_java_thread)
+    j_dump_java_stacktrace = (xc_crash_dump_java_stacktrace ? JNI_TRUE : JNI_FALSE);
+    if(j_dump_java_stacktrace)
     {
         j_is_main_thread = (xc_common_process_id == xc_crash_tid ? JNI_TRUE : JNI_FALSE);
         if(!j_is_main_thread)
@@ -324,7 +324,7 @@ static void *xc_crash_callback_thread(void *arg)
 
     //do callback
     (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_crash_cb_method, j_pathname, j_emergency,
-                                 j_is_java_thread, j_is_main_thread, j_thread_name);
+                                 j_dump_java_stacktrace, j_is_main_thread, j_thread_name);
     XC_JNI_IGNORE_PENDING_EXCEPTION();
 
  end:
@@ -393,8 +393,8 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
     pthread_mutex_lock(&xc_crash_mutex);
 
     //only once
-    if(xc_common_crashed) goto exit;
-    xc_common_crashed = 1;
+    if(xc_common_native_crashed) goto exit;
+    xc_common_native_crashed = 1;
 
     //restore the original/default signal handler
     if(xc_crash_rethrow)

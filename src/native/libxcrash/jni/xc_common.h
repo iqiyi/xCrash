@@ -63,13 +63,16 @@ extern char         *xc_common_app_lib_dir;
 extern char         *xc_common_log_dir;
 
 //process info
-extern sig_atomic_t  xc_common_crashed;
 extern pid_t         xc_common_process_id;
 extern char         *xc_common_process_name;
 extern uint64_t      xc_common_start_time;
 extern JavaVM       *xc_common_vm;
 extern jclass        xc_common_cb_class;
 extern int           xc_common_fd_null;
+
+//process statue
+extern sig_atomic_t  xc_common_native_crashed;
+extern sig_atomic_t  xc_common_java_crashed;
 
 void xc_common_set_vm(JavaVM *vm, JNIEnv *env, jclass cls);
 

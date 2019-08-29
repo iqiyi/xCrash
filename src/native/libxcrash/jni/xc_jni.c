@@ -206,6 +206,14 @@ static jint xc_jni_init(JNIEnv       *env,
     return (0 == r_crash && 0 == r_anr) ? 0 : XCC_ERRNO_JNI;
 }
 
+static void xc_jni_notify_java_crashed(JNIEnv *env, jobject thiz)
+{
+    (void)env;
+    (void)thiz;
+
+    xc_common_java_crashed = 1;
+}
+
 static void xc_jni_test_crash(JNIEnv *env, jobject thiz, jint run_in_new_thread)
 {
     (void)env;
@@ -256,6 +264,13 @@ static JNINativeMethod xc_jni_methods[] = {
         ")"
         "I",
         (void *)xc_jni_init
+    },
+    {
+        "nativeNotifyJavaCrashed",
+        "("
+        ")"
+        "V",
+        (void *)xc_jni_notify_java_crashed
     },
     {
         "nativeTestCrash",

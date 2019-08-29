@@ -148,10 +148,7 @@ static int xc_anr_write_header(int fd, uint64_t anr_time)
                              xc_common_build_fingerprint);
     if(0 != (r = xcc_util_write_str(fd, buf))) return r;
     
-    if(0 != (r = xcc_util_write_format(fd, "pid: %d  >>> %s <<<\n\n"XCC_UTIL_THREAD_SEP,
-                                       xc_common_process_id, xc_common_process_name))) return r;
-    
-    return 0;
+    return xcc_util_write_format(fd, "pid: %d  >>> %s <<<\n\n", xc_common_process_id, xc_common_process_name);
 }
 
 static void *xc_anr_dumper(void *arg)
@@ -176,15 +173,12 @@ static void *xc_anr_dumper(void *arg)
         //block here, waiting for sigquit
         XCC_UTIL_TEMP_FAILURE_RETRY(read(xc_anr_notifier, &data, sizeof(data)));
         
+        //check if process already crashed
+        if(xc_common_native_crashed || xc_common_java_crashed) break;
+
         //ANR time
         if(0 != gettimeofday(&tv, NULL)) break;
         anr_time = (uint64_t)(tv.tv_sec) * 1000 * 1000 + (uint64_t)tv.tv_usec;
-
-        //check if process already crashed
-        if(xc_common_crashed) break;
-
-        //check and load symbol address
-        if(0 != xc_anr_load_symbols()) break;
 
         //clean up redundant logs
         //Unlike crash, we can't clean up redundant logs when the APP starts next time.
@@ -196,13 +190,23 @@ static void *xc_anr_dumper(void *arg)
         //write header info
         if(0 != xc_anr_write_header(fd, anr_time)) goto end;
 
-        //write ART runtime info
-        if(dup2(fd, STDERR_FILENO) < 0) goto end;
-        xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
-        dup2(xc_common_fd_null, STDERR_FILENO);
+        //write trace info from ART runtime
+        if(0 != xcc_util_write_format(fd, XCC_UTIL_THREAD_SEP"Cmd line: %s\n", xc_common_process_name)) goto end;
+        if(0 == xc_anr_load_symbols())
+        {
+            if(dup2(fd, STDERR_FILENO) >= 0)
+            {
+                xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
+                dup2(xc_common_fd_null, STDERR_FILENO);
+            }
+        }
+        else
+        {
+            if(0 != xcc_util_write_str(fd, "Failed to load symbols.\n")) goto end;
+        }
+        if(0 != xcc_util_write_str(fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
 
         //write other info
-        if(0 != xcc_util_write_str(fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
         if(0 != xcc_util_record_logcat(fd, xc_common_process_id, xc_common_api_level, xc_anr_logcat_system_lines, xc_anr_logcat_events_lines, xc_anr_logcat_main_lines)) goto end;
         if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
         if(0 != xcc_meminfo_record(fd, xc_common_process_id)) goto end;

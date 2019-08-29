@@ -65,13 +65,16 @@ char         *xc_common_app_lib_dir       = NULL;
 char         *xc_common_log_dir           = NULL;
 
 //process info
-sig_atomic_t  xc_common_crashed           = 0;
 pid_t         xc_common_process_id        = 0;
 char         *xc_common_process_name      = NULL;
 uint64_t      xc_common_start_time        = 0;
 JavaVM       *xc_common_vm                = NULL;
 jclass        xc_common_cb_class          = NULL;
 int           xc_common_fd_null           = -1;
+
+//process statue
+sig_atomic_t  xc_common_native_crashed    = 0;
+sig_atomic_t  xc_common_java_crashed      = 0;
 
 static int xc_common_crash_prepared_fd = -1;
 static int xc_common_anr_prepared_fd   = -1;

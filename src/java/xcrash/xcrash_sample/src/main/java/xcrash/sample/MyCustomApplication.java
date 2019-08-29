@@ -82,10 +82,11 @@ public class MyCustomApplication extends Application {
             .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
             .setNativeDumpAllThreadsCountMax(10)
             .setNativeCallback(callback)
+            .setAnrLogCountMax(10)
+            .setAnrCallback(callback)
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
-            .setLogFileMaintainDelayMs(1000)
-            .setAnrCallback(callback));
+            .setLogFileMaintainDelayMs(1000));
 
         // Send all pending crash log files.
         new Thread(new Runnable() {
