@@ -6,9 +6,9 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash 是一个安卓 APP 的崩溃捕获库，它支持捕获 native 崩溃和 Java 异常。
+xCrash 能为安卓 APP 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。（不需要 root 权限或任何系统权限）
 
-xCrash 能在 App 进程崩溃时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。并且，不需要 root 权限或任何系统权限。
+xCrash 能在 App 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
@@ -21,9 +21,9 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 * 支持 Android 4.0 - 10（API level 14 - 29）。
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
-* 捕获 native 崩溃和 Java 异常。
-* 通过正则表达式设置需要获取哪些线程的信息。
+* 捕获 java 崩溃，native 崩溃和 ANR。
 * 获取详细的内存使用统计信息。
+* 通过正则表达式设置需要获取哪些线程的信息。
 * 不需要 root 权限或任何系统权限。
 
 
@@ -121,10 +121,9 @@ cd ./src/java/xcrash/
 1. 查看 [xcrash-sample](src/java/xcrash/xcrash_sample)。
 2. 在 [GitHub issues](https://github.com/iqiyi/xCrash/issues) 交流。
 3. 邮件: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
-4. 微信: alan_choi
-5. QQ 群: 603635869。二维码:
+4. QQ 群: 603635869。二维码:
 
-<p align="left"><img src="doc/qq_group.jpeg" alt="qq group" width="320px"></p>
+<p align="left"><img src="doc/qq_group.jpg" alt="qq group" width="300px"></p>
 
 
 ## 贡献

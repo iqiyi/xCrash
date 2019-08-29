@@ -6,9 +6,9 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash is a crash reporting library for Android APP. It supports catching native crash and Java exception.
+xCrash provides the Android app with the ability to capture java crashes, native crashes and ANR. (no root permission or any system permissions are required)
 
-xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the APP process crashes. And, no root permission or any system permissions are required.
+xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANR.
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
@@ -21,9 +21,9 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 * Support Android 4.0 - 10 (API level 14 - 29).
 * Support armeabi, armeabi-v7a, arm64-v8a, x86 and x86_64.
-* Catching native crash and Java exception.
-* Setting which thread's info should be dumped via regular expressions.
+* Capturing java crashes, native crashes and ANR.
 * Dumping detailed memory usage statistics.
+* Setting which thread's info should be dumped via regular expressions.
 * Do not require root permission or any system permissions.
 
 
@@ -121,10 +121,9 @@ cd ./src/java/xcrash/
 1. Check the [xcrash-sample](src/java/xcrash/xcrash_sample).
 2. Communicate on [GitHub issues](https://github.com/iqiyi/xCrash/issues).
 3. Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
-4. WeChat: alan_choi
-5. QQ group: 603635869. QR code:
+4. QQ group: 603635869. QR code:
 
-<p align="left"><img src="doc/qq_group.jpeg" alt="qq group" width="300px"></p>
+<p align="left"><img src="doc/qq_group.jpg" alt="qq group" width="300px"></p>
 
 
 ## Contributing
