@@ -336,7 +336,7 @@ int xcd_process_record(xcd_process_t *self,
                        int dump_map,
                        int dump_fds,
                        int dump_all_threads,
-                       int dump_all_threads_count_max,
+                       unsigned int dump_all_threads_count_max,
                        char *dump_all_threads_whitelist,
                        int api_level)
 {
@@ -344,7 +344,7 @@ int xcd_process_record(xcd_process_t *self,
     xcd_thread_info_t *thd;
     regex_t           *re = NULL;
     size_t             re_cnt = 0;
-    int                thd_dumped = 0;
+    unsigned int       thd_dumped = 0;
     int                thd_matched_regex = 0;
     int                thd_ignored_by_limit = 0;
     
@@ -417,7 +417,7 @@ int xcd_process_record(xcd_process_t *self,
             if(0 != (r = xcc_util_write_format(log_fd, "threads matched whitelist: %d\n", thd_matched_regex))) goto ret;
         if(dump_all_threads_count_max > 0)
             if(0 != (r = xcc_util_write_format(log_fd, "threads ignored by max count limit: %d\n", thd_ignored_by_limit))) goto ret;
-        if(0 != (r = xcc_util_write_format(log_fd, "dumped threads: %zu\n", thd_dumped))) goto ret;
+        if(0 != (r = xcc_util_write_format(log_fd, "dumped threads: %u\n", thd_dumped))) goto ret;
         
         if(0 != (r = xcc_util_write_str(log_fd, XCC_UTIL_THREAD_END))) goto ret;
     }

@@ -30,6 +30,10 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import xcrash.TombstoneManager;
 import xcrash.TombstoneParser;
@@ -69,6 +73,10 @@ public class MyCustomApplication extends Application {
             }
         };
 
+        DateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US);
+        Date startTime = new Date();
+        Log.d(TAG, "xCrash SDK init start:    " + timeFormatter.format(startTime));
+
         // Initialize xCrash.
         XCrash.init(this, new XCrash.InitParameters()
             .setAppVersion("1.2.3-beta456-patch789")
@@ -87,6 +95,9 @@ public class MyCustomApplication extends Application {
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
             .setLogFileMaintainDelayMs(1000));
+
+        Date finishTime = new Date();
+        Log.d(TAG, "xCrash SDK init finished: " + timeFormatter.format(finishTime));
 
         // Send all pending crash log files.
         new Thread(new Runnable() {

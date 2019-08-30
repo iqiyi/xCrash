@@ -160,6 +160,7 @@ public final class XCrash {
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
+                params.anrDumpFds,
                 params.anrCallback);
         }
 
@@ -620,6 +621,7 @@ public final class XCrash {
         int            anrLogcatSystemLines = 50;
         int            anrLogcatEventsLines = 50;
         int            anrLogcatMainLines   = 200;
+        boolean        anrDumpFds           = true;
         ICrashCallback anrCallback          = null;
 
         /**
@@ -689,6 +691,18 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setAnrLogcatMainLines(int logcatMainLines) {
             this.anrLogcatMainLines = logcatMainLines;
+            return this;
+        }
+
+        /**
+         * Set if dumping FD list when an ANR occurred. (Default: enable)
+         *
+         * @param flag True or false.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrDumpFds(boolean flag) {
+            this.anrDumpFds = flag;
             return this;
         }
 

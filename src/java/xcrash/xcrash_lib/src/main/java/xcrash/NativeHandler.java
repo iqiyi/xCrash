@@ -34,6 +34,8 @@ class NativeHandler {
 
     private ICrashCallback crashCallback = null;
     private ICrashCallback anrCallback = null;
+
+    private boolean initNativeLibOk = false;
     private boolean anrEnable = false;
 
     private NativeHandler() {
@@ -65,6 +67,7 @@ class NativeHandler {
                    int anrLogcatSystemLines,
                    int anrLogcatEventsLines,
                    int anrLogcatMainLines,
+                   boolean anrDumpFds,
                    ICrashCallback anrCallback) {
         //load lib
         if (libLoader == null) {
@@ -116,11 +119,13 @@ class NativeHandler {
                 anrLogCountMax,
                 anrLogcatSystemLines,
                 anrLogcatEventsLines,
-                anrLogcatMainLines);
+                anrLogcatMainLines,
+                anrDumpFds);
             if (r != 0) {
                 XCrash.getLogger().e(Util.TAG, "NativeHandler init failed");
                 return Errno.INIT_LIBRARY_FAILED;
             }
+            initNativeLibOk = true;
             return 0; //OK
         } catch (Throwable e) {
             XCrash.getLogger().e(Util.TAG, "NativeHandler init failed", e);
@@ -129,17 +134,21 @@ class NativeHandler {
     }
 
     void notifyJavaCrashed() {
-        if (this.anrEnable) {
+        if (initNativeLibOk && this.anrEnable) {
             NativeHandler.nativeNotifyJavaCrashed();
         }
     }
 
     void testNativeCrash(boolean runInNewThread) {
-        NativeHandler.nativeTestCrash(runInNewThread ? 1 : 0);
+        if (initNativeLibOk) {
+            NativeHandler.nativeTestCrash(runInNewThread ? 1 : 0);
+        }
     }
 
     void testAnr() {
-        NativeHandler.nativeTestAnr();
+        if (initNativeLibOk) {
+            NativeHandler.nativeTestAnr();
+        }
     }
 
     private static String getStacktraceByThreadName(boolean isMainThread, String threadName) {
@@ -232,7 +241,8 @@ class NativeHandler {
             int anrLogCountMax,
             int anrLogcatSystemLines,
             int anrLogcatEventsLines,
-            int anrLogcatMainLines);
+            int anrLogcatMainLines,
+            boolean anrDumpFds);
 
     private static native void nativeNotifyJavaCrashed();
 

@@ -33,10 +33,11 @@ extern "C" {
 #endif
 
 int xc_anr_init(JNIEnv *env,
-                int log_max_count,
+                unsigned int log_max_count,
                 unsigned int logcat_system_lines,
                 unsigned int logcat_events_lines,
-                unsigned int logcat_main_lines);
+                unsigned int logcat_main_lines,
+                int dump_fds);
 
 #ifdef __cplusplus
 }

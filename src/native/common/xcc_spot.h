@@ -56,7 +56,7 @@ typedef struct
     int          dump_map;
     int          dump_fds;
     int          dump_all_threads;
-    int          dump_all_threads_count_max;
+    unsigned int dump_all_threads_count_max;
 
     //set when crashed (content lenghts after this struct)
     size_t       log_pathname_len;

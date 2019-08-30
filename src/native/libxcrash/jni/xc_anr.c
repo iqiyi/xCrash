@@ -54,12 +54,15 @@
 static void                            *xc_anr_libcpp_cerr = NULL;
 static void                           **xc_anr_libart_runtime_instance = NULL;
 static xcc_util_libart_runtime_dump_t   xc_anr_libart_runtime_dump = NULL;
+static int                              xc_anr_symbols_loaded = 0;
+static int                              xc_anr_symbols_status = XCC_ERRNO_NOTFND;
 
 //init parameters
-static int                              xc_anr_log_max_count;
+static unsigned int                     xc_anr_log_max_count;
 static unsigned int                     xc_anr_logcat_system_lines;
 static unsigned int                     xc_anr_logcat_events_lines;
 static unsigned int                     xc_anr_logcat_main_lines;
+static int                              xc_anr_dump_fds;
 
 //callback
 static jmethodID                        xc_anr_cb_method = NULL;
@@ -67,29 +70,27 @@ static int                              xc_anr_notifier = -1;
 
 static int xc_anr_load_symbols()
 {
-    int      r      = XCC_ERRNO_JNI;
     xc_dl_t *libcpp = NULL;
     xc_dl_t *libart = NULL;
 
-    if(NULL !=  xc_anr_libart_runtime_instance &&
-       NULL != *xc_anr_libart_runtime_instance &&
-       NULL !=  xc_anr_libart_runtime_dump &&
-       NULL !=  xc_anr_libcpp_cerr) return 0;
+    //only once
+    if(xc_anr_symbols_loaded) return xc_anr_symbols_status;
+    xc_anr_symbols_loaded = 1;
 
     if(NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
     if(NULL == (xc_anr_libcpp_cerr = xc_dl_sym(libcpp, XCC_UTIL_LIBCPP_CERR))) goto end;
 
     if(NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (xc_anr_libart_runtime_instance = (void **)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_INSTANCE))) goto end;
-    if(NULL == *xc_anr_libart_runtime_instance) goto end;
     if(NULL == (xc_anr_libart_runtime_dump = (xcc_util_libart_runtime_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_DUMP))) goto end;
-    
-    r = 0; //OK
+
+    //OK
+    xc_anr_symbols_status = 0;
 
  end:
     if(NULL != libcpp) xc_dl_destroy(&libcpp);
     if(NULL != libart) xc_dl_destroy(&libart);
-    return r;
+    return xc_anr_symbols_status;
 }
 
 static int xc_anr_logs_filter(const struct dirent *entry)
@@ -114,9 +115,9 @@ static int xc_anr_logs_clean(void)
     char            pathname[1024];
 
     if(0 > (n = scandir(xc_common_log_dir, &entry_list, xc_anr_logs_filter, alphasort))) return XCC_ERRNO_SYS;
-    if(n >= xc_anr_log_max_count)
+    if(n >= (int)xc_anr_log_max_count)
     {
-        for(i = 0; i < (n - xc_anr_log_max_count + 1); i++)
+        for(i = 0; i < (n - (int)xc_anr_log_max_count + 1); i++)
         {
             snprintf(pathname, sizeof(pathname), "%s/%s", xc_common_log_dir, entry_list[i]->d_name);
             unlink(pathname);
@@ -192,23 +193,31 @@ static void *xc_anr_dumper(void *arg)
 
         //write trace info from ART runtime
         if(0 != xcc_util_write_format(fd, XCC_UTIL_THREAD_SEP"Cmd line: %s\n", xc_common_process_name)) goto end;
-        if(0 == xc_anr_load_symbols())
-        {
-            if(dup2(fd, STDERR_FILENO) >= 0)
-            {
-                xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
-                dup2(xc_common_fd_null, STDERR_FILENO);
-            }
-        }
-        else
+        if(0 != xc_anr_load_symbols())
         {
             if(0 != xcc_util_write_str(fd, "Failed to load symbols.\n")) goto end;
+            goto skip;
         }
+        if(NULL == *xc_anr_libart_runtime_instance)
+        {
+            if(0 != xcc_util_write_str(fd, "Failed to check runtime address.\n")) goto end;
+            goto skip;
+        }
+        if(dup2(fd, STDERR_FILENO) < 0)
+        {
+            if(0 != xcc_util_write_str(fd, "Failed to duplicate FD.\n")) goto end;
+            goto skip;
+        }
+        xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
+        dup2(xc_common_fd_null, STDERR_FILENO);
+
+    skip:
         if(0 != xcc_util_write_str(fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
 
         //write other info
         if(0 != xcc_util_record_logcat(fd, xc_common_process_id, xc_common_api_level, xc_anr_logcat_system_lines, xc_anr_logcat_events_lines, xc_anr_logcat_main_lines)) goto end;
-        if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
+        if(xc_anr_dump_fds)
+            if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
         if(0 != xcc_meminfo_record(fd, xc_common_process_id)) goto end;
 
     end:
@@ -259,10 +268,11 @@ static void xc_anr_init_callback(JNIEnv *env)
 }
 
 int xc_anr_init(JNIEnv *env,
-                int log_max_count,
+                unsigned int log_max_count,
                 unsigned int logcat_system_lines,
                 unsigned int logcat_events_lines,
-                unsigned int logcat_main_lines)
+                unsigned int logcat_main_lines,
+                int dump_fds)
 {
     int r;
     pthread_t thd;
@@ -274,6 +284,7 @@ int xc_anr_init(JNIEnv *env,
     xc_anr_logcat_system_lines = logcat_system_lines;
     xc_anr_logcat_events_lines = logcat_events_lines;
     xc_anr_logcat_main_lines = logcat_main_lines;
+    xc_anr_dump_fds = dump_fds;
 
     //init for JNI callback
     xc_anr_init_callback(env);

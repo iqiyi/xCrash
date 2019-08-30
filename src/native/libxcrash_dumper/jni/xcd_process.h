@@ -50,7 +50,7 @@ int xcd_process_record(xcd_process_t *self,
                        int dump_map,
                        int dump_fds,
                        int dump_all_threads,
-                       int dump_all_threads_count_max,
+                       unsigned int dump_all_threads_count_max,
                        char *dump_all_threads_whitelist,
                        int api_level);
 

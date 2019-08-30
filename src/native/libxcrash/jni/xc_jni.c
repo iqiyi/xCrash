@@ -71,7 +71,8 @@ static jint xc_jni_init(JNIEnv       *env,
                         jint          anr_log_max_count,
                         jint          anr_logcat_system_lines,
                         jint          anr_logcat_events_lines,
-                        jint          anr_logcat_main_lines)
+                        jint          anr_logcat_main_lines,
+                        jboolean      anr_dump_fds)
 {
     int              r_crash                                = XCC_ERRNO_JNI;
     int              r_anr                                  = XCC_ERRNO_JNI;
@@ -104,8 +105,10 @@ static jint xc_jni_init(JNIEnv       *env,
        !os_version || !abi_list || !manufacturer || !brand || !model || !build_fingerprint ||
        !app_id || !app_version || !app_lib_dir || !log_dir ||
        crash_logcat_system_lines < 0 || crash_logcat_events_lines < 0 || crash_logcat_main_lines < 0 ||
-       anr_logcat_system_lines < 0 || anr_logcat_events_lines < 0 || anr_logcat_main_lines < 0 ||
-       anr_log_max_count < 0) return XCC_ERRNO_INVAL;
+       crash_dump_all_threads_count_max < 0 ||
+       anr_log_max_count < 0 ||
+       anr_logcat_system_lines < 0 || anr_logcat_events_lines < 0 || anr_logcat_main_lines < 0)
+        return XCC_ERRNO_INVAL;
 
     if(NULL == (c_os_version        = (*env)->GetStringUTFChars(env, os_version,        0))) goto clean;
     if(NULL == (c_abi_list          = (*env)->GetStringUTFChars(env, abi_list,          0))) goto clean;
@@ -157,15 +160,15 @@ static jint xc_jni_init(JNIEnv       *env,
 
         //crash init
         r_crash = xc_crash_init(env,
-                                crash_rethrow,
+                                crash_rethrow ? 1 : 0,
                                 (unsigned int)crash_logcat_system_lines,
                                 (unsigned int)crash_logcat_events_lines,
                                 (unsigned int)crash_logcat_main_lines,
-                                (int)crash_dump_elf_hash,
-                                (int)crash_dump_map,
-                                (int)crash_dump_fds,
-                                (int)crash_dump_all_threads,
-                                (int)crash_dump_all_threads_count_max,
+                                crash_dump_elf_hash ? 1 : 0,
+                                crash_dump_map ? 1 : 0,
+                                crash_dump_fds ? 1 : 0,
+                                crash_dump_all_threads ? 1 : 0,
+                                (unsigned int)crash_dump_all_threads_count_max,
                                 c_crash_dump_all_threads_whitelist,
                                 c_crash_dump_all_threads_whitelist_len);
     }
@@ -174,10 +177,11 @@ static jint xc_jni_init(JNIEnv       *env,
     {
         //anr init
         r_anr = xc_anr_init(env,
-                            (int)anr_log_max_count,
+                            (unsigned int)anr_log_max_count,
                             (unsigned int)anr_logcat_system_lines,
                             (unsigned int)anr_logcat_events_lines,
-                            (unsigned int)anr_logcat_main_lines);
+                            (unsigned int)anr_logcat_main_lines,
+                            anr_dump_fds ? 1 : 0);
     }
     
  clean:
@@ -261,6 +265,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "I"
         "I"
         "I"
+        "Z"
         ")"
         "I",
         (void *)xc_jni_init

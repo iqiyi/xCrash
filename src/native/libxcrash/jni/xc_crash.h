@@ -41,7 +41,7 @@ int xc_crash_init(JNIEnv *env,
                   int dump_map,
                   int dump_fds,
                   int dump_all_threads,
-                  int dump_all_threads_count_max,
+                  unsigned int dump_all_threads_count_max,
                   const char **dump_all_threads_whitelist,
                   size_t dump_all_threads_whitelist_len);
 
