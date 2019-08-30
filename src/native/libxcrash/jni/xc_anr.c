@@ -50,10 +50,14 @@
 #define XC_ANR_CALLBACK_METHOD_NAME      "anrCallback"
 #define XC_ANR_CALLBACK_METHOD_SIGNATURE "(Ljava/lang/String;Ljava/lang/String;)V"
 
+static int                              xc_anr_is_lollipop = 0;
+
 //symbol address in libc++.so and libart.so
 static void                            *xc_anr_libcpp_cerr = NULL;
 static void                           **xc_anr_libart_runtime_instance = NULL;
 static xcc_util_libart_runtime_dump_t   xc_anr_libart_runtime_dump = NULL;
+static xcc_util_libart_dbg_suspend_t    xc_anr_libart_dbg_suspend = NULL;
+static xcc_util_libart_dbg_resume_t     xc_anr_libart_dbg_resume = NULL;
 static int                              xc_anr_symbols_loaded = 0;
 static int                              xc_anr_symbols_status = XCC_ERRNO_NOTFND;
 
@@ -67,6 +71,8 @@ static int                              xc_anr_dump_fds;
 //callback
 static jmethodID                        xc_anr_cb_method = NULL;
 static int                              xc_anr_notifier = -1;
+
+
 
 static int xc_anr_load_symbols()
 {
@@ -83,6 +89,11 @@ static int xc_anr_load_symbols()
     if(NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (xc_anr_libart_runtime_instance = (void **)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_INSTANCE))) goto end;
     if(NULL == (xc_anr_libart_runtime_dump = (xcc_util_libart_runtime_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_DUMP))) goto end;
+    if(xc_anr_is_lollipop)
+    {
+        if(NULL == (xc_anr_libart_dbg_suspend = (xcc_util_libart_dbg_suspend_t)xc_dl_sym(libart, XCC_UTIL_LIBART_DBG_SUSPEND))) goto end;
+        if(NULL == (xc_anr_libart_dbg_resume = (xcc_util_libart_dbg_resume_t)xc_dl_sym(libart, XCC_UTIL_LIBART_DBG_RESUME))) goto end;
+    }
 
     //OK
     xc_anr_symbols_status = 0;
@@ -208,7 +219,9 @@ static void *xc_anr_dumper(void *arg)
             if(0 != xcc_util_write_str(fd, "Failed to duplicate FD.\n")) goto end;
             goto skip;
         }
+        if(xc_anr_is_lollipop) xc_anr_libart_dbg_suspend();
         xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
+        if(xc_anr_is_lollipop) xc_anr_libart_dbg_resume();
         dup2(xc_common_fd_null, STDERR_FILENO);
 
     skip:
@@ -279,6 +292,9 @@ int xc_anr_init(JNIEnv *env,
 
     //capture ANR only for ART
     if(xc_common_api_level < 21) return 0;
+
+    //is Android Lollipop (5.x)?
+    xc_anr_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
 
     xc_anr_log_max_count = log_max_count;
     xc_anr_logcat_system_lines = logcat_system_lines;

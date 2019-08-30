@@ -114,11 +114,15 @@ typedef struct
 #define XCC_UTIL_LIBART_THREAD_CURRENT   "_ZN3art6Thread14CurrentFromGdbEv"
 #define XCC_UTIL_LIBART_THREAD_DUMP      "_ZNK3art6Thread13DumpJavaStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE"
 #define XCC_UTIL_LIBART_THREAD_DUMP2     "_ZNK3art6Thread13DumpJavaStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbb"
+#define XCC_UTIL_LIBART_DBG_SUSPEND      "_ZN3art3Dbg9SuspendVMEv"
+#define XCC_UTIL_LIBART_DBG_RESUME       "_ZN3art3Dbg8ResumeVMEv"
 
 typedef void  (*xcc_util_libart_runtime_dump_t)(void *runtime, void *ostream);
 typedef void *(*xcc_util_libart_thread_current_t)(void);
 typedef void  (*xcc_util_libart_thread_dump_t)(void *thread, void *ostream);
 typedef void  (*xcc_util_libart_thread_dump2_t)(void *thread, void *ostream, int check_suspended, int dump_locks);
+typedef void  (*xcc_util_libart_dbg_suspend_t)(void);
+typedef void  (*xcc_util_libart_dbg_resume_t)(void);
 
 const char* xcc_util_get_signame(const siginfo_t* si);
 const char* xcc_util_get_sigcodename(const siginfo_t* si);
