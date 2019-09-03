@@ -72,8 +72,6 @@ static int                              xc_anr_dump_fds;
 static jmethodID                        xc_anr_cb_method = NULL;
 static int                              xc_anr_notifier = -1;
 
-
-
 static int xc_anr_load_symbols()
 {
     xc_dl_t *libcpp = NULL;
@@ -102,6 +100,65 @@ static int xc_anr_load_symbols()
     if(NULL != libcpp) xc_dl_destroy(&libcpp);
     if(NULL != libart) xc_dl_destroy(&libart);
     return xc_anr_symbols_status;
+}
+
+//not reliable, but try our best...
+static int xc_anr_check_address_valid()
+{
+    FILE      *f = NULL;
+    char       line[512];
+    uintptr_t  start, end;
+    int        r_cerr = XCC_ERRNO_INVAL;
+    int        r_runtime_instance = XCC_ERRNO_INVAL;
+    int        r_runtime_dump = XCC_ERRNO_INVAL;
+    int        r_dbg_suspend = XCC_ERRNO_INVAL;
+    int        r_dbg_resume = XCC_ERRNO_INVAL;
+    int        r = XCC_ERRNO_INVAL;
+
+    if(NULL == (f = fopen("/proc/self/maps", "r"))) return XCC_ERRNO_SYS;
+    
+    while(fgets(line, sizeof(line), f))
+    {
+        if(2 != sscanf(line, "%"SCNxPTR"-%"SCNxPTR" r", &start, &end)) continue;
+        
+        if(0 != r_cerr && (uintptr_t)xc_anr_libcpp_cerr >= start && (uintptr_t)xc_anr_libcpp_cerr < end)
+            r_cerr = 0;
+        if(0 != r_runtime_instance && (uintptr_t)xc_anr_libart_runtime_instance >= start && (uintptr_t)xc_anr_libart_runtime_instance < end)
+            r_runtime_instance = 0;
+        if(0 != r_runtime_dump && (uintptr_t)xc_anr_libart_runtime_dump >= start && (uintptr_t)xc_anr_libart_runtime_dump < end)
+            r_runtime_dump = 0;
+        if(xc_anr_is_lollipop)
+        {
+            if(0 != r_dbg_suspend && (uintptr_t)xc_anr_libart_dbg_suspend >= start && (uintptr_t)xc_anr_libart_dbg_suspend < end)
+                r_dbg_suspend = 0;
+            if(0 != r_dbg_resume && (uintptr_t)xc_anr_libart_dbg_resume >= start && (uintptr_t)xc_anr_libart_dbg_resume < end)
+                r_dbg_resume = 0;
+        }
+        
+        if(0 == r_cerr && 0 == r_runtime_instance && 0 == r_runtime_dump &&
+           (!xc_anr_is_lollipop || (0 == r_dbg_suspend && 0 == r_dbg_resume)))
+        {
+            r = 0;
+            break;
+        }
+    }
+    if(0 != r) goto end;
+
+    r = XCC_ERRNO_INVAL;
+    rewind(f);
+    while(fgets(line, sizeof(line), f))
+    {
+        if(2 != sscanf(line, "%"SCNxPTR"-%"SCNxPTR" r", &start, &end)) continue;
+        if((uintptr_t)(*xc_anr_libart_runtime_instance) >= start && (uintptr_t)(*xc_anr_libart_runtime_instance) < end)
+        {
+            r = 0;
+            break;
+        }
+    }
+    
+ end:
+    fclose(f);
+    return r;
 }
 
 static int xc_anr_logs_filter(const struct dirent *entry)
@@ -204,12 +261,13 @@ static void *xc_anr_dumper(void *arg)
 
         //write trace info from ART runtime
         if(0 != xcc_util_write_format(fd, XCC_UTIL_THREAD_SEP"Cmd line: %s\n", xc_common_process_name)) goto end;
+        if(0 != xcc_util_write_str(fd, "Mode: ART runtime.\n")) goto end;
         if(0 != xc_anr_load_symbols())
         {
             if(0 != xcc_util_write_str(fd, "Failed to load symbols.\n")) goto end;
             goto skip;
         }
-        if(NULL == *xc_anr_libart_runtime_instance)
+        if(0 != xc_anr_check_address_valid())
         {
             if(0 != xcc_util_write_str(fd, "Failed to check runtime address.\n")) goto end;
             goto skip;
@@ -219,9 +277,11 @@ static void *xc_anr_dumper(void *arg)
             if(0 != xcc_util_write_str(fd, "Failed to duplicate FD.\n")) goto end;
             goto skip;
         }
-        if(xc_anr_is_lollipop) xc_anr_libart_dbg_suspend();
+        if(xc_anr_is_lollipop)
+            xc_anr_libart_dbg_suspend();
         xc_anr_libart_runtime_dump(*xc_anr_libart_runtime_instance, xc_anr_libcpp_cerr);
-        if(xc_anr_is_lollipop) xc_anr_libart_dbg_resume();
+        if(xc_anr_is_lollipop)
+            xc_anr_libart_dbg_resume();
         dup2(xc_common_fd_null, STDERR_FILENO);
 
     skip:
