@@ -644,9 +644,11 @@ public class TombstoneParser {
                         status = Status.UNKNOWN;
                     } else {
                         if (sectionContentOutdent) {
-                            if (sectionTitle.equals(keyJavaStacktrace)) {
+                            if (sectionTitle.equals(keyJavaStacktrace) && line.startsWith(" ")) {
+                                //java stacktrace in native crash
                                 line = line.trim();
                             } else if (line.startsWith("    ")) {
+                                //other sections
                                 line = line.substring(4);
                             }
                         }
