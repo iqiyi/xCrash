@@ -88,7 +88,7 @@ class NativeHandler {
 
         this.crashCallback = crashCallback;
         this.anrCallback = anrCallback;
-        this.anrEnable = (anrEnable && Build.VERSION.SDK_INT >= 21);
+        this.anrEnable = anrEnable;
 
         //init native lib
         try {
@@ -115,7 +115,7 @@ class NativeHandler {
                 crashDumpAllThreads,
                 crashDumpAllThreadsCountMax,
                 crashDumpAllThreadsWhiteList,
-                this.anrEnable,
+                anrEnable,
                 anrLogCountMax,
                 anrLogcatSystemLines,
                 anrLogcatEventsLines,
@@ -134,7 +134,7 @@ class NativeHandler {
     }
 
     void notifyJavaCrashed() {
-        if (initNativeLibOk && this.anrEnable) {
+        if (initNativeLibOk && anrEnable) {
             NativeHandler.nativeNotifyJavaCrashed();
         }
     }

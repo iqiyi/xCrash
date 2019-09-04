@@ -2,11 +2,11 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.3.7-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.4.0-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash provides the Android app with the ability to capture java crashes, native crashes and ANR. (no root permission or any system permissions are required)
+xCrash provides the Android app with the ability to capture java crashes, native crashes and ANR. And no root permission or any system permissions are required.
 
 xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANR.
 
@@ -44,7 +44,7 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.3.7'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.0'
 }
 ```
 

@@ -22,26 +22,19 @@
 // Created by caikelun on 2019-03-07.
 package xcrash;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Build;
 
 @SuppressLint("StaticFieldLeak")
 class JavaCrashHandler implements UncaughtExceptionHandler {
@@ -59,6 +52,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private int logcatSystemLines;
     private int logcatEventsLines;
     private int logcatMainLines;
+    private boolean dumpFds;
     private boolean dumpAllThreads;
     private int dumpAllThreadsCountMax;
     private String[] dumpAllThreadsWhiteList;
@@ -74,7 +68,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     void initialize(Context ctx, String appId, String appVersion, String logDir, boolean rethrow,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
-                    boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
+                    boolean dumpFds, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
         this.pid = android.os.Process.myPid();
         this.processName = Util.getProcessName(ctx, this.pid);
@@ -85,6 +79,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         this.logcatSystemLines = logcatSystemLines;
         this.logcatEventsLines = logcatEventsLines;
         this.logcatMainLines = logcatMainLines;
+        this.dumpFds = dumpFds;
         this.dumpAllThreads = dumpAllThreads;
         this.dumpAllThreadsCountMax = dumpAllThreadsCountMax;
         this.dumpAllThreadsWhiteList = dumpAllThreadsWhiteList;
@@ -116,8 +111,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private void handleException(Thread thread, Throwable throwable) {
         Date crashTime = new Date();
 
-        //notify the java crash to native layer
+        //notify the java crash
         NativeHandler.getInstance().notifyJavaCrashed();
+        AnrHandler.getInstance().notifyJavaCrashed();
 
         //create log file
         File logFile = null;
@@ -152,11 +148,16 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
                 //write logcat
                 if (logcatMainLines > 0 || logcatSystemLines > 0 || logcatEventsLines > 0) {
-                    raf.write(getLogcat().getBytes("UTF-8"));
+                    raf.write(Util.getLogcat(logcatMainLines, logcatSystemLines, logcatEventsLines).getBytes("UTF-8"));
+                }
+
+                //write fds
+                if (dumpFds) {
+                    raf.write(Util.getFds().getBytes("UTF-8"));
                 }
 
                 //write memory info
-                raf.write(getMemoryInfo().getBytes("UTF-8"));
+                raf.write(Util.getMemoryInfo().getBytes("UTF-8"));
 
                 //write other threads info
                 if (dumpAllThreads) {
@@ -191,112 +192,12 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         throwable.printStackTrace(pw);
         String stacktrace = sw.toString();
 
-        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
-
-        return Util.sepHead + "\n"
-                + "Tombstone maker: '" + Version.fullVersion + "'\n"
-                + "Crash type: '" + Util.javaCrashType + "'\n"
-                + "Start time: '" + timeFormatter.format(startTime) + "'\n"
-                + "Crash time: '" + timeFormatter.format(crashTime) + "'\n"
-                + "App ID: '" + appId + "'\n"
-                + "App version: '" + appVersion + "'\n"
-                + "Rooted: '" + (Util.isRoot() ? "Yes" : "No") + "'\n"
-                + "API level: '" + Build.VERSION.SDK_INT + "'\n"
-                + "OS version: '" + Build.VERSION.RELEASE + "'\n"
-                + "ABI list: '" + Util.getAbiList() + "'\n"
-                + "Manufacturer: '" + Build.MANUFACTURER + "'\n"
-                + "Brand: '" + Build.BRAND + "'\n"
-                + "Model: '" + Build.MODEL + "'\n"
-                + "Build fingerprint: '" + Build.FINGERPRINT + "'\n"
+        return Util.getLogHeader(startTime, crashTime, Util.javaCrashType, appId, appVersion)
                 + "pid: " + pid + ", tid: " + android.os.Process.myTid() + ", name: " + thread.getName() + "  >>> " + processName + " <<<\n"
                 + "\n"
                 + "java stacktrace:\n"
                 + stacktrace
                 + "\n";
-    }
-
-    private String getMemoryInfo() {
-        return "memory info:\n"
-            + " System Summary (From: /proc/meminfo)\n"
-            + Util.getFile("/proc/meminfo")
-            + "-\n"
-            + " Process Status (From: /proc/PID/status)\n"
-            + Util.getFile("/proc/" + pid + "/status")
-            + "-\n"
-            + " Process Limits (From: /proc/PID/limits)\n"
-            + Util.getFile("/proc/" + pid + "/limits")
-            + "-\n"
-            + Util.getProcessMemoryInfo()
-            + "\n";
-    }
-
-    private String getLogcat() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("logcat:\n");
-
-        if (logcatMainLines > 0) {
-            getLogcatByBufferName(sb, "main", logcatMainLines, 'D');
-        }
-        if (logcatSystemLines > 0) {
-            getLogcatByBufferName(sb, "system", logcatSystemLines, 'W');
-        }
-        if (logcatEventsLines > 0) {
-            getLogcatByBufferName(sb, "events", logcatSystemLines, 'I');
-        }
-
-        sb.append("\n");
-
-        return sb.toString();
-    }
-
-    private void getLogcatByBufferName(StringBuilder sb, String bufferName, int lines, char priority) {
-        boolean withPid = (android.os.Build.VERSION.SDK_INT >= 24);
-        String pidString = Integer.toString(pid);
-        String pidLabel = " " + pidString + " ";
-
-        //command for ProcessBuilder
-        List<String> command = new ArrayList<String>();
-        command.add("/system/bin/logcat");
-        command.add("-b");
-        command.add(bufferName);
-        command.add("-d");
-        command.add("-v");
-        command.add("threadtime");
-        command.add("-t");
-        command.add(Integer.toString(withPid ? lines : (int) (lines * 1.2)));
-        if (withPid) {
-            command.add("--pid");
-            command.add(pidString);
-        }
-        command.add("*:" + priority);
-
-        //append the command line
-        Object[] commandArray = command.toArray();
-        sb.append("--------- tail end of log ").append(bufferName);
-        sb.append(" (").append(android.text.TextUtils.join(" ", commandArray)).append(")\n");
-
-        //append logs
-        BufferedReader br = null;
-        String line;
-        try {
-            Process process = new ProcessBuilder().command(command).start();
-            br = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            while ((line = br.readLine()) != null) {
-                if (withPid || line.contains(pidLabel)) {
-                    sb.append(line).append("\n");
-                }
-            }
-        } catch (Exception e) {
-            XCrash.getLogger().w(Util.TAG, "JavaCrashHandler run logcat command failed", e);
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException ignored) {
-                }
-            }
-        }
     }
 
     private String getOtherThreadsInfo(Thread crashedThread) {

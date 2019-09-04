@@ -31,6 +31,14 @@ import android.text.TextUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 class Util {
@@ -166,7 +174,7 @@ class Util {
         return sb.toString();
     }
 
-    static String getFile(String pathname) {
+    private static String getFile(String pathname) {
         StringBuilder sb = new StringBuilder();
         BufferedReader br = null;
         String line;
@@ -203,6 +211,155 @@ class Util {
             }
         } catch (Exception ignored) {
             return false;
+        }
+    }
+
+    static String getLogHeader(Date startTime, Date crashTime, String crashType, String appId, String appVersion) {
+        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+
+        return Util.sepHead + "\n"
+            + "Tombstone maker: '" + Version.fullVersion + "'\n"
+            + "Crash type: '" + crashType + "'\n"
+            + "Start time: '" + timeFormatter.format(startTime) + "'\n"
+            + "Crash time: '" + timeFormatter.format(crashTime) + "'\n"
+            + "App ID: '" + appId + "'\n"
+            + "App version: '" + appVersion + "'\n"
+            + "Rooted: '" + (Util.isRoot() ? "Yes" : "No") + "'\n"
+            + "API level: '" + Build.VERSION.SDK_INT + "'\n"
+            + "OS version: '" + Build.VERSION.RELEASE + "'\n"
+            + "ABI list: '" + Util.getAbiList() + "'\n"
+            + "Manufacturer: '" + Build.MANUFACTURER + "'\n"
+            + "Brand: '" + Build.BRAND + "'\n"
+            + "Model: '" + Build.MODEL + "'\n"
+            + "Build fingerprint: '" + Build.FINGERPRINT + "'\n";
+    }
+
+    static String getMemoryInfo() {
+        int pid = android.os.Process.myPid();
+        return "memory info:\n"
+            + " System Summary (From: /proc/meminfo)\n"
+            + Util.getFile("/proc/meminfo")
+            + "-\n"
+            + " Process Status (From: /proc/PID/status)\n"
+            + Util.getFile("/proc/" + pid + "/status")
+            + "-\n"
+            + " Process Limits (From: /proc/PID/limits)\n"
+            + Util.getFile("/proc/" + pid + "/limits")
+            + "-\n"
+            + Util.getProcessMemoryInfo()
+            + "\n";
+    }
+
+    static String getFds() {
+        int pid = android.os.Process.myPid();
+        StringBuilder sb = new StringBuilder("open files:\n");
+
+        try {
+            File dir = new File("/proc/" + pid + "/fd");
+            File[] fds = dir.listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String name) {
+                    return TextUtils.isDigitsOnly(name);
+                }
+            });
+
+            int count = 0;
+            if (fds != null) {
+                for (File fd : fds) {
+                    String path = null;
+                    try {
+                        path = fd.getCanonicalPath();
+                    } catch (Exception ignored) {
+                    }
+                    sb.append("    fd ").append(fd.getName()).append(": ")
+                        .append(TextUtils.isEmpty(path) ? "???" : path).append('\n');
+
+                    count++;
+                    if (count > 1024) {
+                        break;
+                    }
+                }
+
+                if (fds.length > 1024) {
+                    sb.append("    ......\n");
+                }
+
+                sb.append("    (number of FDs: ").append(fds.length).append(")\n");
+            }
+        } catch (Exception ignored) {
+        }
+
+        sb.append('\n');
+        return sb.toString();
+    }
+
+    static String getLogcat(int logcatMainLines, int logcatSystemLines, int logcatEventsLines) {
+        int pid = android.os.Process.myPid();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("logcat:\n");
+
+        if (logcatMainLines > 0) {
+            getLogcatByBufferName(pid, sb, "main", logcatMainLines, 'D');
+        }
+        if (logcatSystemLines > 0) {
+            getLogcatByBufferName(pid, sb, "system", logcatSystemLines, 'W');
+        }
+        if (logcatEventsLines > 0) {
+            getLogcatByBufferName(pid, sb, "events", logcatSystemLines, 'I');
+        }
+
+        sb.append("\n");
+
+        return sb.toString();
+    }
+
+    private static void getLogcatByBufferName(int pid, StringBuilder sb, String bufferName, int lines, char priority) {
+        boolean withPid = (android.os.Build.VERSION.SDK_INT >= 24);
+        String pidString = Integer.toString(pid);
+        String pidLabel = " " + pidString + " ";
+
+        //command for ProcessBuilder
+        List<String> command = new ArrayList<String>();
+        command.add("/system/bin/logcat");
+        command.add("-b");
+        command.add(bufferName);
+        command.add("-d");
+        command.add("-v");
+        command.add("threadtime");
+        command.add("-t");
+        command.add(Integer.toString(withPid ? lines : (int) (lines * 1.2)));
+        if (withPid) {
+            command.add("--pid");
+            command.add(pidString);
+        }
+        command.add("*:" + priority);
+
+        //append the command line
+        Object[] commandArray = command.toArray();
+        sb.append("--------- tail end of log ").append(bufferName);
+        sb.append(" (").append(android.text.TextUtils.join(" ", commandArray)).append(")\n");
+
+        //append logs
+        BufferedReader br = null;
+        String line;
+        try {
+            Process process = new ProcessBuilder().command(command).start();
+            br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            while ((line = br.readLine()) != null) {
+                if (withPid || line.contains(pidLabel)) {
+                    sb.append(line).append("\n");
+                }
+            }
+        } catch (Exception e) {
+            XCrash.getLogger().w(Util.TAG, "Util run logcat command failed", e);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ignored) {
+                }
+            }
         }
     }
 }

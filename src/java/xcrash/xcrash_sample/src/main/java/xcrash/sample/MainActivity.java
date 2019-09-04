@@ -25,6 +25,7 @@ package xcrash.sample;
 import android.content.Intent;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 
@@ -36,6 +37,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (Build.VERSION.SDK_INT < 21) {
+            findViewById(R.id.testAnrSigquitButton).setEnabled(false);
+            findViewById(R.id.testAnrServiceButton).setEnabled(false);
+        }
     }
 
     public void testNativeCrashInMainThread_onClick(View view) {

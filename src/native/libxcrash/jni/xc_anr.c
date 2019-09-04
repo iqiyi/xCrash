@@ -102,7 +102,7 @@ static int xc_anr_load_symbols()
     return xc_anr_symbols_status;
 }
 
-//not reliable, but try our best...
+//Not reliable! But try our best to avoid crashes.
 static int xc_anr_check_address_valid()
 {
     FILE      *f = NULL;
@@ -149,6 +149,8 @@ static int xc_anr_check_address_valid()
     while(fgets(line, sizeof(line), f))
     {
         if(2 != sscanf(line, "%"SCNxPTR"-%"SCNxPTR" r", &start, &end)) continue;
+
+        //The next line of code will cause segmentation fault, sometimes.
         if((uintptr_t)(*xc_anr_libart_runtime_instance) >= start && (uintptr_t)(*xc_anr_libart_runtime_instance) < end)
         {
             r = 0;
@@ -298,6 +300,7 @@ static void *xc_anr_dumper(void *arg)
         xc_common_close_anr_log(fd);
 
         //JNI callback
+        //Do we need to implement an emergency buffer for disk exhausted?
         if(NULL == xc_anr_cb_method) continue;
         if(NULL == (j_pathname = (*env)->NewStringUTF(env, pathname))) continue;
         (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_anr_cb_method, j_pathname, NULL);

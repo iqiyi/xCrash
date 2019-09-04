@@ -23,6 +23,7 @@
 package xcrash;
 
 import android.content.Context;
+import android.os.Build;
 import android.text.TextUtils;
 
 /**
@@ -128,15 +129,31 @@ public final class XCrash {
                 params.javaLogcatSystemLines,
                 params.javaLogcatEventsLines,
                 params.javaLogcatMainLines,
+                params.javaDumpFds,
                 params.javaDumpAllThreads,
                 params.javaDumpAllThreadsCountMax,
                 params.javaDumpAllThreadsWhiteList,
                 params.javaCallback);
         }
 
-        //init native crash / ANR handler
+        //init ANR handler (API level < 21)
+        if (params.enableAnrHandler && Build.VERSION.SDK_INT < 21) {
+            AnrHandler.getInstance().initialize(
+                ctx,
+                appId,
+                params.appVersion,
+                params.logDir,
+                params.anrLogCountMax,
+                params.anrLogcatSystemLines,
+                params.anrLogcatEventsLines,
+                params.anrLogcatMainLines,
+                params.anrDumpFds,
+                params.anrCallback);
+        }
+
+        //init native crash handler / ANR handler (API level >= 21)
         int r = Errno.OK;
-        if (params.enableNativeCrashHandler || params.enableAnrHandler) {
+        if (params.enableNativeCrashHandler || (params.enableAnrHandler && Build.VERSION.SDK_INT >= 21)) {
             r = NativeHandler.getInstance().initialize(
                 ctx,
                 params.libLoader,
@@ -155,7 +172,7 @@ public final class XCrash {
                 params.nativeDumpAllThreadsCountMax,
                 params.nativeDumpAllThreadsWhiteList,
                 params.nativeCallback,
-                params.enableAnrHandler,
+                params.enableAnrHandler && Build.VERSION.SDK_INT >= 21,
                 params.anrLogCountMax,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
@@ -279,6 +296,7 @@ public final class XCrash {
         int            javaLogcatSystemLines       = 50;
         int            javaLogcatEventsLines       = 50;
         int            javaLogcatMainLines         = 200;
+        boolean        javaDumpFds                 = true;
         boolean        javaDumpAllThreads          = true;
         int            javaDumpAllThreadsCountMax  = 0;
         String[]       javaDumpAllThreadsWhiteList = null;
@@ -364,6 +382,18 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setJavaLogcatMainLines(int logcatMainLines) {
             this.javaLogcatMainLines = logcatMainLines;
+            return this;
+        }
+
+        /**
+         * Set if dumping FD list when a java crash occurred. (Default: enable)
+         *
+         * @param flag True or false.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setJavaDumpFds(boolean flag) {
+            this.javaDumpFds = flag;
             return this;
         }
 
