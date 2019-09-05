@@ -6,7 +6,7 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash 能为安卓 APP 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。并且，不需要 root 权限或任何系统权限。
+xCrash 能为安卓 APP 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。不需要 root 权限或任何系统权限。
 
 xCrash 能在 App 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
 
