@@ -31,12 +31,15 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括
 
 ### 架构
 
-<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="750px"></p>
+<p align="left"><img src="doc/architecture.png" alt="architecture" width="750px"></p>
 
 ### 捕获 native 崩溃
 
-<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="520px"></p>
+<p align="left"><img src="doc/capture_native_crash.png" alt="capture native crash" width="520px"></p>
 
+### 捕获 ANR
+
+<p align="left"><img src="doc/capture_anr.png" alt="capture anr" width="750px"></p>
 
 ## 使用
 

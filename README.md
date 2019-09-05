@@ -31,12 +31,15 @@ xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI]
 
 ### Architecture
 
-<p align="left"><img src="doc/architecture.png" alt="catching native crash" width="750px"></p>
+<p align="left"><img src="doc/architecture.png" alt="architecture" width="750px"></p>
 
-### Catching Native Crash
+### Capture Native Crash
 
-<p align="left"><img src="doc/catching_native_crash.png" alt="catching native crash" width="520px"></p>
+<p align="left"><img src="doc/capture_native_crash.png" alt="capture native crash" width="520px"></p>
 
+### Capture ANR
+
+<p align="left"><img src="doc/capture_anr.png" alt="capture anr" width="750px"></p>
 
 ## Usage
 
