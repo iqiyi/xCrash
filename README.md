@@ -12,7 +12,7 @@ xCrash can generate a tombstone file (similar format as Android system's tombsto
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
-xCrash is used in a variety of Android APPs (including iQIYI Video) from [iQIYI](http://www.iqiyi.com/) for many years.
+xCrash is used in a variety of Android apps (including iQIYI Video) from [iQIYI](http://www.iqiyi.com/) for many years.
 
 [README 中文版](README.zh-CN.md)
 
@@ -94,7 +94,7 @@ class MyCustomApplication : Application() {
 
 Tombstone files will be written to `Context#getFilesDir() + "/tombstones"` directory by default. (usually in: `/data/data/PACKAGE_NAME/files/tombstones`)
 
-There is a more practical and complex sample APP in the [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) folder.
+There is a more practical and complex sample app in the [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) folder.
 
 
 ## Build

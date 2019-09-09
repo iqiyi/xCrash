@@ -6,13 +6,13 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash 能为安卓 APP 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。不需要 root 权限或任何系统权限。
+xCrash 能为安卓 app 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。不需要 root 权限或任何系统权限。
 
-xCrash 能在 App 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
+xCrash 能在 app 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
-xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 APP（包括爱奇艺视频）中被使用了很多年。
+xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 app（包括爱奇艺视频）中被使用了很多年。
 
 [README English Version](README.md)
 
@@ -94,7 +94,7 @@ class MyCustomApplication : Application() {
 
 Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` 目录。（通常在： `/data/data/PACKAGE_NAME/files/tombstones`）
 
-在 [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) 文件夹中，有一个更实际和复杂的示例 APP。
+在 [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) 文件夹中，有一个更实际和复杂的示例 app。
 
 
 ## 构建
