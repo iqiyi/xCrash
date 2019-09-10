@@ -43,6 +43,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     private final Date startTime = new Date();
 
+    private Context ctx;
     private int pid;
     private String processName;
     private String appId;
@@ -70,8 +71,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpFds, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
-        this.pid = android.os.Process.myPid();
-        this.processName = Util.getProcessName(ctx, this.pid);
+        this.ctx = ctx;
+        this.pid = -1;
+        this.processName = null;
         this.appId = appId;
         this.appVersion = appVersion;
         this.rethrow = rethrow;
@@ -95,6 +97,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
+        this.pid = android.os.Process.myPid();
+
         try {
             handleException(thread, throwable);
         } catch (Exception e) {
@@ -114,6 +118,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         //notify the java crash
         NativeHandler.getInstance().notifyJavaCrashed();
         AnrHandler.getInstance().notifyJavaCrashed();
+
+        //get process name
+        this.processName = Util.getProcessName(this.ctx, this.pid);
 
         //create log file
         File logFile = null;
