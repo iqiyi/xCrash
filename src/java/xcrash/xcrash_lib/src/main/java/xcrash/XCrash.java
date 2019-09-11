@@ -682,7 +682,7 @@ public final class XCrash {
          * Set whether xCrash should rethrow the ANR native signal to system
          * after it has been handled. (Default: true)
          *
-         * <p>Note: This option is only valid if Android API level >= 21.
+         * <p>Note: This option is only valid if Android API level greater than or equal to 21.
          *
          * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
          * @return The InitParameters object.
