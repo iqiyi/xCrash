@@ -68,6 +68,7 @@ static jint xc_jni_init(JNIEnv       *env,
                         jint          crash_dump_all_threads_count_max,
                         jobjectArray  crash_dump_all_threads_whitelist,
                         jboolean      anr_enable,
+                        jboolean      anr_rethrow,
                         jint          anr_log_max_count,
                         jint          anr_logcat_system_lines,
                         jint          anr_logcat_events_lines,
@@ -177,6 +178,7 @@ static jint xc_jni_init(JNIEnv       *env,
     {
         //anr init
         r_anr = xc_anr_init(env,
+                            anr_rethrow ? 1 : 0,
                             (unsigned int)anr_log_max_count,
                             (unsigned int)anr_logcat_system_lines,
                             (unsigned int)anr_logcat_events_lines,
@@ -260,6 +262,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "Z"
         "I"
         "[Ljava/lang/String;"
+        "Z"
         "Z"
         "I"
         "I"

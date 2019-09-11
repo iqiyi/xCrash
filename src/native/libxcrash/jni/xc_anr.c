@@ -47,10 +47,16 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
-#define XC_ANR_CALLBACK_METHOD_NAME      "anrCallback"
-#define XC_ANR_CALLBACK_METHOD_SIGNATURE "(Ljava/lang/String;Ljava/lang/String;)V"
+#define XC_ANR_CALLBACK_METHOD_NAME         "anrCallback"
+#define XC_ANR_CALLBACK_METHOD_SIGNATURE    "(Ljava/lang/String;Ljava/lang/String;)V"
+
+#define XC_ANR_SIGNAL_CATCHER_TID_UNLOAD    (-2)
+#define XC_ANR_SIGNAL_CATCHER_TID_UNKNOWN   (-1)
+#define XC_ANR_SIGNAL_CATCHER_THREAD_NAME   "Signal Catcher"
+#define XC_ANR_SIGNAL_CATCHER_THREAD_SIGBLK 0x1000
 
 static int                              xc_anr_is_lollipop = 0;
+static pid_t                            xc_anr_signal_catcher_tid = XC_ANR_SIGNAL_CATCHER_TID_UNLOAD;
 
 //symbol address in libc++.so and libart.so
 static void                            *xc_anr_libcpp_cerr = NULL;
@@ -62,6 +68,7 @@ static int                              xc_anr_symbols_loaded = 0;
 static int                              xc_anr_symbols_status = XCC_ERRNO_NOTFND;
 
 //init parameters
+static int                              xc_anr_rethrow;
 static unsigned int                     xc_anr_log_max_count;
 static unsigned int                     xc_anr_logcat_system_lines;
 static unsigned int                     xc_anr_logcat_events_lines;
@@ -71,6 +78,56 @@ static int                              xc_anr_dump_fds;
 //callback
 static jmethodID                        xc_anr_cb_method = NULL;
 static int                              xc_anr_notifier = -1;
+
+static void xc_anr_load_signal_catcher_tid()
+{
+    char           buf[256];
+    DIR           *dir;
+    struct dirent *ent;
+    FILE          *f;
+    pid_t          tid;
+    uint64_t       sigblk;
+
+    xc_anr_signal_catcher_tid = XC_ANR_SIGNAL_CATCHER_TID_UNKNOWN;
+
+    snprintf(buf, sizeof(buf), "/proc/%d/task", xc_common_process_id);
+    if(NULL == (dir = opendir(buf))) return;
+    while(NULL != (ent = readdir(dir)))
+    {
+        //get and check thread id
+        if(0 != xcc_util_atoi(ent->d_name, &tid)) continue;
+        if(tid < 0) continue;
+
+        //check thread name
+        xcc_util_get_thread_name(tid, buf, sizeof(buf));
+        if(0 != strcmp(buf, XC_ANR_SIGNAL_CATCHER_THREAD_NAME)) continue;
+
+        //check signal block masks
+        sigblk = 0;
+        snprintf(buf, sizeof(buf), "/proc/%d/status", tid);
+        if(NULL == (f = fopen(buf, "r"))) break;
+        while(fgets(buf, sizeof(buf), f))
+        {
+            if(1 == sscanf(buf, "SigBlk: %"SCNx64, &sigblk)) break;
+        }
+        fclose(f);
+        if(XC_ANR_SIGNAL_CATCHER_THREAD_SIGBLK != sigblk) continue;
+
+        //found it
+        xc_anr_signal_catcher_tid = tid;
+        break;
+    }
+    closedir(dir);
+}
+
+static void xc_anr_send_sigquit()
+{
+    if(XC_ANR_SIGNAL_CATCHER_TID_UNLOAD == xc_anr_signal_catcher_tid)
+        xc_anr_load_signal_catcher_tid();
+
+    if(xc_anr_signal_catcher_tid >= 0)
+        syscall(SYS_tgkill, xc_common_process_id, xc_anr_signal_catcher_tid, SIGQUIT);
+}
 
 static int xc_anr_load_symbols()
 {
@@ -263,7 +320,7 @@ static void *xc_anr_dumper(void *arg)
 
         //write trace info from ART runtime
         if(0 != xcc_util_write_format(fd, XCC_UTIL_THREAD_SEP"Cmd line: %s\n", xc_common_process_name)) goto end;
-        if(0 != xcc_util_write_str(fd, "Mode: ART runtime.\n")) goto end;
+        if(0 != xcc_util_write_str(fd, "Mode: ART DumpForSigQuit.\n")) goto end;
         if(0 != xc_anr_load_symbols())
         {
             if(0 != xcc_util_write_str(fd, "Failed to load symbols.\n")) goto end;
@@ -306,6 +363,9 @@ static void *xc_anr_dumper(void *arg)
         (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_anr_cb_method, j_pathname, NULL);
         XC_JNI_IGNORE_PENDING_EXCEPTION();
         (*env)->DeleteLocalRef(env, j_pathname);
+
+        //rethrow SIGQUIT to ART Signal Catcher
+        if(xc_anr_rethrow) xc_anr_send_sigquit();
     }
     
     (*xc_common_vm)->DetachCurrentThread(xc_common_vm);
@@ -344,6 +404,7 @@ static void xc_anr_init_callback(JNIEnv *env)
 }
 
 int xc_anr_init(JNIEnv *env,
+                int rethrow,
                 unsigned int log_max_count,
                 unsigned int logcat_system_lines,
                 unsigned int logcat_events_lines,
@@ -359,6 +420,7 @@ int xc_anr_init(JNIEnv *env,
     //is Android Lollipop (5.x)?
     xc_anr_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
 
+    xc_anr_rethrow = rethrow;
     xc_anr_log_max_count = log_max_count;
     xc_anr_logcat_system_lines = logcat_system_lines;
     xc_anr_logcat_events_lines = logcat_events_lines;

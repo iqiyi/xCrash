@@ -173,6 +173,7 @@ public final class XCrash {
                 params.nativeDumpAllThreadsWhiteList,
                 params.nativeCallback,
                 params.enableAnrHandler && Build.VERSION.SDK_INT >= 21,
+                params.anrRethrow,
                 params.anrLogCountMax,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
@@ -490,7 +491,7 @@ public final class XCrash {
         }
 
         /**
-         * Set whether xCrash should rethrow the native signal to system
+         * Set whether xCrash should rethrow the crash native signal to system
          * after it has been handled. (Default: true)
          *
          * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
@@ -647,6 +648,7 @@ public final class XCrash {
 
         //anr
         boolean        enableAnrHandler     = true;
+        boolean        anrRethrow           = true;
         int            anrLogCountMax       = 10;
         int            anrLogcatSystemLines = 50;
         int            anrLogcatEventsLines = 50;
@@ -673,6 +675,21 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters disableAnrCrashHandler() {
             this.enableAnrHandler = false;
+            return this;
+        }
+
+        /**
+         * Set whether xCrash should rethrow the ANR native signal to system
+         * after it has been handled. (Default: true)
+         *
+         * <p>Note: This option is only valid if Android API level >= 21.
+         *
+         * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrRethrow(boolean rethrow) {
+            this.anrRethrow = rethrow;
             return this;
         }
 
