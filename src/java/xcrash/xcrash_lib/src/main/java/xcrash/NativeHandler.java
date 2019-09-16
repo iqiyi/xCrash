@@ -34,7 +34,7 @@ import java.util.Map;
 class NativeHandler {
 
     private static final NativeHandler instance = new NativeHandler();
-    private static final long anrTimeoutMs = 25 * 1000;
+    private long anrTimeoutMs = 15 * 1000;
 
     private Context ctx;
     private ICrashCallback crashCallback = null;
@@ -95,6 +95,7 @@ class NativeHandler {
         this.crashCallback = crashCallback;
         this.anrCallback = anrCallback;
         this.anrEnable = anrEnable;
+        this.anrTimeoutMs = anrRethrow ? 15 * 1000 : 30 * 1000; //setting rethrow to "false" is NOT recommended
 
         //init native lib
         try {
@@ -207,7 +208,7 @@ class NativeHandler {
         TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
 
         //check process ANR state
-        if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, anrTimeoutMs)) {
+        if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) {
             FileManager.getInstance().recycleLogFile(new File(logPath));
             return; //not an ANR
         }

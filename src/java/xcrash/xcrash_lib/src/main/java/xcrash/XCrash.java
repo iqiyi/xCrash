@@ -701,6 +701,8 @@ public final class XCrash {
          *
          * <p>Note: This option is only valid if Android API level greater than or equal to 21.
          *
+         * <p>Warning: It is highly recommended NOT to modify the default value (true) in most cases unless you know that you are doing.
+         *
          * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
          * @return The InitParameters object.
          */

@@ -351,6 +351,9 @@ static void *xc_trace_dumper(void *arg)
         //close log file
         xc_common_close_trace_log(fd);
 
+        //rethrow SIGQUIT to ART Signal Catcher
+        if(xc_trace_rethrow) xc_trace_send_sigquit();
+
         //JNI callback
         //Do we need to implement an emergency buffer for disk exhausted?
         if(NULL == xc_trace_cb_method) continue;
@@ -358,9 +361,6 @@ static void *xc_trace_dumper(void *arg)
         (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_trace_cb_method, j_pathname, NULL);
         XC_JNI_IGNORE_PENDING_EXCEPTION();
         (*env)->DeleteLocalRef(env, j_pathname);
-
-        //rethrow SIGQUIT to ART Signal Catcher
-        if(xc_trace_rethrow) xc_trace_send_sigquit();
     }
     
     (*xc_common_vm)->DetachCurrentThread(xc_common_vm);

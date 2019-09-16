@@ -84,7 +84,7 @@ public class MyCustomApplication extends Application {
             .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
             .setNativeDumpAllThreadsCountMax(10)
             .setNativeCallback(callback)
-            .setAnrRethrow(false)
+            .setAnrRethrow(true)
             .setAnrLogCountMax(10)
             .setAnrCallback(callback)
             .setPlaceholderCountMax(3)
