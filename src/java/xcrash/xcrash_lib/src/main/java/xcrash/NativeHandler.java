@@ -22,16 +22,21 @@
 // Created by caikelun on 2019-03-07.
 package xcrash;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
 
+import java.io.File;
 import java.util.Map;
 
+@SuppressLint("StaticFieldLeak")
 class NativeHandler {
 
     private static final NativeHandler instance = new NativeHandler();
+    private static final long anrTimeoutMs = 25 * 1000;
 
+    private Context ctx;
     private ICrashCallback crashCallback = null;
     private ICrashCallback anrCallback = null;
 
@@ -64,7 +69,6 @@ class NativeHandler {
                    ICrashCallback crashCallback,
                    boolean anrEnable,
                    boolean anrRethrow,
-                   int anrLogCountMax,
                    int anrLogcatSystemLines,
                    int anrLogcatEventsLines,
                    int anrLogcatMainLines,
@@ -87,6 +91,7 @@ class NativeHandler {
             }
         }
 
+        this.ctx = ctx;
         this.crashCallback = crashCallback;
         this.anrCallback = anrCallback;
         this.anrEnable = anrEnable;
@@ -118,7 +123,6 @@ class NativeHandler {
                 crashDumpAllThreadsWhiteList,
                 anrEnable,
                 anrRethrow,
-                anrLogCountMax,
                 anrLogcatSystemLines,
                 anrLogcatEventsLines,
                 anrLogcatMainLines,
@@ -144,12 +148,6 @@ class NativeHandler {
     void testNativeCrash(boolean runInNewThread) {
         if (initNativeLibOk) {
             NativeHandler.nativeTestCrash(runInNewThread ? 1 : 0);
-        }
-    }
-
-    void testAnr() {
-        if (initNativeLibOk) {
-            NativeHandler.nativeTestAnr();
         }
     }
 
@@ -200,16 +198,38 @@ class NativeHandler {
 
     // do NOT obfuscate this method
     @SuppressWarnings("unused")
-    private static void anrCallback(String logPath, String emergency) {
-        if (!TextUtils.isEmpty(logPath)) {
-            //append memory info
-            TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
+    private static void traceCallback(String logPath, String emergency) {
+        if (TextUtils.isEmpty(logPath)) {
+            return;
+        }
+
+        //append memory info
+        TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
+
+        //check process ANR state
+        if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, anrTimeoutMs)) {
+            FileManager.getInstance().recycleLogFile(new File(logPath));
+            return; //not an ANR
+        }
+
+        //delete extra ANR log files
+        if (!FileManager.getInstance().maintainAnr()) {
+            return;
+        }
+
+        //rename trace log file to ANR log file
+        String anrLogPath = logPath.substring(0, logPath.length() - Util.traceLogSuffix.length()) + Util.anrLogSuffix;
+        File traceFile = new File(logPath);
+        File anrFile = new File(anrLogPath);
+        if (!traceFile.renameTo(anrFile)) {
+            FileManager.getInstance().recycleLogFile(traceFile);
+            return;
         }
 
         ICrashCallback callback = NativeHandler.getInstance().anrCallback;
         if (callback != null) {
             try {
-                callback.onCrash(logPath, emergency);
+                callback.onCrash(anrLogPath, emergency);
             } catch (Exception e) {
                 XCrash.getLogger().w(Util.TAG, "NativeHandler ANR callback.onCrash failed", e);
             }
@@ -239,17 +259,14 @@ class NativeHandler {
             boolean crashDumpAllThreads,
             int crashDumpAllThreadsCountMax,
             String[] crashDumpAllThreadsWhiteList,
-            boolean anrEnable,
-            boolean anrRethrow,
-            int anrLogCountMax,
-            int anrLogcatSystemLines,
-            int anrLogcatEventsLines,
-            int anrLogcatMainLines,
-            boolean anrDumpFds);
+            boolean traceEnable,
+            boolean traceRethrow,
+            int traceLogcatSystemLines,
+            int traceLogcatEventsLines,
+            int traceLogcatMainLines,
+            boolean traceDumpFds);
 
     private static native void nativeNotifyJavaCrashed();
 
     private static native void nativeTestCrash(int runInNewThread);
-
-    private static native void nativeTestAnr();
 }

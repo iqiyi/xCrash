@@ -117,10 +117,10 @@ int xcc_signal_crash_queue(siginfo_t* si)
     return 0;
 }
 
-static sigset_t         xcc_signal_anr_oldset;
-static struct sigaction xcc_signal_anr_oldact;
+static sigset_t         xcc_signal_trace_oldset;
+static struct sigaction xcc_signal_trace_oldact;
 
-int xcc_signal_anr_register(void (*handler)(int, siginfo_t *, void *))
+int xcc_signal_trace_register(void (*handler)(int, siginfo_t *, void *))
 {
     int              r;
     sigset_t         set;
@@ -129,24 +129,24 @@ int xcc_signal_anr_register(void (*handler)(int, siginfo_t *, void *))
     //un-block the SIGQUIT mask for current thread, hope this is the main thread
     sigemptyset(&set);
     sigaddset(&set, SIGQUIT);
-    if(0 != (r = pthread_sigmask(SIG_UNBLOCK, &set, &xcc_signal_anr_oldset))) return r;
+    if(0 != (r = pthread_sigmask(SIG_UNBLOCK, &set, &xcc_signal_trace_oldset))) return r;
 
     //register new signal handler for SIGQUIT
     memset(&act, 0, sizeof(act));
     sigfillset(&act.sa_mask);
     act.sa_sigaction = handler;
     act.sa_flags = SA_RESTART | SA_SIGINFO;
-    if(0 != sigaction(SIGQUIT, &act, &xcc_signal_anr_oldact))
+    if(0 != sigaction(SIGQUIT, &act, &xcc_signal_trace_oldact))
     {
-        pthread_sigmask(SIG_SETMASK, &xcc_signal_anr_oldset, NULL);
+        pthread_sigmask(SIG_SETMASK, &xcc_signal_trace_oldset, NULL);
         return XCC_ERRNO_SYS;
     }
 
     return 0;
 }
 
-void xcc_signal_anr_unregister(void)
+void xcc_signal_trace_unregister(void)
 {
-    pthread_sigmask(SIG_SETMASK, &xcc_signal_anr_oldset, NULL);
-    sigaction(SIGQUIT, &xcc_signal_anr_oldact, NULL);
+    pthread_sigmask(SIG_SETMASK, &xcc_signal_trace_oldset, NULL);
+    sigaction(SIGQUIT, &xcc_signal_trace_oldact, NULL);
 }

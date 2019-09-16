@@ -21,8 +21,8 @@
 
 // Created by caikelun on 2019-08-13.
 
-#ifndef XC_ANR_H
-#define XC_ANR_H 1
+#ifndef XC_TRACE_H
+#define XC_TRACE_H 1
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,13 +32,12 @@
 extern "C" {
 #endif
 
-int xc_anr_init(JNIEnv *env,
-                int rethrow,
-                unsigned int log_max_count,
-                unsigned int logcat_system_lines,
-                unsigned int logcat_events_lines,
-                unsigned int logcat_main_lines,
-                int dump_fds);
+int xc_trace_init(JNIEnv *env,
+                  int rethrow,
+                  unsigned int logcat_system_lines,
+                  unsigned int logcat_events_lines,
+                  unsigned int logcat_main_lines,
+                  int dump_fds);
 
 #ifdef __cplusplus
 }

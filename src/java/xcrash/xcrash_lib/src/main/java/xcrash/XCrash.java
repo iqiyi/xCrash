@@ -91,7 +91,8 @@ public final class XCrash {
         }
 
         //save app id
-        XCrash.appId = ctx.getPackageName();
+        String packageName = ctx.getPackageName();
+        XCrash.appId = packageName;
         if (TextUtils.isEmpty(XCrash.appId)) {
             XCrash.appId = "unknown";
         }
@@ -108,6 +109,20 @@ public final class XCrash {
         }
         XCrash.logDir = params.logDir;
 
+        //get PID and process name
+        int pid = android.os.Process.myPid();
+        String processName = null;
+        if (params.enableJavaCrashHandler || params.enableAnrHandler) {
+            processName = Util.getProcessName(ctx, pid);
+
+            //capture only the ANR of the main process
+            if (params.enableAnrHandler) {
+                if (TextUtils.isEmpty(processName) || !processName.equals(packageName)) {
+                    params.enableAnrHandler = false;
+                }
+            }
+        }
+
         //init file manager
         FileManager.getInstance().initialize(
             params.logDir,
@@ -122,6 +137,8 @@ public final class XCrash {
         if (params.enableJavaCrashHandler) {
             JavaCrashHandler.getInstance().initialize(
                 ctx,
+                pid,
+                processName,
                 appId,
                 params.appVersion,
                 params.logDir,
@@ -140,10 +157,11 @@ public final class XCrash {
         if (params.enableAnrHandler && Build.VERSION.SDK_INT < 21) {
             AnrHandler.getInstance().initialize(
                 ctx,
+                pid,
+                processName,
                 appId,
                 params.appVersion,
                 params.logDir,
-                params.anrLogCountMax,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
@@ -174,7 +192,6 @@ public final class XCrash {
                 params.nativeCallback,
                 params.enableAnrHandler && Build.VERSION.SDK_INT >= 21,
                 params.anrRethrow,
-                params.anrLogCountMax,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
@@ -816,15 +833,5 @@ public final class XCrash {
     @SuppressWarnings("unused")
     public static void testNativeCrash(boolean runInNewThread) {
         NativeHandler.getInstance().testNativeCrash(runInNewThread);
-    }
-
-    /**
-     * Force an ANR.
-     *
-     * <p>Warning: This method is for testing purposes only. Don't call it in a release version of your APP.
-     */
-    @SuppressWarnings("unused")
-    public static void testAnr() {
-        NativeHandler.getInstance().testAnr();
     }
 }

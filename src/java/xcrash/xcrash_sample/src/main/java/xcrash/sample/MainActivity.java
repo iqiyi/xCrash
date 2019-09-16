@@ -25,7 +25,6 @@ package xcrash.sample;
 import android.content.Intent;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 
@@ -37,11 +36,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if (Build.VERSION.SDK_INT < 21) {
-            findViewById(R.id.testAnrSigquitButton).setEnabled(false);
-            findViewById(R.id.testAnrServiceButton).setEnabled(false);
-        }
     }
 
     public void testNativeCrashInMainThread_onClick(View view) {
@@ -76,19 +70,12 @@ public class MainActivity extends AppCompatActivity {
     public void testJavaCrashInAnotherProcess_onClick(View view) {
         startService(new Intent(this, MyService.class).putExtra("type", "java"));
     }
-
-    public void testAnrSigquit_onClick(View view) {
-        XCrash.testAnr();
-    }
-
     public void testAnrInput_onClick(View view) {
-        try {
-            Thread.sleep(10 * 1000);
-        } catch (Exception ignored) {
+        while (true) {
+            try {
+                Thread.sleep(1000);
+            } catch (Exception ignored) {
+            }
         }
-    }
-
-    public void testAnrService_onClick(View view) {
-        startService(new Intent(this, MyService.class).putExtra("type", "anr"));
     }
 }

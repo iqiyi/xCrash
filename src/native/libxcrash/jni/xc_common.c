@@ -41,6 +41,7 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
+#pragma clang diagnostic ignored "-Wcast-align"
 
 #define XC_COMMON_OPEN_DIR_FLAGS      (O_RDONLY | O_DIRECTORY | O_CLOEXEC)
 #define XC_COMMON_OPEN_FILE_FLAGS     (O_RDWR | O_CLOEXEC)
@@ -76,12 +77,12 @@ int           xc_common_fd_null           = -1;
 sig_atomic_t  xc_common_native_crashed    = 0;
 sig_atomic_t  xc_common_java_crashed      = 0;
 
-static int xc_common_crash_prepared_fd = -1;
-static int xc_common_anr_prepared_fd   = -1;
+static int    xc_common_crash_prepared_fd = -1;
+static int    xc_common_trace_prepared_fd = -1;
 
 static void xc_common_open_prepared_fd(int is_crash)
 {
-    int fd = (is_crash ? xc_common_crash_prepared_fd : xc_common_anr_prepared_fd);
+    int fd = (is_crash ? xc_common_crash_prepared_fd : xc_common_trace_prepared_fd);
     if(fd >= 0) return;
     
     fd = XCC_UTIL_TEMP_FAILURE_RETRY(open("/dev/null", O_RDWR));
@@ -89,12 +90,12 @@ static void xc_common_open_prepared_fd(int is_crash)
     if(is_crash)
         xc_common_crash_prepared_fd = fd;
     else
-        xc_common_anr_prepared_fd = fd;
+        xc_common_trace_prepared_fd = fd;
 }
 
 static int xc_common_close_prepared_fd(int is_crash)
 {
-    int fd = (is_crash ? xc_common_crash_prepared_fd : xc_common_anr_prepared_fd);
+    int fd = (is_crash ? xc_common_crash_prepared_fd : xc_common_trace_prepared_fd);
     if(fd < 0) return XCC_ERRNO_FD;
     
     close(fd);
@@ -102,7 +103,7 @@ static int xc_common_close_prepared_fd(int is_crash)
     if(is_crash)
         xc_common_crash_prepared_fd = -1;
     else
-        xc_common_anr_prepared_fd = -1;
+        xc_common_trace_prepared_fd = -1;
 
     return 0;
 }
@@ -234,7 +235,7 @@ static int xc_common_open_log(int is_crash, uint64_t timestamp,
 
     xcc_fmt_snprintf(pathname, pathname_len, "%s/"XC_COMMON_LOG_PREFIX"_%020"PRIu64"_%s__%s%s",
                      xc_common_log_dir, timestamp, xc_common_app_version, xc_common_process_name,
-                     is_crash ? XC_COMMON_LOG_SUFFIX_CRASH : XC_COMMON_LOG_SUFFIX_ANR);
+                     is_crash ? XC_COMMON_LOG_SUFFIX_CRASH : XC_COMMON_LOG_SUFFIX_TRACE);
 
     //open dir
     if((fd = XCC_UTIL_TEMP_FAILURE_RETRY(open(xc_common_log_dir, XC_COMMON_OPEN_DIR_FLAGS))) < 0)
@@ -249,10 +250,7 @@ static int xc_common_open_log(int is_crash, uint64_t timestamp,
     {
         for(i = 0; i < n; i += ent->d_reclen)
         {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-align"
             ent = (xcc_util_dirent_t *)(buf + i);
-#pragma clang diagnostic pop
             
             // placeholder_01234567890123456789.clean.xcrash
             // file name length: 45
@@ -294,9 +292,9 @@ int xc_common_open_crash_log(char *pathname, size_t pathname_len, int *from_plac
     return xc_common_open_log(1, xc_common_start_time, pathname, pathname_len, from_placeholder);
 }
 
-int xc_common_open_anr_log(char *pathname, size_t pathname_len, uint64_t anr_time)
+int xc_common_open_trace_log(char *pathname, size_t pathname_len, uint64_t trace_time)
 {
-    return xc_common_open_log(0, anr_time, pathname, pathname_len, NULL);
+    return xc_common_open_log(0, trace_time, pathname, pathname_len, NULL);
 }
 
 void xc_common_close_crash_log(int fd)
@@ -304,7 +302,7 @@ void xc_common_close_crash_log(int fd)
     xc_common_close_log(fd, 1);
 }
 
-void xc_common_close_anr_log(int fd)
+void xc_common_close_trace_log(int fd)
 {
     xc_common_close_log(fd, 0);
 }

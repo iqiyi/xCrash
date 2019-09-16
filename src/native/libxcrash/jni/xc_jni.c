@@ -34,7 +34,7 @@
 #include "xc_jni.h"
 #include "xc_common.h"
 #include "xc_crash.h"
-#include "xc_anr.h"
+#include "xc_trace.h"
 #include "xc_util.h"
 #include "xc_test.h"
 
@@ -67,16 +67,15 @@ static jint xc_jni_init(JNIEnv       *env,
                         jboolean      crash_dump_all_threads,
                         jint          crash_dump_all_threads_count_max,
                         jobjectArray  crash_dump_all_threads_whitelist,
-                        jboolean      anr_enable,
-                        jboolean      anr_rethrow,
-                        jint          anr_log_max_count,
-                        jint          anr_logcat_system_lines,
-                        jint          anr_logcat_events_lines,
-                        jint          anr_logcat_main_lines,
-                        jboolean      anr_dump_fds)
+                        jboolean      trace_enable,
+                        jboolean      trace_rethrow,
+                        jint          trace_logcat_system_lines,
+                        jint          trace_logcat_events_lines,
+                        jint          trace_logcat_main_lines,
+                        jboolean      trace_dump_fds)
 {
     int              r_crash                                = XCC_ERRNO_JNI;
-    int              r_anr                                  = XCC_ERRNO_JNI;
+    int              r_trace                                  = XCC_ERRNO_JNI;
     
     const char      *c_os_version                           = NULL;
     const char      *c_abi_list                             = NULL;
@@ -102,13 +101,12 @@ static jint xc_jni_init(JNIEnv       *env,
     if(xc_jni_inited) return XCC_ERRNO_JNI;
     xc_jni_inited = 1;
 
-    if(!env || !(*env) || (!crash_enable && ! anr_enable) || api_level < 0 ||
+    if(!env || !(*env) || (!crash_enable && ! trace_enable) || api_level < 0 ||
        !os_version || !abi_list || !manufacturer || !brand || !model || !build_fingerprint ||
        !app_id || !app_version || !app_lib_dir || !log_dir ||
        crash_logcat_system_lines < 0 || crash_logcat_events_lines < 0 || crash_logcat_main_lines < 0 ||
        crash_dump_all_threads_count_max < 0 ||
-       anr_log_max_count < 0 ||
-       anr_logcat_system_lines < 0 || anr_logcat_events_lines < 0 || anr_logcat_main_lines < 0)
+       trace_logcat_system_lines < 0 || trace_logcat_events_lines < 0 || trace_logcat_main_lines < 0)
         return XCC_ERRNO_INVAL;
 
     if(NULL == (c_os_version        = (*env)->GetStringUTFChars(env, os_version,        0))) goto clean;
@@ -136,7 +134,7 @@ static jint xc_jni_init(JNIEnv       *env,
                            c_log_dir)) goto clean;
     
     r_crash = 0;
-    r_anr = 0;
+    r_trace = 0;
     
     if(crash_enable)
     {
@@ -174,16 +172,15 @@ static jint xc_jni_init(JNIEnv       *env,
                                 c_crash_dump_all_threads_whitelist_len);
     }
     
-    if(anr_enable)
+    if(trace_enable)
     {
-        //anr init
-        r_anr = xc_anr_init(env,
-                            anr_rethrow ? 1 : 0,
-                            (unsigned int)anr_log_max_count,
-                            (unsigned int)anr_logcat_system_lines,
-                            (unsigned int)anr_logcat_events_lines,
-                            (unsigned int)anr_logcat_main_lines,
-                            anr_dump_fds ? 1 : 0);
+        //trace init
+        r_trace = xc_trace_init(env,
+                            trace_rethrow ? 1 : 0,
+                            (unsigned int)trace_logcat_system_lines,
+                            (unsigned int)trace_logcat_events_lines,
+                            (unsigned int)trace_logcat_main_lines,
+                            trace_dump_fds ? 1 : 0);
     }
     
  clean:
@@ -209,7 +206,7 @@ static jint xc_jni_init(JNIEnv       *env,
         free(c_crash_dump_all_threads_whitelist);
     }
     
-    return (0 == r_crash && 0 == r_anr) ? 0 : XCC_ERRNO_JNI;
+    return (0 == r_crash && 0 == r_trace) ? 0 : XCC_ERRNO_JNI;
 }
 
 static void xc_jni_notify_java_crashed(JNIEnv *env, jobject thiz)
@@ -226,14 +223,6 @@ static void xc_jni_test_crash(JNIEnv *env, jobject thiz, jint run_in_new_thread)
     (void)thiz;
 
     xc_test_crash(run_in_new_thread);
-}
-
-static void xc_jni_test_anr(JNIEnv *env, jobject thiz)
-{
-    (void)env;
-    (void)thiz;
-
-    xc_test_anr();
 }
 
 static JNINativeMethod xc_jni_methods[] = {
@@ -267,7 +256,6 @@ static JNINativeMethod xc_jni_methods[] = {
         "I"
         "I"
         "I"
-        "I"
         "Z"
         ")"
         "I",
@@ -287,13 +275,6 @@ static JNINativeMethod xc_jni_methods[] = {
         ")"
         "V",
         (void *)xc_jni_test_crash
-    },
-    {
-        "nativeTestAnr",
-        "("
-        ")"
-        "V",
-        (void *)xc_jni_test_anr
     }
 };
 

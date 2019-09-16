@@ -22,7 +22,6 @@
 // Created by caikelun on 2019-09-03.
 package xcrash;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.FileObserver;
@@ -31,13 +30,9 @@ import android.text.TextUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FilenameFilter;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,6 +47,7 @@ class AnrHandler {
     private final Date startTime = new Date();
     private final Pattern patPidTime = Pattern.compile("^-----\\spid\\s(\\d+)\\sat\\s(.*)\\s-----$");
     private final Pattern patProcessName = Pattern.compile("^Cmd\\sline:\\s+(.*)$");
+    private final long anrTimeoutMs = 15 * 1000;
 
     private Context ctx;
     private int pid;
@@ -59,7 +55,6 @@ class AnrHandler {
     private String appId;
     private String appVersion;
     private String logDir;
-    private int logCountMax;
     private int logcatSystemLines;
     private int logcatEventsLines;
     private int logcatMainLines;
@@ -76,7 +71,7 @@ class AnrHandler {
     }
 
     @SuppressWarnings("deprecation")
-    void initialize(Context ctx, String appId, String appVersion, String logDir, int logCountMax,
+    void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpFds, ICrashCallback callback) {
 
@@ -85,21 +80,12 @@ class AnrHandler {
             return;
         }
 
-        //check if you're in the main process
-        int myPid = android.os.Process.myPid();
-        String myProcessName = Util.getProcessName(ctx, myPid);
-        String packageName = ctx.getPackageName();
-        if (TextUtils.isEmpty(packageName) || !(packageName.equals(myProcessName))) {
-            return;
-        }
-
         this.ctx = ctx;
-        this.pid = myPid;
-        this.processName = myProcessName;
+        this.pid = pid;
+        this.processName = (TextUtils.isEmpty(processName) ? "unknown" : processName);
         this.appId = appId;
         this.appVersion = appVersion;
         this.logDir = logDir;
-        this.logCountMax = logCountMax;
         this.logcatSystemLines = logcatSystemLines;
         this.logcatEventsLines = logcatEventsLines;
         this.logcatMainLines = logcatMainLines;
@@ -145,13 +131,13 @@ class AnrHandler {
         Date anrTime = new Date();
 
         //check ANR time interval
-        if (anrTime.getTime() - lastTime < 10 * 1000) {
+        if (anrTime.getTime() - lastTime < anrTimeoutMs) {
             return;
         }
         lastTime = anrTime.getTime();
 
         //check process error state
-        if (!checkProcessErrorState()) {
+        if (!Util.checkProcessAnrState(this.ctx, anrTimeoutMs)) {
             return;
         }
 
@@ -161,8 +147,8 @@ class AnrHandler {
             return;
         }
 
-        //clean logs
-        if (!logsClean()) {
+        //delete extra ANR log files
+        if (!FileManager.getInstance().maintainAnr()) {
             return;
         }
 
@@ -230,45 +216,6 @@ class AnrHandler {
         }
     }
 
-    private boolean logsClean() {
-        if (!Util.checkAndCreateDir(logDir)) {
-            return false;
-        }
-
-        //get all ANR logs
-        File dir = new File(logDir);
-        File[] anrFiles = dir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.anrLogSuffix);
-            }
-        });
-
-        //check ANR logs count
-        if (anrFiles == null || anrFiles.length < logCountMax) {
-            return true;
-        }
-
-        //delete unwanted logs
-        Arrays.sort(anrFiles, new Comparator<File>() {
-            @Override
-            public int compare(File f1, File f2) {
-                return f1.getName().compareTo(f2.getName()); }
-        });
-        for (int i = 0; i < anrFiles.length - logCountMax + 1; i++) {
-            FileManager.getInstance().recycleLogFile(anrFiles[i]);
-        }
-
-        //check ANR logs count again
-        anrFiles = dir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.anrLogSuffix);
-            }
-        });
-        return (anrFiles == null || anrFiles.length < logCountMax);
-    }
-
     private String getEmergency(Date anrTime, String trace) {
         return Util.getLogHeader(startTime, anrTime, Util.anrCrashType, appId, appVersion)
             + "pid: " + pid + "  >>> " + processName + " <<<\n"
@@ -279,29 +226,6 @@ class AnrHandler {
             + "\n"
             + Util.sepOtherThreadsEnding
             + "\n\n";
-    }
-
-    private boolean checkProcessErrorState() {
-        ActivityManager am = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
-        if (am != null) {
-            for (int i = 0; i < 20; i++) {
-                List<ActivityManager.ProcessErrorStateInfo> processErrorList = am.getProcessesInErrorState();
-                if (processErrorList != null) {
-                    for (ActivityManager.ProcessErrorStateInfo errorStateInfo : processErrorList) {
-                        if (errorStateInfo.pid == this.pid && errorStateInfo.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) {
-                            return true;
-                        }
-                    }
-                }
-
-                try {
-                    Thread.sleep(500);
-                } catch (Exception ignored) {
-                }
-            }
-        }
-
-        return false;
     }
 
     private String getTrace(String filepath, long anrTime) {
@@ -341,7 +265,7 @@ class AnrHandler {
                         continue;
                     }
                     long logTime = dLogTime.getTime();
-                    if (Math.abs(logTime - anrTime) > 10 * 1000) {
+                    if (Math.abs(logTime - anrTime) > anrTimeoutMs) {
                         continue; //check log time
                     }
 
@@ -362,7 +286,7 @@ class AnrHandler {
                     found = true;
 
                     sb.append(line).append('\n');
-                    sb.append("Mode: Watching /data/anr/*.\n");
+                    sb.append("Mode: Watching /data/anr/*\n");
 
                     continue;
                 }

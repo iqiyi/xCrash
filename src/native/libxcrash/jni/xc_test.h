@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 void xc_test_crash(int run_in_new_thread);
-void xc_test_anr(void);
 
 #ifdef __cplusplus
 }

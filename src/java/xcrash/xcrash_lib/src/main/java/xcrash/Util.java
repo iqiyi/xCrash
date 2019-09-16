@@ -65,6 +65,7 @@ class Util {
     static final String javaLogSuffix = ".java.xcrash";
     static final String nativeLogSuffix = ".native.xcrash";
     static final String anrLogSuffix = ".anr.xcrash";
+    static final String traceLogSuffix = ".trace.xcrash";
 
     static String getProcessName(Context ctx, int pid) {
         try {
@@ -78,7 +79,7 @@ class Util {
             }
         } catch (Exception ignored) {
         }
-        return "unknown";
+        return null;
     }
 
     private static final String[] suPathname = {
@@ -174,7 +175,7 @@ class Util {
         return sb.toString();
     }
 
-    private static String getFile(String pathname) {
+    private static String getFileContent(String pathname) {
         StringBuilder sb = new StringBuilder();
         BufferedReader br = null;
         String line;
@@ -214,6 +215,32 @@ class Util {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    static boolean checkProcessAnrState(Context ctx, long timeoutMs) {
+        ActivityManager am = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+        if (am == null) return false;
+
+        int pid = android.os.Process.myPid();
+        long poll = timeoutMs / 500;
+        for (int i = 0; i < poll; i++) {
+            List<ActivityManager.ProcessErrorStateInfo> processErrorList = am.getProcessesInErrorState();
+            if (processErrorList != null) {
+                for (ActivityManager.ProcessErrorStateInfo errorStateInfo : processErrorList) {
+                    if (errorStateInfo.pid == pid && errorStateInfo.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) {
+                        return true;
+                    }
+                }
+            }
+
+            try {
+                Thread.sleep(500);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return false;
+    }
+
     static String getLogHeader(Date startTime, Date crashTime, String crashType, String appId, String appVersion) {
         DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
 
@@ -238,13 +265,13 @@ class Util {
         int pid = android.os.Process.myPid();
         return "memory info:\n"
             + " System Summary (From: /proc/meminfo)\n"
-            + Util.getFile("/proc/meminfo")
+            + Util.getFileContent("/proc/meminfo")
             + "-\n"
             + " Process Status (From: /proc/PID/status)\n"
-            + Util.getFile("/proc/" + pid + "/status")
+            + Util.getFileContent("/proc/" + pid + "/status")
             + "-\n"
             + " Process Limits (From: /proc/PID/limits)\n"
-            + Util.getFile("/proc/" + pid + "/limits")
+            + Util.getFileContent("/proc/" + pid + "/limits")
             + "-\n"
             + Util.getProcessMemoryInfo()
             + "\n";

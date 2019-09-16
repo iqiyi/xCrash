@@ -16,7 +16,7 @@ LOCAL_LDLIBS           := -llog -ldl
 LOCAL_SRC_FILES        := xc_jni.c      \
                           xc_common.c   \
                           xc_crash.c    \
-                          xc_anr.c      \
+                          xc_trace.c    \
                           xc_dl.c       \
                           xc_fallback.c \
                           xc_util.c     \

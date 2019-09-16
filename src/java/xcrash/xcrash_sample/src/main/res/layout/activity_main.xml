@@ -99,17 +99,6 @@
                 tools:ignore="HardcodedText" />
 
             <Button
-                android:id="@+id/testAnrSigquitButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="0dp"
-                android:onClick="testAnrSigquit_onClick"
-                android:padding="20dp"
-                android:text="ANR (kill -3)"
-                android:textAllCaps="false"
-                tools:ignore="HardcodedText" />
-
-            <Button
                 android:id="@+id/testAnrInputButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -117,17 +106,6 @@
                 android:onClick="testAnrInput_onClick"
                 android:padding="20dp"
                 android:text="ANR (input timeout)"
-                android:textAllCaps="false"
-                tools:ignore="HardcodedText" />
-
-            <Button
-                android:id="@+id/testAnrServiceButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="0dp"
-                android:onClick="testAnrService_onClick"
-                android:padding="20dp"
-                android:text="ANR (service timeout)"
                 android:textAllCaps="false"
                 tools:ignore="HardcodedText" />
         </LinearLayout>

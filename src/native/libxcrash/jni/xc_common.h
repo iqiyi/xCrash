@@ -34,16 +34,16 @@ extern "C" {
 
 // log filename format:
 // tombstone_01234567890123456789_appversion__processname.native.xcrash
-// tombstone_01234567890123456789_appversion__processname.anr.xcrash
+// tombstone_01234567890123456789_appversion__processname.trace.xcrash
 // placeholder_01234567890123456789.clean.xcrash
-#define XC_COMMON_LOG_PREFIX          "tombstone"
-#define XC_COMMON_LOG_PREFIX_LEN      9
-#define XC_COMMON_LOG_SUFFIX_CRASH    ".native.xcrash"
-#define XC_COMMON_LOG_SUFFIX_ANR      ".anr.xcrash"
-#define XC_COMMON_LOG_SUFFIX_ANR_LEN  11
-#define XC_COMMON_LOG_NAME_MIN_ANR    (9 + 1 + 20 + 1 + 2 + 11)
-#define XC_COMMON_PLACEHOLDER_PREFIX  "placeholder"
-#define XC_COMMON_PLACEHOLDER_SUFFIX  ".clean.xcrash"
+#define XC_COMMON_LOG_PREFIX           "tombstone"
+#define XC_COMMON_LOG_PREFIX_LEN       9
+#define XC_COMMON_LOG_SUFFIX_CRASH     ".native.xcrash"
+#define XC_COMMON_LOG_SUFFIX_TRACE     ".trace.xcrash"
+#define XC_COMMON_LOG_SUFFIX_TRACE_LEN 13
+#define XC_COMMON_LOG_NAME_MIN_TRACE   (9 + 1 + 20 + 1 + 2 + 13)
+#define XC_COMMON_PLACEHOLDER_PREFIX   "placeholder"
+#define XC_COMMON_PLACEHOLDER_SUFFIX   ".clean.xcrash"
 
 //system info
 extern int           xc_common_api_level;
@@ -89,9 +89,9 @@ int xc_common_init(int         api_level,
                    const char *log_dir);
 
 int xc_common_open_crash_log(char *pathname, size_t pathname_len, int *from_placeholder);
-int xc_common_open_anr_log(char *pathname, size_t pathname_len, uint64_t anr_time);
+int xc_common_open_trace_log(char *pathname, size_t pathname_len, uint64_t trace_time);
 void xc_common_close_crash_log(int fd);
-void xc_common_close_anr_log(int fd);
+void xc_common_close_trace_log(int fd);
 int xc_common_seek_to_content_end(int fd);
 
 #ifdef __cplusplus

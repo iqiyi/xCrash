@@ -105,9 +105,4 @@ void xc_test_crash(int run_in_new_thread)
         xc_test_call_1();
 }
 
-void xc_test_anr(void)
-{
-    kill(getpid(), SIGQUIT);
-}
-
 #pragma clang diagnostic pop

@@ -45,6 +45,7 @@ class FileManager {
     private int javaLogCountMax = 0;
     private int nativeLogCountMax = 0;
     private int anrLogCountMax = 0;
+    private int traceLogCountMax = 1;
     private int placeholderCountMax = 0;
     private int placeholderSizeKb = 0;
     private int delayMs = 0;
@@ -80,6 +81,7 @@ class FileManager {
             int javaLogCount = 0;
             int nativeLogCount = 0;
             int anrLogCount = 0;
+            int traceLogCount = 0;
             int placeholderCleanCount = 0;
             int placeholderDirtyCount = 0;
             for (final File file : files) {
@@ -92,6 +94,8 @@ class FileManager {
                             nativeLogCount++;
                         } else if (name.endsWith(Util.anrLogSuffix)) {
                             anrLogCount++;
+                        } else if (name.endsWith(Util.traceLogSuffix)) {
+                            traceLogCount++;
                         }
                     } else if (name.startsWith(placeholderPrefix + "_")) {
                         if (name.endsWith(placeholderCleanSuffix)) {
@@ -106,6 +110,7 @@ class FileManager {
             if (javaLogCount <= this.javaLogCountMax
                 && nativeLogCount <= this.nativeLogCountMax
                 && anrLogCount <= this.anrLogCountMax
+                && traceLogCount <= this.traceLogCountMax
                 && placeholderCleanCount == this.placeholderCountMax
                 && placeholderDirtyCount == 0) {
                 //everything OK, need to do nothing
@@ -113,6 +118,7 @@ class FileManager {
             } else if (javaLogCount > this.javaLogCountMax + 10
                 || nativeLogCount > this.nativeLogCountMax + 10
                 || anrLogCount > this.anrLogCountMax + 10
+                || traceLogCount > this.traceLogCountMax + 10
                 || placeholderCleanCount > this.placeholderCountMax + 10
                 || placeholderDirtyCount > 10) {
                 //too many unwanted files, clean up now
@@ -121,6 +127,7 @@ class FileManager {
             } else if (javaLogCount > this.javaLogCountMax
                 || nativeLogCount > this.nativeLogCountMax
                 || anrLogCount > this.anrLogCountMax
+                || traceLogCount > this.traceLogCountMax
                 || placeholderCleanCount > this.placeholderCountMax
                 || placeholderDirtyCount > 0) {
                 //have some unwanted files, clean up as soon as possible
@@ -157,6 +164,20 @@ class FileManager {
             }
         } catch (Exception e) {
             XCrash.getLogger().e(Util.TAG, "FileManager maintain start failed", e);
+        }
+    }
+
+    boolean maintainAnr() {
+        if (!Util.checkAndCreateDir(logDir)) {
+            return false;
+        }
+        File dir = new File(logDir);
+
+        try {
+            return doMaintainTombstoneType(dir, Util.anrLogSuffix, anrLogCountMax);
+        } catch (Exception e) {
+            XCrash.getLogger().e(Util.TAG, "FileManager maintainAnr failed", e);
+            return false;
         }
     }
 
@@ -321,60 +342,37 @@ class FileManager {
     }
 
     private void doMaintainTombstone(File dir) {
-        //get all existing log files
-        File[] nativeFiles = dir.listFiles(new FilenameFilter() {
+        doMaintainTombstoneType(dir, Util.nativeLogSuffix, nativeLogCountMax);
+        doMaintainTombstoneType(dir, Util.javaLogSuffix, javaLogCountMax);
+        doMaintainTombstoneType(dir, Util.anrLogSuffix, anrLogCountMax);
+        doMaintainTombstoneType(dir, Util.traceLogSuffix, traceLogCountMax);
+    }
+
+    private boolean doMaintainTombstoneType(File dir, final String logSuffix, int logCountMax) {
+        File[] files = dir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
-                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.nativeLogSuffix);
-            }
-        });
-        File[] javaFiles = dir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.javaLogSuffix);
-            }
-        });
-        File[] anrFiles = dir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(Util.logPrefix + "_") && name.endsWith(Util.anrLogSuffix);
+                return name.startsWith(Util.logPrefix + "_") && name.endsWith(logSuffix);
             }
         });
 
-        //delete unwanted files
-        if (nativeFiles != null && nativeFiles.length >= nativeLogCountMax) {
-            Arrays.sort(nativeFiles, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return f1.getName().compareTo(f2.getName());
+        boolean result = true;
+        if (files != null && files.length > logCountMax) {
+            if (logCountMax > 0) {
+                Arrays.sort(files, new Comparator<File>() {
+                    @Override
+                    public int compare(File f1, File f2) {
+                        return f1.getName().compareTo(f2.getName());
+                    }
+                });
+            }
+            for (int i = 0; i < files.length - logCountMax; i++) {
+                if (!recycleLogFile(files[i])) {
+                    result = false;
                 }
-            });
-            for (int i = 0; i < nativeFiles.length - nativeLogCountMax; i++) {
-                recycleLogFile(nativeFiles[i]);
             }
         }
-        if (javaFiles != null && javaFiles.length >= javaLogCountMax) {
-            Arrays.sort(javaFiles, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return f1.getName().compareTo(f2.getName());
-                }
-            });
-            for (int i = 0; i < javaFiles.length - javaLogCountMax; i++) {
-                recycleLogFile(javaFiles[i]);
-            }
-        }
-        if (anrFiles != null && anrFiles.length >= anrLogCountMax) {
-            Arrays.sort(anrFiles, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return f1.getName().compareTo(f2.getName());
-                }
-            });
-            for (int i = 0; i < anrFiles.length - anrLogCountMax; i++) {
-                recycleLogFile(anrFiles[i]);
-            }
-        }
+        return result;
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")

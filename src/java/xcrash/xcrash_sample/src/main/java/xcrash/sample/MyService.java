@@ -20,11 +20,6 @@ public class MyService extends Service {
             XCrash.testNativeCrash(false);
         } else if (intent.getStringExtra("type").equals("java")) {
             XCrash.testJavaCrash(false);
-        } else {
-            try {
-                Thread.sleep(25 * 1000);
-            } catch (Exception ignored) {
-            }
         }
         return START_NOT_STICKY;
     }

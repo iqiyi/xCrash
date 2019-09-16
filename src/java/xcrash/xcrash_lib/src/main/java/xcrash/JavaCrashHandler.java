@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.text.TextUtils;
 
 @SuppressLint("StaticFieldLeak")
 class JavaCrashHandler implements UncaughtExceptionHandler {
@@ -67,13 +68,13 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         return instance;
     }
 
-    void initialize(Context ctx, String appId, String appVersion, String logDir, boolean rethrow,
+    void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir, boolean rethrow,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpFds, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
         this.ctx = ctx;
-        this.pid = -1;
-        this.processName = null;
+        this.pid = pid;
+        this.processName = (TextUtils.isEmpty(processName) ? "unknown" : processName);
         this.appId = appId;
         this.appVersion = appVersion;
         this.rethrow = rethrow;
@@ -97,8 +98,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
-        this.pid = android.os.Process.myPid();
-
         try {
             handleException(thread, throwable);
         } catch (Exception e) {
@@ -118,9 +117,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         //notify the java crash
         NativeHandler.getInstance().notifyJavaCrashed();
         AnrHandler.getInstance().notifyJavaCrashed();
-
-        //get process name
-        this.processName = Util.getProcessName(this.ctx, this.pid);
 
         //create log file
         File logFile = null;
