@@ -288,9 +288,13 @@ static void *xc_trace_dumper(void *arg)
     (void)arg;
     
     pthread_detach(pthread_self());
-    pthread_setname_np(pthread_self(), "xcrash_trace_dump");
 
-    if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, NULL)) goto exit;
+    JavaVMAttachArgs attach_args = {
+        .version = XC_JNI_VERSION,
+        .name    = "xcrash_trace_dp",
+        .group   = NULL
+    };
+    if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, &attach_args)) goto exit;
 
     while(1)
     {

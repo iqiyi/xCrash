@@ -298,9 +298,12 @@ static void *xc_crash_callback_thread(void *arg)
     
     (void)arg;
     
-    pthread_setname_np(pthread_self(), "xcrash_crash_cb");
-
-    if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, NULL)) return NULL;
+    JavaVMAttachArgs attach_args = {
+        .version = XC_JNI_VERSION,
+        .name    = "xcrash_crash_cb",
+        .group   = NULL
+    };
+    if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, &attach_args)) return NULL;
 
     //block until native crashed
     if(sizeof(data) != XCC_UTIL_TEMP_FAILURE_RETRY(read(xc_crash_cb_notifier, &data, sizeof(data)))) goto end;
