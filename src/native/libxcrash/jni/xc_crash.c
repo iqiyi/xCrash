@@ -221,7 +221,7 @@ static int xc_crash_exec_dumper(void *arg)
 
     //escape to the dumper process
     errno = 0;
-    //execl(xc_crash_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
+    execl(xc_crash_dumper_pathname, XCC_UTIL_XCRASH_DUMPER_FILENAME, NULL);
     return 100 + errno;
 }
 
