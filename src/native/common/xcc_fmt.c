@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "xcc_fmt.h"
+#include "xcc_libc_support.h"
 
 static unsigned xcc_fmt_parse_decimal(const char *format, int *ppos)
 {
@@ -164,7 +165,7 @@ static void xcc_fmt_stream_send(xcc_fmt_stream_t *self, const char *data, int le
 static void xcc_fmt_stream_send_repeat(xcc_fmt_stream_t *self, char ch, int count)
 {
     char pad[8];
-    memset(pad, ch, sizeof(pad));
+    xcc_libc_support_memset(pad, ch, sizeof(pad));
     
     const int pad_size = (int)(sizeof(pad));
     while(count > 0)

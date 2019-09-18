@@ -40,6 +40,7 @@
 #include "xcc_errno.h"
 #include "xcc_fmt.h"
 #include "xcc_version.h"
+#include "xcc_libc_support.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
@@ -47,88 +48,6 @@
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 
 #define XCC_UTIL_TIME_FORMAT "%04d-%02d-%02dT%02d:%02d:%02d.%03ld%c%02ld%02ld"
-
-/* Nonzero if YEAR is a leap year (every 4 years,
-   except every 100th isn't, and every 400th is).  */
-#define XCC_UTIL_ISLEAP(year)         ((year) % 4 == 0 && ((year) % 100 != 0 || (year) % 400 == 0))
-
-#define XCC_UTIL_SECS_PER_HOUR        (60 * 60)
-#define XCC_UTIL_SECS_PER_DAY         (XCC_UTIL_SECS_PER_HOUR * 24)
-#define XCC_UTIL_DIV(a, b)            ((a) / (b) - ((a) % (b) < 0))
-#define XCC_UTIL_LEAPS_THRU_END_OF(y) (XCC_UTIL_DIV(y, 4) - XCC_UTIL_DIV(y, 100) + XCC_UTIL_DIV(y, 400))
-
-static const unsigned short int xcc_util_mon_yday[2][13] =
-{
-    /* Normal years.  */
-    { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
-    /* Leap years.  */
-    { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
-};
-
-/* Compute the `struct tm' representation of *T,
-   offset GMTOFF seconds east of UTC,
-   and store year, yday, mon, mday, wday, hour, min, sec into *RESULT.
-   Return RESULT if successful.  */
-static struct tm *xcc_util_time2tm(const time_t timev, long gmtoff, struct tm *result)
-{
-    time_t days, rem, y;
-    const unsigned short int *ip;
-
-    if(NULL == result) return NULL;
-
-    result->tm_gmtoff = gmtoff;
-
-    days = timev / XCC_UTIL_SECS_PER_DAY;
-    rem = timev % XCC_UTIL_SECS_PER_DAY;
-    rem += gmtoff;
-    while (rem < 0)
-    {
-        rem += XCC_UTIL_SECS_PER_DAY;
-        --days;
-    }
-    while (rem >= XCC_UTIL_SECS_PER_DAY)
-    {
-        rem -= XCC_UTIL_SECS_PER_DAY;
-        ++days;
-    }
-    result->tm_hour = (int)(rem / XCC_UTIL_SECS_PER_HOUR);
-    rem %= XCC_UTIL_SECS_PER_HOUR;
-    result->tm_min = (int)(rem / 60);
-    result->tm_sec = rem % 60;
-    /* January 1, 1970 was a Thursday.  */
-    result->tm_wday = (4 + days) % 7;
-    if (result->tm_wday < 0)
-        result->tm_wday += 7;
-    y = 1970;
-
-    while (days < 0 || days >= (XCC_UTIL_ISLEAP(y) ? 366 : 365))
-    {
-        /* Guess a corrected year, assuming 365 days per year.  */
-        time_t yg = y + days / 365 - (days % 365 < 0);
-
-        /* Adjust DAYS and Y to match the guessed year.  */
-        days -= ((yg - y) * 365
-                 + XCC_UTIL_LEAPS_THRU_END_OF (yg - 1)
-                 - XCC_UTIL_LEAPS_THRU_END_OF (y - 1));
-
-        y = yg;
-    }
-    result->tm_year = (int)(y - 1900);
-    if (result->tm_year != y - 1900)
-    {
-        /* The year cannot be represented due to overflow.  */
-        errno = EOVERFLOW;
-        return NULL;
-    }
-    result->tm_yday = (int)days;
-    ip = xcc_util_mon_yday[XCC_UTIL_ISLEAP(y)];
-    for (y = 11; days < (long int) ip[y]; --y)
-        continue;
-    days -= ip[y];
-    result->tm_mon = (int)y;
-    result->tm_mday = (int)(days + 1);
-    return result;
-}
 
 const char* xcc_util_get_signame(const siginfo_t* si)
 {
@@ -569,10 +488,10 @@ size_t xcc_util_get_dump_header(char *buf,
     struct tm    crash_tm;
 
     //convert times
-    memset(&start_tm, 0, sizeof(start_tm));
-    memset(&crash_tm, 0, sizeof(crash_tm));
-    xcc_util_time2tm(start_sec, time_zone, &start_tm);
-    xcc_util_time2tm(crash_sec, time_zone, &crash_tm);
+    xcc_libc_support_memset(&start_tm, 0, sizeof(start_tm));
+    xcc_libc_support_memset(&crash_tm, 0, sizeof(crash_tm));
+    xcc_libc_support_localtime_r(&start_sec, time_zone, &start_tm);
+    xcc_libc_support_localtime_r(&crash_sec, time_zone, &crash_tm);
 
     return xcc_fmt_snprintf(buf, buf_len,
                             XCC_UTIL_TOMB_HEAD

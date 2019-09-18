@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "xcc_util.h"
+#include "xcc_libc_support.h"
 #include "xcc_meminfo.h"
 
 #define XCC_MEMINFO_DELETE_STR     " (deleted)"
@@ -500,8 +501,8 @@ int xcc_meminfo_record(int log_fd, pid_t pid)
     size_t         i;
     int            r = 0;
 
-    memset(stats, 0, sizeof(stats));
-    memset(&total, 0, sizeof(total));
+    xcc_libc_support_memset(stats, 0, sizeof(stats));
+    xcc_libc_support_memset(&total, 0, sizeof(total));
 
     //load memory info from /proc/pid/smaps
     snprintf(path, sizeof(path), "/proc/%d/smaps", pid);

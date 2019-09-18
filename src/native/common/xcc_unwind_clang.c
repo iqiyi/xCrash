@@ -38,6 +38,7 @@
 #include "xcc_errno.h"
 #include "xcc_util.h"
 #include "xcc_fmt.h"
+#include "xcc_libc_support.h"
 
 #define MAX_FRAMES 64
 
@@ -162,7 +163,7 @@ size_t xcc_unwind_clang_record(ucontext_t *uc, char *buf, size_t buf_len)
 {
     xcc_unwind_clang_t self;
 
-    memset(&self, 0, sizeof(xcc_unwind_clang_t));
+    xcc_libc_support_memset(&self, 0, sizeof(xcc_unwind_clang_t));
     self.uc      = uc;
     self.buf     = buf;
     self.buf_len = buf_len;

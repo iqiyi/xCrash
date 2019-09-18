@@ -66,7 +66,7 @@ int xcc_signal_crash_register(void (*handler)(int, siginfo_t *, void *))
     if(0 != sigaltstack(&ss, NULL)) return XCC_ERRNO_SYS;
 
     struct sigaction act;
-    xcc_safe_memset(&act, 0, sizeof(act));
+    memset(&act, 0, sizeof(act));
     sigfillset(&act.sa_mask);
     act.sa_sigaction = handler;
     act.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
@@ -93,7 +93,7 @@ int xcc_signal_crash_unregister(void)
 int xcc_signal_crash_ignore(void)
 {
     struct sigaction act;
-    xcc_safe_memset(&act, 0, sizeof(act));
+    xcc_libc_support_memset(&act, 0, sizeof(act));
     sigemptyset(&act.sa_mask);
     act.sa_handler = SIG_DFL;
     act.sa_flags = SA_RESTART;
@@ -133,7 +133,7 @@ int xcc_signal_trace_register(void (*handler)(int, siginfo_t *, void *))
     if(0 != (r = pthread_sigmask(SIG_UNBLOCK, &set, &xcc_signal_trace_oldset))) return r;
 
     //register new signal handler for SIGQUIT
-    xcc_safe_memset(&act, 0, sizeof(act));
+    memset(&act, 0, sizeof(act));
     sigfillset(&act.sa_mask);
     act.sa_sigaction = handler;
     act.sa_flags = SA_RESTART | SA_SIGINFO;

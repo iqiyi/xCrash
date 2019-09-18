@@ -19,20 +19,26 @@
 // SOFTWARE.
 //
 
+// Created by Sim Sun on 2019-09-17.
+
 #ifndef XCC_LIBC_SUPPORT_H
 #define XCC_LIBC_SUPPORT_H 1
 
 #include <stddef.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif
 
 // memset(3) is not async-signal-safe, ref: http://boston.conman.org/2016/12/17.1
-void xcc_safe_memset(void* ip, char c, size_t len);
+void *xcc_libc_support_memset(void *s, int c, size_t n);
+
+// you need to pass timezone through gmtoff
+struct tm *xcc_libc_support_localtime_r(const time_t *timev, long gmtoff, struct tm *result);
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif
 
-#endif // XCC_LIBC_SUPPORT_H
+#endif
