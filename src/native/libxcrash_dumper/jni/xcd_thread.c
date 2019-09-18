@@ -62,6 +62,7 @@ void xcd_thread_suspend(xcd_thread_t *self)
         XCD_LOG_WARN("THREAD: ptrace ATTACH failed, errno=%d", errno);
 #endif
         self->status = XCD_THREAD_STATUS_ATTACH;
+        return;
     }
 
     errno = 0;
@@ -74,6 +75,7 @@ void xcd_thread_suspend(xcd_thread_t *self)
             XCD_LOG_ERROR("THREAD: waitpid for ptrace ATTACH failed, errno=%d", errno);
 #endif
             self->status = XCD_THREAD_STATUS_ATTACH_WAIT;
+            return;
         }
         errno = 0;
     }
@@ -102,6 +104,7 @@ void xcd_thread_load_regs(xcd_thread_t *self)
     {
         XCD_LOG_ERROR("THREAD: ptrace GETREGS failed, errno=%d", errno);
         self->status = XCD_THREAD_STATUS_REGS;
+        return;
     }
     regs_len = XCD_REGS_USER_NUM;
 #else
@@ -112,6 +115,7 @@ void xcd_thread_load_regs(xcd_thread_t *self)
     {
         XCD_LOG_ERROR("THREAD: ptrace GETREGSET failed, errno=%d", errno);
         self->status = XCD_THREAD_STATUS_REGS;
+        return;
     }
     regs_len = iovec.iov_len / sizeof(uintptr_t);
 #endif
@@ -128,6 +132,9 @@ int xcd_thread_load_frames(xcd_thread_t *self, xcd_maps_t *maps)
 #if XCD_THREAD_DEBUG
     XCD_LOG_DEBUG("THREAD: load frames, tid=%d, tname=%s", self->tid, self->tname);
 #endif
+
+    if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE; //do NOT ignore
+
     return xcd_frames_create(&(self->frames), &(self->regs), maps, self->pid);
 }
 
@@ -139,28 +146,28 @@ int xcd_thread_record_info(xcd_thread_t *self, int log_fd, const char *pname)
 
 int xcd_thread_record_regs(xcd_thread_t *self, int log_fd)
 {
-    if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
+    if(XCD_THREAD_STATUS_OK != self->status) return 0; //ignore
     
     return xcd_regs_record(&(self->regs), log_fd);
 }
 
 int xcd_thread_record_backtrace(xcd_thread_t *self, int log_fd)
 {
-    if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
+    if(XCD_THREAD_STATUS_OK != self->status) return 0; //ignore
 
     return xcd_frames_record_backtrace(self->frames, log_fd);
 }
 
 int xcd_thread_record_buildid(xcd_thread_t *self, int log_fd, int dump_elf_hash, uintptr_t fault_addr)
 {
-    if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
+    if(XCD_THREAD_STATUS_OK != self->status) return 0; //ignore
 
     return xcd_frames_record_buildid(self->frames, log_fd, dump_elf_hash, fault_addr);
 }
 
 int xcd_thread_record_stack(xcd_thread_t *self, int log_fd)
 {
-    if(XCD_THREAD_STATUS_OK != self->status) return XCC_ERRNO_STATE;
+    if(XCD_THREAD_STATUS_OK != self->status) return 0; //ignore
     
     return xcd_frames_record_stack(self->frames, log_fd);
 }
@@ -286,6 +293,8 @@ int xcd_thread_record_memory(xcd_thread_t *self, int log_fd)
     size_t            labels_count;
     size_t            i;
     int               r;
+
+    if(XCD_THREAD_STATUS_OK != self->status) return 0; //ignore
 
     xcd_regs_get_labels(&labels, &labels_count);
     
