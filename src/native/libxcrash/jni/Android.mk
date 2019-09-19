@@ -10,9 +10,9 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE           := xcrash
 LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden
-LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
+LOCAL_LDLIBS           := -ldl -llog
 LOCAL_STATIC_LIBRARIES := test
-LOCAL_LDLIBS           := -llog -ldl
+LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
 LOCAL_SRC_FILES        := xc_jni.c      \
                           xc_common.c   \
                           xc_crash.c    \
