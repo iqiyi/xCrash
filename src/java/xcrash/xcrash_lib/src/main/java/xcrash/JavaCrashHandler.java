@@ -34,8 +34,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.text.TextUtils;
+import android.os.Process;
 
 @SuppressLint("StaticFieldLeak")
 class JavaCrashHandler implements UncaughtExceptionHandler {
@@ -44,7 +44,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     private final Date startTime = new Date();
 
-    private Context ctx;
     private int pid;
     private String processName;
     private String appId;
@@ -68,11 +67,10 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         return instance;
     }
 
-    void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir, boolean rethrow,
+    void initialize(int pid, String processName, String appId, String appVersion, String logDir, boolean rethrow,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpFds, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
-        this.ctx = ctx;
         this.pid = pid;
         this.processName = (TextUtils.isEmpty(processName) ? "unknown" : processName);
         this.appId = appId;
@@ -107,7 +105,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         if (this.rethrow && defaultHandler != null) {
             defaultHandler.uncaughtException(thread, throwable);
         } else {
-            android.os.Process.killProcess(this.pid);
+            Process.killProcess(this.pid);
+            System.exit(10);
         }
     }
 
@@ -196,7 +195,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         String stacktrace = sw.toString();
 
         return Util.getLogHeader(startTime, crashTime, Util.javaCrashType, appId, appVersion)
-                + "pid: " + pid + ", tid: " + android.os.Process.myTid() + ", name: " + thread.getName() + "  >>> " + processName + " <<<\n"
+                + "pid: " + pid + ", tid: " + Process.myTid() + ", name: " + thread.getName() + "  >>> " + processName + " <<<\n"
                 + "\n"
                 + "java stacktrace:\n"
                 + stacktrace

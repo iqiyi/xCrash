@@ -136,7 +136,6 @@ public final class XCrash {
         //init java crash handler
         if (params.enableJavaCrashHandler) {
             JavaCrashHandler.getInstance().initialize(
-                ctx,
                 pid,
                 processName,
                 appId,

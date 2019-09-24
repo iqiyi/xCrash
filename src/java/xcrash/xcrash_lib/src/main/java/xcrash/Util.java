@@ -68,17 +68,45 @@ class Util {
     static final String traceLogSuffix = ".trace.xcrash";
 
     static String getProcessName(Context ctx, int pid) {
+
+        //get from ActivityManager
         try {
             ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
             if (manager != null) {
-                for (ActivityManager.RunningAppProcessInfo processInfo : manager.getRunningAppProcesses()) {
-                    if (processInfo.pid == pid) {
-                        return processInfo.processName;
+                List<ActivityManager.RunningAppProcessInfo> processInfoList = manager.getRunningAppProcesses();
+                if (processInfoList != null) {
+                    for (ActivityManager.RunningAppProcessInfo processInfo : processInfoList) {
+                        if (processInfo.pid == pid && !TextUtils.isEmpty(processInfo.processName)) {
+                            return processInfo.processName; //OK
+                        }
                     }
                 }
             }
         } catch (Exception ignored) {
         }
+
+        //get from /proc/PID/cmdline
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader("/proc/" + pid + "/cmdline"));
+            String processName = br.readLine();
+            if (!TextUtils.isEmpty(processName)) {
+                processName = processName.trim();
+                if (!TextUtils.isEmpty(processName)) {
+                    return processName; //OK
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                if (br != null) {
+                    br.close();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        //failed
         return null;
     }
 
