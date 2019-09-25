@@ -22,6 +22,7 @@
 // Created by caikelun on 2019-03-07.
 package xcrash;
 
+import android.app.Application;
 import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
@@ -132,6 +133,12 @@ public final class XCrash {
             params.placeholderCountMax,
             params.placeholderSizeKb,
             params.logFileMaintainDelayMs);
+
+        if ((params.enableJavaCrashHandler && !params.javaRethrow) || (params.enableNativeCrashHandler && !params.nativeRethrow)) {
+            if (ctx instanceof Application) {
+                ActivityMonitor.getInstance().initialize((Application) ctx);
+            }
+        }
 
         //init java crash handler
         if (params.enableJavaCrashHandler) {

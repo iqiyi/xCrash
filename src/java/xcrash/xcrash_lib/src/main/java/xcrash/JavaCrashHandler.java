@@ -96,15 +96,22 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
+        if (defaultHandler != null) {
+            Thread.setDefaultUncaughtExceptionHandler(defaultHandler);
+        }
+
         try {
             handleException(thread, throwable);
         } catch (Exception e) {
             XCrash.getLogger().e(Util.TAG, "JavaCrashHandler handleException failed", e);
         }
 
-        if (this.rethrow && defaultHandler != null) {
-            defaultHandler.uncaughtException(thread, throwable);
+        if (this.rethrow) {
+            if (defaultHandler != null) {
+                defaultHandler.uncaughtException(thread, throwable);
+            }
         } else {
+            ActivityMonitor.getInstance().finishAllActivities();
             Process.killProcess(this.pid);
             System.exit(10);
         }

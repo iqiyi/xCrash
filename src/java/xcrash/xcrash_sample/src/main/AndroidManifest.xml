@@ -21,13 +21,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".SecondActivity" />
+
         <service
             android:name=".MyService"
-            android:process=":bg"
             android:enabled="true"
-            android:exported="false">
-        </service>
-
+            android:exported="false"
+            android:process=":bg" />
     </application>
 
 </manifest>

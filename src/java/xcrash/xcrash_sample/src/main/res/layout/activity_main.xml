@@ -49,6 +49,17 @@
                 tools:ignore="HardcodedText" />
 
             <Button
+                android:id="@+id/testNativeCrashInAnotherActivityButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="0dp"
+                android:onClick="testNativeCrashInAnotherActivity_onClick"
+                android:padding="20dp"
+                android:text="native crash (in another activity)"
+                android:textAllCaps="false"
+                tools:ignore="HardcodedText" />
+
+            <Button
                 android:id="@+id/testNativeCrashInAnotherProcessButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -81,6 +92,17 @@
                 android:onClick="testJavaCrashInAnotherThread_onClick"
                 android:padding="20dp"
                 android:text="java crash (in another java thread)"
+                android:textAllCaps="false"
+                tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/testJavaCrashInAnotherActivityButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="0dp"
+                android:onClick="testJavaCrashInAnotherActivity_onClick"
+                android:padding="20dp"
+                android:text="java crash (in another activity)"
                 android:textAllCaps="false"
                 tools:ignore="HardcodedText" />
 

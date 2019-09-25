@@ -1,21 +1,20 @@
 package xcrash.sample;
 
-import android.app.Service;
+import androidx.appcompat.app.AppCompatActivity;
+
 import android.content.Intent;
-import android.os.IBinder;
+import android.os.Bundle;
 
 import xcrash.XCrash;
 
-public class MyService extends Service {
-    public MyService() {
-    }
+public class SecondActivity extends AppCompatActivity {
 
     @Override
-    public void onCreate() {
-    }
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_second);
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+        Intent intent = getIntent();
         String type = intent.getStringExtra("type");
         if (type != null) {
             if (type.equals("native")) {
@@ -24,11 +23,5 @@ public class MyService extends Service {
                 XCrash.testJavaCrash(false);
             }
         }
-        return START_NOT_STICKY;
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
     }
 }

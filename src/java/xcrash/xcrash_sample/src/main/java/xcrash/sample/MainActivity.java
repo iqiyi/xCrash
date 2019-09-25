@@ -55,6 +55,10 @@ public class MainActivity extends AppCompatActivity {
         XCrash.testNativeCrash(true);
     }
 
+    public void testNativeCrashInAnotherActivity_onClick(View view) {
+        startActivity(new Intent(this, SecondActivity.class).putExtra("type", "native"));
+    }
+
     public void testNativeCrashInAnotherProcess_onClick(View view) {
         startService(new Intent(this, MyService.class).putExtra("type", "native"));
     }
@@ -65,6 +69,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void testJavaCrashInAnotherThread_onClick(View view) {
         XCrash.testJavaCrash(true);
+    }
+
+    public void testJavaCrashInAnotherActivity_onClick(View view) {
+        startActivity(new Intent(this, SecondActivity.class).putExtra("type", "java"));
     }
 
     public void testJavaCrashInAnotherProcess_onClick(View view) {

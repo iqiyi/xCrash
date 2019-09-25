@@ -42,6 +42,7 @@ class NativeHandler {
 
     private boolean initNativeLibOk = false;
     private boolean anrEnable = false;
+    private boolean crashRethrow = false;
 
     private NativeHandler() {
     }
@@ -95,6 +96,7 @@ class NativeHandler {
         this.crashCallback = crashCallback;
         this.anrCallback = anrCallback;
         this.anrEnable = anrEnable;
+        this.crashRethrow = crashRethrow;
         this.anrTimeoutMs = anrRethrow ? 15 * 1000 : 30 * 1000; //setting rethrow to "false" is NOT recommended
 
         //init native lib
@@ -173,6 +175,7 @@ class NativeHandler {
     // do NOT obfuscate this method
     @SuppressWarnings("unused")
     private static void crashCallback(String logPath, String emergency, boolean dumpJavaStacktrace, boolean isMainThread, String threadName) {
+
         if (!TextUtils.isEmpty(logPath)) {
 
             //append java stacktrace
@@ -194,6 +197,10 @@ class NativeHandler {
             } catch (Exception e) {
                 XCrash.getLogger().w(Util.TAG, "NativeHandler native crash callback.onCrash failed", e);
             }
+        }
+
+        if (!NativeHandler.getInstance().crashRethrow) {
+            ActivityMonitor.getInstance().finishAllActivities();
         }
     }
 
