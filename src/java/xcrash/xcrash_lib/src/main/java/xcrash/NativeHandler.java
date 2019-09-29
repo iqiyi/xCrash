@@ -37,12 +37,13 @@ class NativeHandler {
     private long anrTimeoutMs = 15 * 1000;
 
     private Context ctx;
-    private ICrashCallback crashCallback = null;
-    private ICrashCallback anrCallback = null;
+    private boolean crashRethrow;
+    private ICrashCallback crashCallback;
+    private boolean anrEnable;
+    private boolean anrCheckProcessState;
+    private ICrashCallback anrCallback;
 
     private boolean initNativeLibOk = false;
-    private boolean anrEnable = false;
-    private boolean crashRethrow = false;
 
     private NativeHandler() {
     }
@@ -70,6 +71,7 @@ class NativeHandler {
                    ICrashCallback crashCallback,
                    boolean anrEnable,
                    boolean anrRethrow,
+                   boolean anrCheckProcessState,
                    int anrLogcatSystemLines,
                    int anrLogcatEventsLines,
                    int anrLogcatMainLines,
@@ -93,10 +95,11 @@ class NativeHandler {
         }
 
         this.ctx = ctx;
-        this.crashCallback = crashCallback;
-        this.anrCallback = anrCallback;
-        this.anrEnable = anrEnable;
         this.crashRethrow = crashRethrow;
+        this.crashCallback = crashCallback;
+        this.anrEnable = anrEnable;
+        this.anrCheckProcessState = anrCheckProcessState;
+        this.anrCallback = anrCallback;
         this.anrTimeoutMs = anrRethrow ? 15 * 1000 : 30 * 1000; //setting rethrow to "false" is NOT recommended
 
         //init native lib
@@ -215,9 +218,11 @@ class NativeHandler {
         TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
 
         //check process ANR state
-        if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) {
-            FileManager.getInstance().recycleLogFile(new File(logPath));
-            return; //not an ANR
+        if (NativeHandler.getInstance().anrCheckProcessState) {
+            if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) {
+                FileManager.getInstance().recycleLogFile(new File(logPath));
+                return; //not an ANR
+            }
         }
 
         //delete extra ANR log files

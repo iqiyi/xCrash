@@ -168,6 +168,7 @@ public final class XCrash {
                 appId,
                 params.appVersion,
                 params.logDir,
+                params.anrCheckProcessState,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
@@ -198,6 +199,7 @@ public final class XCrash {
                 params.nativeCallback,
                 params.enableAnrHandler && Build.VERSION.SDK_INT >= 21,
                 params.anrRethrow,
+                params.anrCheckProcessState,
                 params.anrLogcatSystemLines,
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
@@ -672,6 +674,7 @@ public final class XCrash {
         //anr
         boolean        enableAnrHandler     = true;
         boolean        anrRethrow           = true;
+        boolean        anrCheckProcessState = true;
         int            anrLogCountMax       = 10;
         int            anrLogcatSystemLines = 50;
         int            anrLogcatEventsLines = 50;
@@ -715,6 +718,20 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setAnrRethrow(boolean rethrow) {
             this.anrRethrow = rethrow;
+            return this;
+        }
+
+        /**
+         * Set whether the process error state (from "ActivityManager#getProcessesInErrorState()") is a necessary condition for ANR.  (Default: true)
+         *
+         * <p>Note: On some Android TV box devices, the ANR is not reflected by process error state. In this case, set this option to false.
+         *
+         * @param checkProcessState If <code>true</code>, process state error will be a necessary condition for ANR.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrCheckProcessState(boolean checkProcessState) {
+            this.anrCheckProcessState = checkProcessState;
             return this;
         }
 

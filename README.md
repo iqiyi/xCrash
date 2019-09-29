@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.4.4-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.4.5-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -12,7 +12,7 @@ xCrash can generate a tombstone file (similar format as Android system's tombsto
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
-xCrash is used in a variety of Android apps (including iQIYI Video) from [iQIYI](http://www.iqiyi.com/) for many years.
+xCrash has been used for many years in many Android apps (including iQIYI video) on different platforms (mobile, tablet, TV) of [iQIYI](http://www.iqiyi.com/).
 
 [README 中文版](README.zh-CN.md)
 
@@ -47,7 +47,7 @@ xCrash is used in a variety of Android apps (including iQIYI Video) from [iQIYI]
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.4'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.5'
 }
 ```
 

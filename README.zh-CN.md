@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.4.4-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.4.5-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -12,7 +12,7 @@ xCrash 能在 app 进程崩溃或 ANR 时，在你指定的目录中生成一个
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
-xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 app（包括爱奇艺视频）中被使用了很多年。
+xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的不同平台（手机，平板，电视）的很多安卓 app（包括爱奇艺视频）中被使用了很多年。
 
 [README English Version](README.md)
 
@@ -47,7 +47,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的很多安卓 app（包括
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.4'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.5'
 }
 ```
 

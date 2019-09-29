@@ -55,6 +55,7 @@ class AnrHandler {
     private String appId;
     private String appVersion;
     private String logDir;
+    private boolean checkProcessState;
     private int logcatSystemLines;
     private int logcatEventsLines;
     private int logcatMainLines;
@@ -72,7 +73,7 @@ class AnrHandler {
 
     @SuppressWarnings("deprecation")
     void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir,
-                    int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
+                    boolean checkProcessState, int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
                     boolean dumpFds, ICrashCallback callback) {
 
         //check API level
@@ -86,6 +87,7 @@ class AnrHandler {
         this.appId = appId;
         this.appVersion = appVersion;
         this.logDir = logDir;
+        this.checkProcessState = checkProcessState;
         this.logcatSystemLines = logcatSystemLines;
         this.logcatEventsLines = logcatEventsLines;
         this.logcatMainLines = logcatMainLines;
@@ -134,11 +136,12 @@ class AnrHandler {
         if (anrTime.getTime() - lastTime < anrTimeoutMs) {
             return;
         }
-        lastTime = anrTime.getTime();
 
         //check process error state
-        if (!Util.checkProcessAnrState(this.ctx, anrTimeoutMs)) {
-            return;
+        if (this.checkProcessState) {
+            if (!Util.checkProcessAnrState(this.ctx, anrTimeoutMs)) {
+                return;
+            }
         }
 
         //get trace
@@ -146,6 +149,9 @@ class AnrHandler {
         if (TextUtils.isEmpty(trace)) {
             return;
         }
+
+        //captured ANR
+        lastTime = anrTime.getTime();
 
         //delete extra ANR log files
         if (!FileManager.getInstance().maintainAnr()) {
