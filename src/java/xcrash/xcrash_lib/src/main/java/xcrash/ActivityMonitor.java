@@ -33,6 +33,7 @@ class ActivityMonitor {
     private static final ActivityMonitor instance = new ActivityMonitor();
 
     private LinkedList<Activity> activities = null;
+    private static final int MAX_ACTIVITY_NUM = 100;
 
     private ActivityMonitor() {
     }
@@ -48,11 +49,9 @@ class ActivityMonitor {
             new Application.ActivityLifecycleCallbacks() {
                 @Override
                 public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-                    if (!activities.contains(activity)) {
-                        activities.addFirst(activity);
-                        if (activities.size() > 100) {
-                            activities.removeLast();
-                        }
+                    activities.addFirst(activity);
+                    if (activities.size() > MAX_ACTIVITY_NUM) {
+                        activities.removeLast();
                     }
                 }
 
@@ -83,9 +82,7 @@ class ActivityMonitor {
 
                 @Override
                 public void onActivityDestroyed(Activity activity) {
-                    if (activities.contains(activity)) {
-                        activities.removeFirstOccurrence(activity);
-                    }
+                    activities.remove(activity);
                 }
             }
         );
@@ -96,6 +93,7 @@ class ActivityMonitor {
             for (Activity activity : activities) {
                 activity.finish();
             }
+            activities.clear();
         }
     }
 }
