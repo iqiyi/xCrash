@@ -103,9 +103,21 @@ typedef struct
             } while (_rc == -1 && errno == EINTR);  \
             _rc; })
 
-#define XCC_UTIL_LIBC   "/libc.so"
-#define XCC_UTIL_LIBCPP "/libc++.so"
-#define XCC_UTIL_LIBART "/libart.so"
+#ifndef __LP64__
+#define XCC_UTIL_LIBC        "/system/lib/libc.so"
+#define XCC_UTIL_LIBCPP      "/system/lib/libc++.so"
+#define XCC_UTIL_LIBART      "/system/lib/libart.so"
+#define XCC_UTIL_LIBC_APEX   "/apex/com.android.runtime/lib/bionic/libc.so"
+#define XCC_UTIL_LIBCPP_APEX "/apex/com.android.runtime/lib/libc++.so"
+#define XCC_UTIL_LIBART_APEX "/apex/com.android.runtime/lib/libart.so"
+#else
+#define XCC_UTIL_LIBC        "/system/lib64/libc.so"
+#define XCC_UTIL_LIBCPP      "/system/lib64/libc++.so"
+#define XCC_UTIL_LIBART      "/system/lib64/libart.so"
+#define XCC_UTIL_LIBC_APEX   "/apex/com.android.runtime/lib64/bionic/libc.so"
+#define XCC_UTIL_LIBCPP_APEX "/apex/com.android.runtime/lib64/libc++.so"
+#define XCC_UTIL_LIBART_APEX "/apex/com.android.runtime/lib64/libart.so"
+#endif
 
 #define XCC_UTIL_LIBC_ABORT_MSG_PTR      "__abort_message_ptr"
 #define XCC_UTIL_LIBCPP_CERR             "_ZNSt3__14cerrE"
@@ -143,8 +155,6 @@ int xcc_util_read_file_line(const char *path, char *buf, size_t len);
 void xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
 void xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
 int xcc_util_is_root(void);
-
-int xcc_util_ends_with(const char *str, const char *suffix);
 
 size_t xcc_util_get_dump_header(char *buf,
                                 size_t buf_len,

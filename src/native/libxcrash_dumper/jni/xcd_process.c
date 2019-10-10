@@ -214,7 +214,7 @@ static int xcd_process_record_signal_info(xcd_process_t *self, int log_fd)
                                  sender_desc, addr_desc);
 }
 
-static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd)
+static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd, int api_level)
 {
     //
     // struct abort_msg_t {
@@ -230,7 +230,9 @@ static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd)
     //
 
     //get abort_msg_t ***ppp (&__abort_message_ptr)
-    uintptr_t ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC, XCC_UTIL_LIBC_ABORT_MSG_PTR);
+    uintptr_t ppp = 0;
+    if(api_level >= 29) ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC_APEX, XCC_UTIL_LIBC_ABORT_MSG_PTR);
+    if(0 == ppp) ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC, XCC_UTIL_LIBC_ABORT_MSG_PTR);
     if(0 == ppp) return 0;
     XCD_LOG_DEBUG("PROCESS: abort_msg, ppp = %"PRIxPTR, ppp);
 
@@ -354,7 +356,7 @@ int xcd_process_record(xcd_process_t *self,
         {
             if(0 != (r = xcd_thread_record_info(&(thd->t), log_fd, self->pname))) return r;
             if(0 != (r = xcd_process_record_signal_info(self, log_fd))) return r;
-            if(0 != (r = xcd_process_record_abort_message(self, log_fd))) return r;
+            if(0 != (r = xcd_process_record_abort_message(self, log_fd, api_level))) return r;
             if(0 != (r = xcd_thread_record_regs(&(thd->t), log_fd))) return r;
             if(0 == xcd_thread_load_frames(&(thd->t), self->maps))
             {

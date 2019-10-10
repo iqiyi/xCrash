@@ -249,11 +249,13 @@ static void xc_xcrash_record_java_stacktrace()
     if(xc_common_api_level < 21) return;
 
     //peek libc++.so
-    if(NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
+    if(xc_common_api_level >= 29) libcpp = xc_dl_create(XCC_UTIL_LIBCPP_APEX);
+    if(NULL == libcpp && NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
     if(NULL == (cerr = xc_dl_sym(libcpp, XCC_UTIL_LIBCPP_CERR))) goto end;
 
     //peek libart.so
-    if(NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
+    if(xc_common_api_level >= 29) libart = xc_dl_create(XCC_UTIL_LIBART_APEX);
+    if(NULL == libart && NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (current = (xcc_util_libart_thread_current_t)xc_dl_sym(libart, XCC_UTIL_LIBART_THREAD_CURRENT))) goto end;
     if(NULL == (dump = (xcc_util_libart_thread_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_THREAD_DUMP)))
     {

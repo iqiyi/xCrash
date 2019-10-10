@@ -137,10 +137,12 @@ static int xc_trace_load_symbols()
     if(xc_trace_symbols_loaded) return xc_trace_symbols_status;
     xc_trace_symbols_loaded = 1;
 
-    if(NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
+    if(xc_common_api_level >= 29) libcpp = xc_dl_create(XCC_UTIL_LIBCPP_APEX);
+    if(NULL == libcpp && NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
     if(NULL == (xc_trace_libcpp_cerr = xc_dl_sym(libcpp, XCC_UTIL_LIBCPP_CERR))) goto end;
 
-    if(NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
+    if(xc_common_api_level >= 29) libart = xc_dl_create(XCC_UTIL_LIBART_APEX);
+    if(NULL == libart && NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (xc_trace_libart_runtime_instance = (void **)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_INSTANCE))) goto end;
     if(NULL == (xc_trace_libart_runtime_dump = (xcc_util_libart_runtime_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_DUMP))) goto end;
     if(xc_trace_is_lollipop)

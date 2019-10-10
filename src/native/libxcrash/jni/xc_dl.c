@@ -62,7 +62,7 @@ struct xc_dl
     xc_dl_symbols_queue_t  symbolsq;
 };
 
-static int xc_dl_find_map_start(xc_dl_t *self, const char *sub_pathname, char *pathname, size_t pathname_len)
+static int xc_dl_find_map_start(xc_dl_t *self, const char *pathname)
 {
     FILE      *f = NULL;
     char       line[512];
@@ -77,10 +77,8 @@ static int xc_dl_find_map_start(xc_dl_t *self, const char *sub_pathname, char *p
         if(2 != sscanf(line, "%"SCNxPTR"-%*"SCNxPTR" %*4s %"SCNxPTR" %*x:%*x %*d%n", &(self->map_start), &offset, &pos)) continue;
         if(0 != offset) continue;
         p = xcc_util_trim(line + pos);
-        if(!xcc_util_ends_with(p, sub_pathname)) continue;
+        if(0 != strcmp(p, pathname)) continue;
 
-        strncpy(pathname, p, pathname_len);
-        pathname[pathname_len - 1] = '\0';
         r = 0; //found
         break;
     }
@@ -174,17 +172,16 @@ static int xc_dl_parse_elf(xc_dl_t *self)
     return 0;
 }
 
-xc_dl_t *xc_dl_create(const char *sub_pathname)
+xc_dl_t *xc_dl_create(const char *pathname)
 {
     xc_dl_t *self;
-    char     pathname[512];
 
     if(NULL == (self = calloc(1, sizeof(xc_dl_t)))) return NULL;
     self->fd = -1;
     self->data = MAP_FAILED;
     TAILQ_INIT(&(self->symbolsq));
 
-    if(0 != xc_dl_find_map_start(self, sub_pathname, pathname, sizeof(pathname))) goto err;
+    if(0 != xc_dl_find_map_start(self, pathname)) goto err;
     if(0 != xc_dl_file_open(self, pathname)) goto err;
     if(0 != xc_dl_parse_elf(self)) goto err;
     

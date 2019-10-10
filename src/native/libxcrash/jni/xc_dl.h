@@ -33,7 +33,7 @@ extern "C" {
 
 typedef struct xc_dl xc_dl_t;
 
-xc_dl_t *xc_dl_create(const char *sub_pathname);
+xc_dl_t *xc_dl_create(const char *pathname);
 void xc_dl_destroy(xc_dl_t **self);
 
 void *xc_dl_sym(xc_dl_t *self, const char *symbol);
