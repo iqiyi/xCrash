@@ -6,13 +6,13 @@
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
-xCrash provides the Android app with the ability to capture java crashes, native crashes and ANR. No root permission or any system permissions are required.
+xCrash provides the Android app with the ability to capture java crash, native crash and ANR. No root permission or any system permissions are required.
 
-xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANR.
+xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANRs.
 
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
 
-xCrash has been used for many years in many Android apps (including iQIYI video) on different platforms (mobile, tablet, TV) of [iQIYI](http://www.iqiyi.com/).
+xCrash has been used in many Android apps (including iQIYI video) on different platforms (mobile, tablet, TV) of [iQIYI](http://www.iqiyi.com/) for many years.
 
 [README 中文版](README.zh-CN.md)
 
@@ -21,10 +21,25 @@ xCrash has been used for many years in many Android apps (including iQIYI video)
 
 * Support Android 4.0 - 10 (API level 14 - 29).
 * Support armeabi, armeabi-v7a, arm64-v8a, x86 and x86_64.
-* Capturing java crashes, native crashes and ANR.
+* Capturing java crash, native crash and ANR.
 * Dumping detailed memory usage statistics.
 * Setting which thread's info should be dumped via regular expressions.
 * Do not require root permission or any system permissions.
+
+
+## Tombstone Files Preview
+
+* [java crash](doc/tombstone_java.txt)
+* [native crash (armeabi)](doc/tombstone_native_armeabi.txt)
+* [native crash (armeabi-v7a)](doc/tombstone_native_armeabi-v7a.txt)
+* [native crash (arm64-v8a)](doc/tombstone_native_arm64-v8a.txt)
+* [native crash (x86)](doc/tombstone_native_x86.txt)
+* [native crash (x86_64)](doc/tombstone_native_x86_64.txt)
+* [ANR (armeabi)](doc/tombstone_anr_armeabi.txt)
+* [ANR (armeabi-v7a)](doc/tombstone_anr_armeabi-v7a.txt)
+* [ANR (arm64-v8a)](doc/tombstone_anr_arm64-v8a.txt)
+* [ANR (x86)](doc/tombstone_anr_x86.txt)
+* [ANR (x86_64)](doc/tombstone_anr_x86_64.txt)
 
 
 ## Overview Maps

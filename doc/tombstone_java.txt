@@ -1,0 +1,511 @@
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Tombstone maker: 'xCrash 2.4.6'
+Crash type: 'java'
+Start time: '2019-10-12T03:23:19.580+0800'
+Crash time: '2019-10-12T03:23:25.533+0800'
+App ID: 'xcrash.sample'
+App version: '1.2.3-beta456-patch789'
+Rooted: 'No'
+API level: '29'
+OS version: '10'
+ABI list: 'arm64-v8a,armeabi-v7a,armeabi'
+Manufacturer: 'Google'
+Brand: 'google'
+Model: 'Pixel'
+Build fingerprint: 'google/sailfish/sailfish:10/QP1A.190711.020/5800535:user/release-keys'
+pid: 21356, tid: 21356, name: main  >>> xcrash.sample <<<
+
+java stacktrace:
+java.lang.IllegalStateException: Could not execute method for android:onClick
+	at androidx.appcompat.app.AppCompatViewInflater$DeclaredOnClickListener.onClick(AppCompatViewInflater.java:402)
+	at android.view.View.performClick(View.java:7140)
+	at android.view.View.performClickInternal(View.java:7117)
+	at android.view.View.access$3500(View.java:801)
+	at android.view.View$PerformClick.run(View.java:27351)
+	at android.os.Handler.handleCallback(Handler.java:883)
+	at android.os.Handler.dispatchMessage(Handler.java:100)
+	at android.os.Looper.loop(Looper.java:214)
+	at android.app.ActivityThread.main(ActivityThread.java:7356)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:492)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:930)
+Caused by: java.lang.reflect.InvocationTargetException
+	at java.lang.reflect.Method.invoke(Native Method)
+	at androidx.appcompat.app.AppCompatViewInflater$DeclaredOnClickListener.onClick(AppCompatViewInflater.java:397)
+	... 11 more
+Caused by: java.lang.RuntimeException: test java exception
+	at xcrash.XCrash.testJavaCrash(XCrash.java:847)
+	at xcrash.sample.MainActivity.testJavaCrashInMainThread_onClick(MainActivity.java:67)
+	... 13 more
+
+logcat:
+--------- tail end of log main (/system/bin/logcat -b main -d -v threadtime -t 200 --pid 21356 *:D)
+10-12 03:23:19.356 21356 21356 I xcrash.sample: Late-enabling -Xcheck:jni
+10-12 03:23:19.398 21356 21356 E xcrash.sample: Unknown bits set in runtime_flags: 0x8000
+10-12 03:23:19.571 21356 21356 D xcrash_sample: xCrash SDK init: start
+10-12 03:23:19.586 21356 21356 D xcrash_sample: xCrash SDK init: end
+10-12 03:23:19.757 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/View;->computeFitSystemWindows(Landroid/graphics/Rect;Landroid/graphics/Rect;)Z (greylist, reflection, allowed)
+10-12 03:23:19.758 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (greylist, reflection, allowed)
+10-12 03:23:19.829 21356 21356 I WebViewFactory: Loading com.google.android.webview version 77.0.3865.92 (code 386509238)
+10-12 03:23:19.874 21356 21356 I cr_LibraryLoader: Time to load native libraries: 4 ms (timestamps 1922-1926)
+10-12 03:23:19.920 21356 21356 I chromium: [INFO:library_loader_hooks.cc(51)] Chromium logging enabled: level = 0, default verbosity = 0
+10-12 03:23:19.921 21356 21356 I cr_LibraryLoader: Expected native library version number "77.0.3865.92", actual native library version number "77.0.3865.92"
+10-12 03:23:19.926 21356 21402 W cr_ChildProcLH: Create a new ChildConnectionAllocator with package name = com.google.android.webview, sandboxed = true
+10-12 03:23:19.930 21356 21402 W xcrash.sample: Accessing hidden method Landroid/content/Context;->bindServiceAsUser(Landroid/content/Intent;Landroid/content/ServiceConnection;ILandroid/os/Handler;Landroid/os/UserHandle;)Z (greylist, reflection, allowed)
+10-12 03:23:19.934 21356 21356 I cr_BrowserStartup: Initializing chromium process, singleProcess=false
+10-12 03:23:19.979 21356 21430 W chromium: [WARNING:dns_config_service_posix.cc(339)] Failed to read DnsConfig.
+10-12 03:23:20.031 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker;-><init>(Landroid/content/Context;I)V (greylist, reflection, allowed)
+10-12 03:23:20.031 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker;->logEvent(Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;)V (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionStarted(I)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionModified(II)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionModified(IILandroid/view/textclassifier/TextClassification;)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionModified(IILandroid/view/textclassifier/TextSelection;)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionAction(III)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.032 21356 21356 W xcrash.sample: Accessing hidden method Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent;->selectionAction(IIILandroid/view/textclassifier/TextClassification;)Landroid/view/textclassifier/logging/SmartSelectionEventTracker$SelectionEvent; (greylist, reflection, allowed)
+10-12 03:23:20.143 21356 21395 I Adreno  : QUALCOMM build                   : 4a00b69, I4e7e888065
+10-12 03:23:20.143 21356 21395 I Adreno  : Build Date                       : 04/09/19
+10-12 03:23:20.143 21356 21395 I Adreno  : OpenGL ES Shader Compiler Version: EV031.26.06.00
+10-12 03:23:20.143 21356 21395 I Adreno  : Local Branch                     : mybranche95ae4c8-d77f-f18d-a9ef-1458d0b52ae8
+10-12 03:23:20.143 21356 21395 I Adreno  : Remote Branch                    : quic/gfx-adreno.lnx.1.0
+10-12 03:23:20.143 21356 21395 I Adreno  : Remote Branch                    : NONE
+10-12 03:23:20.143 21356 21395 I Adreno  : Reconstruct Branch               : NOTHING
+10-12 03:23:20.143 21356 21395 I Adreno  : Build Config                     : S L 8.0.5 AArch64
+10-12 03:23:20.146 21356 21395 I Adreno  : PFP: 0x005ff110, ME: 0x005ff066
+10-12 03:23:20.198 21356 21395 W Gralloc3: mapper 3.x is not supported
+10-12 03:23:25.531 21356 21356 D AndroidRuntime: Shutting down VM
+--------- tail end of log system (/system/bin/logcat -b system -d -v threadtime -t 50 --pid 21356 *:W)
+--------- tail end of log events (/system/bin/logcat -b events -d -v threadtime -t 50 --pid 21356 *:I)
+10-12 03:23:20.046 21356 21356 I am_on_create_called: [0,xcrash.sample.MainActivity,performCreate]
+10-12 03:23:20.053 21356 21356 I am_on_start_called: [0,xcrash.sample.MainActivity,handleStartActivity]
+10-12 03:23:20.056 21356 21356 I am_on_resume_called: [0,xcrash.sample.MainActivity,RESUME_ACTIVITY]
+10-12 03:23:20.083 21356 21356 I am_on_top_resumed_gained_called: [0,xcrash.sample.MainActivity,topStateChangedWhenResumed]
+
+open files:
+    fd 0: /dev/null
+    fd 1: /dev/null
+    fd 2: /dev/null
+    fd 3: /proc/21356/fd/3
+    fd 4: /proc/21356/fd/4
+    fd 5: /proc/21356/fd/5
+    fd 6: /dev/null
+    fd 7: /dev/null
+    fd 8: /dev/null
+    fd 9: /apex/com.android.runtime/javalib/core-oj.jar
+    fd 10: /apex/com.android.runtime/javalib/core-libart.jar
+    fd 11: /apex/com.android.runtime/javalib/okhttp.jar
+    fd 12: /apex/com.android.runtime/javalib/bouncycastle.jar
+    fd 13: /apex/com.android.runtime/javalib/apache-xml.jar
+    fd 14: /system/framework/framework.jar
+    fd 15: /system/framework/ext.jar
+    fd 16: /system/framework/telephony-common.jar
+    fd 17: /system/framework/voip-common.jar
+    fd 18: /system/framework/ims-common.jar
+    fd 19: /dev/null
+    fd 20: /dev/null
+    fd 21: /system/framework/android.test.base.jar
+    fd 22: /apex/com.android.conscrypt/javalib/conscrypt.jar
+    fd 23: /apex/com.android.media/javalib/updatable-media.jar
+    fd 24: /system/framework/framework-res.apk
+    fd 25: /system/product/overlay/GoogleConfigOverlay.apk
+    fd 26: /system/product/overlay/GoogleWebViewOverlay.apk
+    fd 27: /vendor/overlay/framework-res__auto_generated_rro_vendor.apk
+    fd 28: /system/product/overlay/PixelConfigOverlayCommon.apk
+    fd 29: /system/product/overlay/framework-res__auto_generated_rro_product.apk
+    fd 30: /dev/null
+    fd 31: /dev/binder
+    fd 32: /proc/21356/fd/32
+    fd 33: /proc/21356/fd/33
+    fd 34: /proc/21356/fd/34
+    fd 35: /proc/21356/fd/35
+    fd 36: /proc/21356/fd/36
+    fd 37: /data/app/xcrash.sample-WeCpVYjROKKgYtuzbHflHg==/base.apk
+    fd 38: /proc/21356/fd/38
+    fd 39: /proc/21356/fd/39
+    fd 40: /system/product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
+    fd 41: /dev/null
+    fd 42: /dev/null
+    fd 43: /dev/null
+    fd 44: /dev/null
+    fd 45: /proc/21356/fd/45
+    fd 46: /proc/21356/fd/46
+    fd 47: /proc/21356/fd/47
+    fd 48: /proc/21356/fd/48
+    fd 49: /dev/ashmem
+    fd 50: /proc/21356/fd/50
+    fd 51: /proc/21356/fd/51
+    fd 52: /data/app/com.google.android.trichromelibrary_386509238-C5vGqz1rgNqceBgeyyw2Aw==/base.apk
+    fd 53: /proc/21356/fd/53
+    fd 54: /data/data/xcrash.sample/files/tombstones/tombstone_00001570821799580000_1.2.3-beta456-patch789__xcrash.sample.java.xcrash
+    fd 55: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 56: /data/app/com.google.android.trichromelibrary_386509238-C5vGqz1rgNqceBgeyyw2Aw==/base.apk
+    fd 57: /data/data/xcrash.sample/app_webview/webview_data.lock
+    fd 58: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 59: /system/product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
+    fd 60: /proc/21356/fd/60
+    fd 61: /proc/21356/fd/61
+    fd 62: /data/app/com.google.android.trichromelibrary_386509238-C5vGqz1rgNqceBgeyyw2Aw==/base.apk
+    fd 63: /data/app/com.google.android.trichromelibrary_386509238-C5vGqz1rgNqceBgeyyw2Aw==/base.apk
+    fd 64: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 65: /data/app/com.google.android.trichromelibrary_386509238-C5vGqz1rgNqceBgeyyw2Aw==/base.apk
+    fd 66: /dev/urandom
+    fd 67: /proc/21356/fd/67
+    fd 68: /proc/21356/fd/68
+    fd 69: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 70: /proc/21356/fd/70
+    fd 71: /proc/21356/fd/71
+    fd 72: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 73: /data/app/com.google.android.webview-wtyVrSKc9Gzy-ujvyvTNjw==/base.apk
+    fd 74: /proc/21356/fd/74
+    fd 75: /proc/21356/fd/75
+    fd 76: /proc/21356/fd/76
+    fd 77: /proc/21356/fd/77
+    fd 78: /proc/21356/fd/78
+    fd 79: /proc/21356/fd/79
+    fd 80: /proc/21356/fd/80
+    fd 81: /proc/21356/fd/81
+    fd 82: /proc/21356/fd/82
+    fd 83: /proc/21356/fd/83
+    fd 84: /proc/21356/fd/84
+    fd 85: /proc/21356/fd/85
+    fd 86: /proc/21356/fd/86
+    fd 87: /proc/21356/fd/87
+    fd 88: /proc/21356/fd/88
+    fd 89: /proc/21356/fd/89
+    fd 90: /proc/21356/fd/90
+    fd 91: /dev/ashmem
+    fd 92: /dev/ashmem
+    fd 93: /dev/ashmem
+    fd 94: /data/data/xcrash.sample/app_webview/Web Data
+    fd 95: /proc/21356/fd/95
+    fd 96: /proc/21356/fd/96
+    fd 97: /dev/ashmem
+    fd 98: /dev/ion
+    fd 99: /proc/21356/fd/99
+    fd 100: /proc/21356/fd/100
+    fd 101: /proc/21356/fd/101
+    fd 102: /dev/ashmem
+    fd 103: /dev/kgsl-3d0
+    fd 104: /dev/ion
+    fd 105: /dev/hwbinder
+    fd 106: /proc/21356/fd/106
+    fd 107: /proc/21356/fd/107
+    fd 110: /proc/21356/fd/110
+    fd 111: /proc/21356/fd/111
+    fd 113: /proc/21356/fd/113
+    fd 114: /proc/21356/fd/114
+    fd 115: /proc/21356/fd/115
+    fd 116: /proc/21356/fd/116
+    fd 117: /proc/21356/fd/117
+    (number of FDs: 115)
+
+memory info:
+ System Summary (From: /proc/meminfo)
+  MemTotal:        3855796 kB
+  MemFree:           90124 kB
+  MemAvailable:    1452636 kB
+  Buffers:           77420 kB
+  Cached:          1461900 kB
+  SwapCached:        10232 kB
+  Active:          1771504 kB
+  Inactive:        1014432 kB
+  Active(anon):    1046604 kB
+  Inactive(anon):   368348 kB
+  Active(file):     724900 kB
+  Inactive(file):   646084 kB
+  Unevictable:      151672 kB
+  Mlocked:          151672 kB
+  SwapTotal:        524284 kB
+  SwapFree:         271320 kB
+  Dirty:               136 kB
+  Writeback:             0 kB
+  AnonPages:       1391280 kB
+  Mapped:           620988 kB
+  Shmem:             16660 kB
+  Slab:             231556 kB
+  SReclaimable:      92700 kB
+  SUnreclaim:       138856 kB
+  KernelStack:       44448 kB
+  PageTables:        57544 kB
+  NFS_Unstable:          0 kB
+  Bounce:                0 kB
+  WritebackTmp:          0 kB
+  CommitLimit:     2452180 kB
+  Committed_AS:   67847232 kB
+  VmallocTotal:   258998208 kB
+  VmallocUsed:      223632 kB
+  VmallocChunk:   258675172 kB
+-
+ Process Status (From: /proc/PID/status)
+  Name:	xcrash.sample
+  State:	R (running)
+  Tgid:	21356
+  Pid:	21356
+  PPid:	626
+  TracerPid:	0
+  Uid:	10180	10180	10180	10180
+  Gid:	10180	10180	10180	10180
+  Ngid:	0
+  FDSize:	128
+  Groups:	9997 20180 50180
+  VmPeak:	 5659228 kB
+  VmSize:	 5542192 kB
+  VmLck:	       0 kB
+  VmPin:	       0 kB
+  VmHWM:	   94624 kB
+  VmRSS:	   94396 kB
+  VmData:	 5051840 kB
+  VmStk:	    8192 kB
+  VmExe:	      28 kB
+  VmLib:	  166580 kB
+  VmPTE:	    1068 kB
+  VmSwap:	    6476 kB
+  Threads:	37
+  SigQ:	0/13891
+  SigPnd:	0000000000000000
+  ShdPnd:	0000000000000000
+  SigBlk:	0000000080001200
+  SigIgn:	0000000000000001
+  SigCgt:	0000000e400084fc
+  CapInh:	0000000000000000
+  CapPrm:	0000000000000000
+  CapEff:	0000000000000000
+  CapBnd:	0000000000000000
+  CapAmb:	0000000000000000
+  Seccomp:	2
+  Cpus_allowed:	f
+  Cpus_allowed_list:	0-3
+  Mems_allowed:	1
+  Mems_allowed_list:	0
+  voluntary_ctxt_switches:	343
+  nonvoluntary_ctxt_switches:	301
+-
+ Process Limits (From: /proc/PID/limits)
+  Limit                     Soft Limit           Hard Limit           Units
+  Max cpu time              unlimited            unlimited            seconds
+  Max file size             unlimited            unlimited            bytes
+  Max data size             unlimited            unlimited            bytes
+  Max stack size            8388608              unlimited            bytes
+  Max core file size        0                    unlimited            bytes
+  Max resident set          unlimited            unlimited            bytes
+  Max processes             13891                13891                processes
+  Max open files            32768                32768                files
+  Max locked memory         65536                65536                bytes
+  Max address space         unlimited            unlimited            bytes
+  Max file locks            unlimited            unlimited            locks
+  Max pending signals       13891                13891                signals
+  Max msgqueue size         819200               819200               bytes
+  Max nice priority         40                   40
+  Max realtime priority     0                    0
+  Max realtime timeout      unlimited            unlimited            us
+-
+ Process Summary (From: android.os.Debug.MemoryInfo)
+                       Pss(KB)
+                        ------
+           Java Heap:     7632
+         Native Heap:    10932
+                Code:    19064
+               Stack:       56
+            Graphics:     1104
+       Private Other:     3448
+              System:     4414
+               TOTAL:    46650           TOTAL SWAP:     6460
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4364, name: RenderThread  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4349, name: Jit thread pool worker thread 0  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4357, name: Binder:21356_2  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4374, name: NetworkService  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4353, name: ReferenceQueueDaemon  >>> xcrash.sample <<<
+
+java stacktrace:
+    at java.lang.Object.wait(Native Method)
+    at java.lang.Object.wait(Object.java:442)
+    at java.lang.Object.wait(Object.java:568)
+    at java.lang.Daemons$ReferenceQueueDaemon.runInternal(Daemons.java:215)
+    at java.lang.Daemons$Daemon.run(Daemons.java:137)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4359, name: Profile Saver  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4371, name: GoogleApiHandler  >>> xcrash.sample <<<
+
+java stacktrace:
+    at android.os.MessageQueue.nativePollOnce(Native Method)
+    at android.os.MessageQueue.next(MessageQueue.java:336)
+    at android.os.Looper.loop(Looper.java:174)
+    at android.os.HandlerThread.run(HandlerThread.java:67)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4362, name: xcrash_trace_dp  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4361, name: xcrash_crash_cb  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4352, name: HeapTaskDaemon  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4354, name: FinalizerDaemon  >>> xcrash.sample <<<
+
+java stacktrace:
+    at java.lang.Object.wait(Native Method)
+    at java.lang.Object.wait(Object.java:442)
+    at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:190)
+    at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:211)
+    at java.lang.Daemons$FinalizerDaemon.runInternal(Daemons.java:271)
+    at java.lang.Daemons$Daemon.run(Daemons.java:137)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4372, name: Chrome_IOThread  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4370, name: CrAsyncTask #2  >>> xcrash.sample <<<
+
+java stacktrace:
+    at sun.misc.Unsafe.park(Native Method)
+    at java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:230)
+    at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:2109)
+    at java.util.concurrent.ArrayBlockingQueue.poll(ArrayBlockingQueue.java:402)
+    at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1091)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1152)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+    at Js.run(PG:2)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4375, name: PlatformServiceBridgeHandlerThread  >>> xcrash.sample <<<
+
+java stacktrace:
+    at android.os.MessageQueue.nativePollOnce(Native Method)
+    at android.os.MessageQueue.next(MessageQueue.java:336)
+    at android.os.Looper.loop(Looper.java:174)
+    at android.os.HandlerThread.run(HandlerThread.java:67)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4355, name: FinalizerWatchdogDaemon  >>> xcrash.sample <<<
+
+java stacktrace:
+    at java.lang.Thread.sleep(Native Method)
+    at java.lang.Thread.sleep(Thread.java:440)
+    at java.lang.Thread.sleep(Thread.java:356)
+    at java.lang.Daemons$FinalizerWatchdogDaemon.sleepForMillis(Daemons.java:383)
+    at java.lang.Daemons$FinalizerWatchdogDaemon.waitForFinalization(Daemons.java:411)
+    at java.lang.Daemons$FinalizerWatchdogDaemon.runInternal(Daemons.java:323)
+    at java.lang.Daemons$Daemon.run(Daemons.java:137)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4378, name: process reaper  >>> xcrash.sample <<<
+
+java stacktrace:
+    at sun.misc.Unsafe.park(Native Method)
+    at java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:230)
+    at java.util.concurrent.SynchronousQueue$TransferStack.awaitFulfill(SynchronousQueue.java:461)
+    at java.util.concurrent.SynchronousQueue$TransferStack.transfer(SynchronousQueue.java:362)
+    at java.util.concurrent.SynchronousQueue.poll(SynchronousQueue.java:937)
+    at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1091)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1152)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4377, name: CleanupReference  >>> xcrash.sample <<<
+
+java stacktrace:
+    at java.lang.Object.wait(Native Method)
+    at java.lang.Object.wait(Object.java:442)
+    at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:190)
+    at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:211)
+    at Po.run(PG:2)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4350, name: Signal Catcher  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4373, name: ThreadPoolForeg  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4369, name: Chrome_ProcessLauncherThread  >>> xcrash.sample <<<
+
+java stacktrace:
+    at android.os.MessageQueue.nativePollOnce(Native Method)
+    at android.os.MessageQueue.next(MessageQueue.java:336)
+    at android.os.Looper.loop(Looper.java:174)
+    at android.os.HandlerThread.run(HandlerThread.java:67)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4358, name: Binder:21356_3  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4366, name: CrAsyncTask #1  >>> xcrash.sample <<<
+
+java stacktrace:
+    at sun.misc.Unsafe.park(Native Method)
+    at java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:230)
+    at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:2109)
+    at java.util.concurrent.ArrayBlockingQueue.poll(ArrayBlockingQueue.java:402)
+    at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1091)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1152)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+    at Js.run(PG:2)
+    at java.lang.Thread.run(Thread.java:919)
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4376, name: ThreadPoolForeg  >>> xcrash.sample <<<
+
+java stacktrace:
+
+--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+pid: 21356, tid: 4356, name: Binder:21356_1  >>> xcrash.sample <<<
+
+java stacktrace:
+
+total JVM threads (exclude the crashed thread): 24
+dumped JVM threads:24
++++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++ +++
+
+
+expanded_key_1:
+expanded_content
+
+
+
+expanded_key_2:
+expanded_content_row_1
+expanded_content_row_2
+

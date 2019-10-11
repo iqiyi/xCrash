@@ -27,6 +27,21 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的不同平台（手机，�
 * 不需要 root 权限或任何系统权限。
 
 
+## Tombstone 文件预览
+
+* [java 崩溃](doc/tombstone_java.txt)
+* [native 崩溃 (armeabi)](doc/tombstone_native_armeabi.txt)
+* [native 崩溃 (armeabi-v7a)](doc/tombstone_native_armeabi-v7a.txt)
+* [native 崩溃 (arm64-v8a)](doc/tombstone_native_arm64-v8a.txt)
+* [native 崩溃 (x86)](doc/tombstone_native_x86.txt)
+* [native 崩溃 (x86_64)](doc/tombstone_native_x86_64.txt)
+* [ANR (armeabi)](doc/tombstone_anr_armeabi.txt)
+* [ANR (armeabi-v7a)](doc/tombstone_anr_armeabi-v7a.txt)
+* [ANR (arm64-v8a)](doc/tombstone_anr_arm64-v8a.txt)
+* [ANR (x86)](doc/tombstone_anr_x86.txt)
+* [ANR (x86_64)](doc/tombstone_anr_x86_64.txt)
+
+
 ## 概览图
 
 ### 架构
