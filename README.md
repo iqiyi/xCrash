@@ -27,7 +27,7 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 * Do not require root permission or any system permissions.
 
 
-## Tombstone Files Preview
+## Tombstone File Previews
 
 * [java crash](doc/tombstone_java.txt)
 * [native crash (armeabi)](doc/tombstone_native_armeabi.txt)
