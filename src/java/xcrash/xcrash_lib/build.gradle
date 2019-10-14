@@ -20,15 +20,6 @@ android {
             minifyEnabled false
         }
     }
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['libs']
-        }
-    }
-}
-
-dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
 }
 
 apply from: rootProject.file('gradle/check.gradle')
