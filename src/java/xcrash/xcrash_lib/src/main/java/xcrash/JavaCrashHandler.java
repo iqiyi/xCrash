@@ -168,6 +168,9 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 //write memory info
                 raf.write(Util.getMemoryInfo().getBytes("UTF-8"));
 
+                //write background / foreground
+                raf.write(("foreground:\n" + (ActivityMonitor.getInstance().isApplicationForeground() ? "yes" : "no") + "\n\n").getBytes("UTF-8"));
+
                 //write other threads info
                 if (dumpAllThreads) {
                     raf.write(getOtherThreadsInfo(thread).getBytes("UTF-8"));

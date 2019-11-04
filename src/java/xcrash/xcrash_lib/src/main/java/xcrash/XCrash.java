@@ -134,7 +134,7 @@ public final class XCrash {
             params.placeholderSizeKb,
             params.logFileMaintainDelayMs);
 
-        if ((params.enableJavaCrashHandler && !params.javaRethrow) || (params.enableNativeCrashHandler && !params.nativeRethrow)) {
+        if (params.enableJavaCrashHandler || params.enableNativeCrashHandler || params.enableAnrHandler) {
             if (ctx instanceof Application) {
                 ActivityMonitor.getInstance().initialize((Application) ctx);
             }

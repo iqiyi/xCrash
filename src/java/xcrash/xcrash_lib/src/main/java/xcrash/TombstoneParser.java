@@ -266,6 +266,12 @@ public class TombstoneParser {
     public static final String keyXCrashError = "xcrash error";
 
     /**
+     * Is the app at the foreground? ("yes" or "no")
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static final String keyForeground = "foreground";
+
+    /**
      * Error message from xCrash itself.
      */
     @SuppressWarnings("WeakerAccess")
@@ -307,6 +313,10 @@ public class TombstoneParser {
         keyJavaStacktrace,
         keyXCrashError,
         keyXCrashErrorDebug
+    ));
+
+    private static final Set<String> keySingleLineSections = new HashSet<String>(Arrays.asList(
+        keyForeground
     ));
 
     private enum Status {
@@ -639,6 +649,12 @@ public class TombstoneParser {
                     break;
                 case SECTION:
                     if (line.equals(sectionContentEnding) || last) {
+                        if (keySingleLineSections.contains(sectionTitle)) {
+                            if (sectionContent.length() > 0 && sectionContent.charAt(sectionContent.length() - 1) == '\n') {
+                                //If there is only one line in the content, then delete the newline character at the end.
+                                sectionContent.deleteCharAt(sectionContent.length() - 1);
+                            }
+                        }
                         putKeyValue(map, sectionTitle, sectionContent.toString(), sectionContentAppend);
                         sectionContent.setLength(0);
                         status = Status.UNKNOWN;

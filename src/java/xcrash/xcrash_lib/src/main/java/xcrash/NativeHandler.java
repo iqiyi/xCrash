@@ -191,6 +191,9 @@ class NativeHandler {
 
             //append memory info
             TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
+
+            //append background / foreground
+            TombstoneManager.appendSection(logPath, "foreground", ActivityMonitor.getInstance().isApplicationForeground() ? "yes" : "no");
         }
 
         ICrashCallback callback = NativeHandler.getInstance().crashCallback;
@@ -216,6 +219,9 @@ class NativeHandler {
 
         //append memory info
         TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
+
+        //append background / foreground
+        TombstoneManager.appendSection(logPath, "foreground", ActivityMonitor.getInstance().isApplicationForeground() ? "yes" : "no");
 
         //check process ANR state
         if (NativeHandler.getInstance().anrCheckProcessState) {
