@@ -214,7 +214,49 @@ static int xcd_process_record_signal_info(xcd_process_t *self, int log_fd)
                                  sender_desc, addr_desc);
 }
 
-static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd, int api_level)
+static int xcd_process_get_abort_message_29(xcd_process_t *self, char *buf, size_t buf_len)
+{
+    //
+    // struct abort_msg_t {
+    //     size_t size;
+    //     char msg[0];
+    // };
+    //
+    // struct magic_abort_msg_t {
+    //     uint64_t magic1;
+    //     uint64_t magic2;
+    //     abort_msg_t msg;
+    // };
+    //
+    // ...
+    // size_t size = sizeof(magic_abort_msg_t) + strlen(msg) + 1;
+    // ...
+    //
+
+    int r;
+
+    //get abort_msg_t *p
+    uintptr_t p = xcd_maps_find_abort_msg(self->maps);
+    if(0 == p) return XCC_ERRNO_NOTFND;
+    p += (sizeof(uint64_t) * 2);
+
+    //get size
+    size_t size = 0;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, p, &size, sizeof(size_t)))) return r;
+    if(size < (sizeof(uint64_t) * 2 + sizeof(size_t) + 1 + 1)) return XCC_ERRNO_NOTFND;
+    XCD_LOG_DEBUG("PROCESS: abort_msg, size = %zu", size);
+
+    //get strlen(msg)
+    size -= (sizeof(uint64_t) * 2 + sizeof(size_t) + 1);
+
+    //get p->msg
+    if(size > buf_len) size = buf_len;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, p + sizeof(size_t), buf, size))) return r;
+
+    return 0;
+}
+
+static int xcd_process_get_abort_message_14(xcd_process_t *self, char *buf, size_t buf_len)
 {
     //
     // struct abort_msg_t {
@@ -229,48 +271,63 @@ static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd, int
     // ......
     //
 
+    int r;
+
     //get abort_msg_t ***ppp (&__abort_message_ptr)
     uintptr_t ppp = 0;
-    if(api_level >= 29) ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC_APEX, XCC_UTIL_LIBC_ABORT_MSG_PTR);
-    if(0 == ppp) ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC, XCC_UTIL_LIBC_ABORT_MSG_PTR);
-    if(0 == ppp) return 0;
+    ppp = xcd_maps_find_pc(self->maps, XCC_UTIL_LIBC, XCC_UTIL_LIBC_ABORT_MSG_PTR);
+    if(0 == ppp) return XCC_ERRNO_NOTFND;
     XCD_LOG_DEBUG("PROCESS: abort_msg, ppp = %"PRIxPTR, ppp);
 
     //get abort_msg_t **pp (__abort_message_ptr)
     uintptr_t pp = 0;
-    if(0 != xcd_util_ptrace_read_fully(self->pid, ppp, &pp, sizeof(uintptr_t))) return 0;
-    if(0 == pp) return 0;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, ppp, &pp, sizeof(uintptr_t)))) return r;
+    if(0 == pp) return XCC_ERRNO_NOTFND;
     XCD_LOG_DEBUG("PROCESS: abort_msg, pp = %"PRIxPTR, pp);
 
     //get abort_msg_t *p (*__abort_message_ptr)
     uintptr_t p = 0;
-    if(0 != xcd_util_ptrace_read_fully(self->pid, pp, &p, sizeof(uintptr_t))) return 0;
-    if(0 == p) return 0;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, pp, &p, sizeof(uintptr_t)))) return r;
+    if(0 == p) return XCC_ERRNO_NOTFND;
     XCD_LOG_DEBUG("PROCESS: abort_msg, p = %"PRIxPTR, p);
 
     //get p->size
     size_t size = 0;
-    if(0 != xcd_util_ptrace_read_fully(self->pid, p, &size, sizeof(size_t))) return 0;
-    if(size < sizeof(size_t) + 1 + 1) return 0;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, p, &size, sizeof(size_t)))) return r;
+    if(size < (sizeof(size_t) + 1 + 1)) return XCC_ERRNO_NOTFND;
     XCD_LOG_DEBUG("PROCESS: abort_msg, size = %zu", size);
 
     //get strlen(msg)
     size -= (sizeof(size_t) + 1);
 
     //get p->msg
-    if(size > 256) size = 256;
+    if(size > buf_len) size = buf_len;
+    if(0 != (r = xcd_util_ptrace_read_fully(self->pid, p + sizeof(size_t), buf, size))) return r;
+
+    return 0;
+}
+
+static int xcd_process_record_abort_message(xcd_process_t *self, int log_fd, int api_level)
+{
     char msg[256 + 1];
     memset(msg, 0, sizeof(msg));
-    if(0 != xcd_util_ptrace_read_fully(self->pid, p + sizeof(size_t), msg, size)) return 0;
+
+    if(api_level >= 29)
+    {
+        if(0 != xcd_process_get_abort_message_29(self, msg, sizeof(msg) - 1)) return 0;
+    }
+    else
+    {
+        if(0 != xcd_process_get_abort_message_14(self, msg, sizeof(msg) - 1)) return 0;
+    }
 
     //format
     size_t i;
-    for(i = 0; i < sizeof(msg); i++)
+    for(i = 0; i < strlen(msg); i++)
     {
         if(isspace(msg[i]) && ' ' != msg[i])
             msg[i] = ' ';
     }
-    XCD_LOG_DEBUG("PROCESS: abort_msg, strlen(msg) = %zu", strlen(msg));
 
     //write
     return xcc_util_write_format(log_fd, "Abort message: '%s'\n", msg);

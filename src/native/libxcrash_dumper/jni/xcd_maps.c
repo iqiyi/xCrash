@@ -34,6 +34,11 @@
 #include "xcd_util.h"
 #include "xcd_log.h"
 
+#define XCD_MAPS_ABORT_MSG_NAME    "[anon:abort message]"
+#define XCD_MAPS_ABORT_MSG_FLAGS   (PROT_READ | PROT_WRITE)
+#define XCD_MAPS_ABORT_MSG_MAGIC_1 0xb18e40886ac388f0ULL
+#define XCD_MAPS_ABORT_MSG_MAGIC_2 0xc6dfba755a1de0b5ULL
+
 typedef struct xcd_maps_item
 {
     xcd_map_t map;
@@ -132,6 +137,32 @@ xcd_map_t *xcd_maps_get_prev_map(xcd_maps_t *self, xcd_map_t *cur_map)
     xcd_maps_item_t *prev_mi = TAILQ_PREV(cur_mi, xcd_maps_item_queue, link);
 
     return (NULL == prev_mi ? NULL : &(prev_mi->map));
+}
+
+uintptr_t xcd_maps_find_abort_msg(xcd_maps_t *self)
+{
+    xcd_maps_item_t *mi;
+    uintptr_t        p;
+    uint64_t         magic;
+
+    TAILQ_FOREACH(mi, &(self->maps), link)
+    {
+        if(NULL != mi->map.name && 0 == strcmp(mi->map.name, XCD_MAPS_ABORT_MSG_NAME) &&
+           XCD_MAPS_ABORT_MSG_FLAGS == mi->map.flags)
+        {
+            p = mi->map.start;
+            if(0 != xcd_util_ptrace_read_fully(self->pid, p, &magic, sizeof(uint64_t))) continue;
+            if(XCD_MAPS_ABORT_MSG_MAGIC_1 != magic) continue;
+
+            p += sizeof(uint64_t);
+            if(0 != xcd_util_ptrace_read_fully(self->pid, p, &magic, sizeof(uint64_t))) continue;
+            if(XCD_MAPS_ABORT_MSG_MAGIC_2 != magic) continue;
+
+            return mi->map.start;
+        }
+    }
+
+    return 0;
 }
 
 uintptr_t xcd_maps_find_pc(xcd_maps_t *self, const char *pathname, const char *symbol)

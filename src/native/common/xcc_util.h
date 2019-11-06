@@ -120,6 +120,7 @@ typedef struct
 #endif
 
 #define XCC_UTIL_LIBC_ABORT_MSG_PTR      "__abort_message_ptr"
+#define XCC_UTIL_LIBC_SET_ABORT_MSG      "android_set_abort_message"
 #define XCC_UTIL_LIBCPP_CERR             "_ZNSt3__14cerrE"
 #define XCC_UTIL_LIBART_RUNTIME_INSTANCE "_ZN3art7Runtime9instance_E"
 #define XCC_UTIL_LIBART_RUNTIME_DUMP     "_ZN3art7Runtime14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE"
@@ -129,6 +130,7 @@ typedef struct
 #define XCC_UTIL_LIBART_DBG_SUSPEND      "_ZN3art3Dbg9SuspendVMEv"
 #define XCC_UTIL_LIBART_DBG_RESUME       "_ZN3art3Dbg8ResumeVMEv"
 
+typedef void  (*xcc_util_libc_set_abort_message_t)(const char* msg);
 typedef void  (*xcc_util_libart_runtime_dump_t)(void *runtime, void *ostream);
 typedef void *(*xcc_util_libart_thread_current_t)(void);
 typedef void  (*xcc_util_libart_thread_dump_t)(void *thread, void *ostream);

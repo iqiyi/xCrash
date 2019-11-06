@@ -28,17 +28,38 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <android/log.h>
+#include "xcc_util.h"
 #include "xc_test.h"
+#include "xc_common.h"
+#include "xc_dl.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 
 #define XC_TEST_LOG(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "xcrash", fmt, ##__VA_ARGS__)
+#define XC_TEST_ABORT_MSG     "abort message for xCrash internal testing"
+
+static void xc_test_set_abort_msg()
+{
+    xc_dl_t                           *libc          = NULL;
+    xcc_util_libc_set_abort_message_t  set_abort_msg = NULL;
+
+    if(xc_common_api_level >= 29) libc = xc_dl_create(XCC_UTIL_LIBC_APEX);
+    if(NULL == libc && NULL == (libc = xc_dl_create(XCC_UTIL_LIBC))) goto end;
+    if(NULL == (set_abort_msg = (xcc_util_libc_set_abort_message_t)xc_dl_sym(libc, XCC_UTIL_LIBC_SET_ABORT_MSG))) goto end;
+
+    set_abort_msg(XC_TEST_ABORT_MSG);
+
+ end:
+    if(NULL != libc) xc_dl_destroy(&libc);
+}
 
 int xc_test_call_4(int v)
 {
     int *a = NULL;
+
+    xc_test_set_abort_msg();
     
     *a = v; // crash!
     (*a)++;
