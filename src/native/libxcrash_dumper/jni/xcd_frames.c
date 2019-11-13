@@ -446,7 +446,7 @@ int xcd_frames_record_buildid(xcd_frames_t *self, int log_fd, int dump_elf_hash,
     {
         if(NULL != (map = xcd_maps_find_map(self->maps, fault_addr)))
         {
-            if(NULL != map->name || '\0' != map->name[0])
+            if(NULL != map->name && '\0' != map->name[0])
             {
                 if(0 != (r = xcd_frames_record_buildid_line(self, map->name, map, log_fd, dump_elf_hash))) return r;
                 fault_addr_name = map->name;
