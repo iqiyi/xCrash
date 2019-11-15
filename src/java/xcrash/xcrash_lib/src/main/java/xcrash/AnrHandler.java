@@ -60,6 +60,7 @@ class AnrHandler {
     private int logcatEventsLines;
     private int logcatMainLines;
     private boolean dumpFds;
+    private boolean dumpNetworkInfo;
     private ICrashCallback callback;
     private long lastTime = 0;
     private FileObserver fileObserver = null;
@@ -74,7 +75,7 @@ class AnrHandler {
     @SuppressWarnings("deprecation")
     void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir,
                     boolean checkProcessState, int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
-                    boolean dumpFds, ICrashCallback callback) {
+                    boolean dumpFds, boolean dumpNetworkInfo, ICrashCallback callback) {
 
         //check API level
         if (Build.VERSION.SDK_INT >= 21) {
@@ -92,6 +93,7 @@ class AnrHandler {
         this.logcatEventsLines = logcatEventsLines;
         this.logcatMainLines = logcatMainLines;
         this.dumpFds = dumpFds;
+        this.dumpNetworkInfo = dumpNetworkInfo;
         this.callback = callback;
 
         fileObserver = new FileObserver("/data/anr/", CLOSE_WRITE) {
@@ -197,6 +199,11 @@ class AnrHandler {
                 //write fds
                 if (dumpFds) {
                     raf.write(Util.getFds().getBytes("UTF-8"));
+                }
+
+                //write network info
+                if (dumpNetworkInfo) {
+                    raf.write(Util.getNetworkInfo().getBytes("UTF-8"));
                 }
 
                 //write memory info

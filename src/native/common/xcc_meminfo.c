@@ -445,34 +445,9 @@ static void xcc_meminfo_load(FILE *fp, xcc_meminfo_t *stats, int *found_swap_pss
     }
 }
 
-static int xcc_meminfo_record_from(int log_fd, const char *path, const char *title)
-{
-    FILE *fp = NULL;
-    char  line[512];
-    char *p;
-    int   r = 0;
-
-    if(NULL == (fp = fopen(path, "r"))) goto end;
-    
-    if(0 != (r = xcc_util_write_str(log_fd, title))) goto end;
-    while(NULL != fgets(line, sizeof(line), fp))
-    {
-        p = xcc_util_trim(line);
-        if(strlen(p) > 0)
-        {
-            if(0 != (r = xcc_util_write_format(log_fd, "  %s\n", p))) goto end;
-        }
-    }
-    if(0 != (r = xcc_util_write_str(log_fd, "-\n"))) goto end;
-
- end:
-    if(NULL != fp) fclose(fp);
-    return r;
-}
-
 static int xcc_meminfo_record_sys(int log_fd)
 {
-    return xcc_meminfo_record_from(log_fd, "/proc/meminfo", " System Summary (From: /proc/meminfo)\n");
+    return xcc_util_record_sub_section_from(log_fd, "/proc/meminfo", " System Summary (From: /proc/meminfo)\n", 0);
 }
 
 static int xcc_meminfo_record_proc_status(int log_fd, pid_t pid)
@@ -480,7 +455,7 @@ static int xcc_meminfo_record_proc_status(int log_fd, pid_t pid)
     char  path[64];
     snprintf(path, sizeof(path), "/proc/%d/status", pid);
 
-    return xcc_meminfo_record_from(log_fd, path, " Process Status (From: /proc/PID/status)\n");
+    return xcc_util_record_sub_section_from(log_fd, path, " Process Status (From: /proc/PID/status)\n", 0);
 }
 
 static int xcc_meminfo_record_proc_limits(int log_fd, pid_t pid)
@@ -488,7 +463,7 @@ static int xcc_meminfo_record_proc_limits(int log_fd, pid_t pid)
     char  path[64];
     snprintf(path, sizeof(path), "/proc/%d/limits", pid);
 
-    return xcc_meminfo_record_from(log_fd, path, " Process Limits (From: /proc/PID/limits)\n");
+    return xcc_util_record_sub_section_from(log_fd, path, " Process Limits (From: /proc/PID/limits)\n", 0);
 }
 
 int xcc_meminfo_record(int log_fd, pid_t pid)

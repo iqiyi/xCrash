@@ -242,6 +242,12 @@ public class TombstoneParser {
     public static final String keyOpenFiles = "open files";
 
     /**
+     * Network info.
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static final String keyNetworkInfo = "network info";
+
+    /**
      * Memory info. (From: /proc/PID/smaps)
      */
     @SuppressWarnings("WeakerAccess")

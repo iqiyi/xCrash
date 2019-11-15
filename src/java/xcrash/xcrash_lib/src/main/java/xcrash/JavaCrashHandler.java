@@ -54,6 +54,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
     private int logcatEventsLines;
     private int logcatMainLines;
     private boolean dumpFds;
+    private boolean dumpNetworkInfo;
     private boolean dumpAllThreads;
     private int dumpAllThreadsCountMax;
     private String[] dumpAllThreadsWhiteList;
@@ -69,7 +70,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     void initialize(int pid, String processName, String appId, String appVersion, String logDir, boolean rethrow,
                     int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
-                    boolean dumpFds, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
+                    boolean dumpFds, boolean dumpNetworkInfo, boolean dumpAllThreads, int dumpAllThreadsCountMax, String[] dumpAllThreadsWhiteList,
                     ICrashCallback callback) {
         this.pid = pid;
         this.processName = (TextUtils.isEmpty(processName) ? "unknown" : processName);
@@ -81,6 +82,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         this.logcatEventsLines = logcatEventsLines;
         this.logcatMainLines = logcatMainLines;
         this.dumpFds = dumpFds;
+        this.dumpNetworkInfo = dumpNetworkInfo;
         this.dumpAllThreads = dumpAllThreads;
         this.dumpAllThreadsCountMax = dumpAllThreadsCountMax;
         this.dumpAllThreadsWhiteList = dumpAllThreadsWhiteList;
@@ -163,6 +165,11 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 //write fds
                 if (dumpFds) {
                     raf.write(Util.getFds().getBytes("UTF-8"));
+                }
+
+                //write network info
+                if (dumpNetworkInfo) {
+                    raf.write(Util.getNetworkInfo().getBytes("UTF-8"));
                 }
 
                 //write memory info

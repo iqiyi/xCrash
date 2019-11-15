@@ -201,6 +201,7 @@ int main(int argc, char** argv)
                                xcd_core_spot.dump_elf_hash,
                                xcd_core_spot.dump_map,
                                xcd_core_spot.dump_fds,
+                               xcd_core_spot.dump_network_info,
                                xcd_core_spot.dump_all_threads,
                                xcd_core_spot.dump_all_threads_count_max,
                                xcd_core_dump_all_threads_whitelist,

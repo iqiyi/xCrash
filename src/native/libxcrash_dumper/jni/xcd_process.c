@@ -394,6 +394,7 @@ int xcd_process_record(xcd_process_t *self,
                        int dump_elf_hash,
                        int dump_map,
                        int dump_fds,
+                       int dump_network_info,
                        int dump_all_threads,
                        unsigned int dump_all_threads_count_max,
                        char *dump_all_threads_whitelist,
@@ -425,6 +426,7 @@ int xcd_process_record(xcd_process_t *self,
             if(dump_map) if(0 != (r = xcd_maps_record(self->maps, log_fd))) return r;
             if(0 != (r = xcc_util_record_logcat(log_fd, self->pid, api_level, logcat_system_lines, logcat_events_lines, logcat_main_lines))) return r;
             if(dump_fds) if(0 != (r = xcc_util_record_fds(log_fd, self->pid))) return r;
+            if(dump_network_info) if(0 != (r = xcc_util_record_network_info(log_fd, self->pid, api_level))) return r;
             if(0 != (r = xcc_meminfo_record(log_fd, self->pid))) return r;
 
             break;

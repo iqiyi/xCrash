@@ -55,6 +55,7 @@ typedef struct
     int          dump_elf_hash;
     int          dump_map;
     int          dump_fds;
+    int          dump_network_info;
     int          dump_all_threads;
     unsigned int dump_all_threads_count_max;
 

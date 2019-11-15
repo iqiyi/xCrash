@@ -64,6 +64,7 @@ static jint xc_jni_init(JNIEnv       *env,
                         jboolean      crash_dump_elf_hash,
                         jboolean      crash_dump_map,
                         jboolean      crash_dump_fds,
+                        jboolean      crash_dump_network_info,
                         jboolean      crash_dump_all_threads,
                         jint          crash_dump_all_threads_count_max,
                         jobjectArray  crash_dump_all_threads_whitelist,
@@ -72,10 +73,11 @@ static jint xc_jni_init(JNIEnv       *env,
                         jint          trace_logcat_system_lines,
                         jint          trace_logcat_events_lines,
                         jint          trace_logcat_main_lines,
-                        jboolean      trace_dump_fds)
+                        jboolean      trace_dump_fds,
+                        jboolean      trace_dump_network_info)
 {
     int              r_crash                                = XCC_ERRNO_JNI;
-    int              r_trace                                  = XCC_ERRNO_JNI;
+    int              r_trace                                = XCC_ERRNO_JNI;
     
     const char      *c_os_version                           = NULL;
     const char      *c_abi_list                             = NULL;
@@ -166,6 +168,7 @@ static jint xc_jni_init(JNIEnv       *env,
                                 crash_dump_elf_hash ? 1 : 0,
                                 crash_dump_map ? 1 : 0,
                                 crash_dump_fds ? 1 : 0,
+                                crash_dump_network_info ? 1 : 0,
                                 crash_dump_all_threads ? 1 : 0,
                                 (unsigned int)crash_dump_all_threads_count_max,
                                 c_crash_dump_all_threads_whitelist,
@@ -180,7 +183,8 @@ static jint xc_jni_init(JNIEnv       *env,
                             (unsigned int)trace_logcat_system_lines,
                             (unsigned int)trace_logcat_events_lines,
                             (unsigned int)trace_logcat_main_lines,
-                            trace_dump_fds ? 1 : 0);
+                            trace_dump_fds ? 1 : 0,
+                            trace_dump_network_info ? 1 : 0);
     }
     
  clean:
@@ -249,6 +253,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "Z"
         "Z"
         "Z"
+        "Z"
         "I"
         "[Ljava/lang/String;"
         "Z"
@@ -256,6 +261,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "I"
         "I"
         "I"
+        "Z"
         "Z"
         ")"
         "I",

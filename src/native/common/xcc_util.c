@@ -415,6 +415,39 @@ void xcc_util_get_thread_name(pid_t tid, char *buf, size_t len)
         strncpy(buf, "unknown", len);
 }
 
+int xcc_util_record_sub_section_from(int fd, const char *path, const char *title, size_t limit)
+{
+    FILE   *fp = NULL;
+    char    line[512];
+    char   *p;
+    int     r = 0;
+    size_t  n = 0;
+
+    if(NULL == (fp = fopen(path, "r"))) goto end;
+
+    if(0 != (r = xcc_util_write_str(fd, title))) goto end;
+    while(NULL != fgets(line, sizeof(line), fp))
+    {
+        p = xcc_util_trim(line);
+        if(strlen(p) > 0)
+        {
+            n++;
+            if(0 == limit || n <= limit)
+                if(0 != (r = xcc_util_write_format_safe(fd, "  %s\n", p))) goto end;
+        }
+    }
+    if(limit > 0 && n > limit)
+    {
+        if(0 != (r = xcc_util_write_str(fd, "  ......\n"))) goto end;
+        if(0 != (r = xcc_util_write_format_safe(fd, "  (number of records: %zu)\n", n))) goto end;
+    }
+    if(0 != (r = xcc_util_write_str(fd, "-\n"))) goto end;
+
+ end:
+    if(NULL != fp) fclose(fp);
+    return r;
+}
+
 static const char *xcc_util_su_pathnames[] =
 {
     "/data/local/su",
@@ -648,6 +681,45 @@ int xcc_util_record_fds(int fd, pid_t pid)
  clean:
     if(fd2 >= 0) close(fd2);
     return r;
+}
+
+int xcc_util_record_network_info(int fd, pid_t pid, int api_level)
+{
+    int  r;
+    char path[128];
+
+    if(0 != (r = xcc_util_write_str(fd, "network info:\n"))) return r;
+
+    if(api_level >= 29)
+    {
+        if(0 != (r = xcc_util_write_str(fd, "Not supported on Android Q (API level 29) and later.\n"))) return r;
+    }
+    else
+    {
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/tcp", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " TCP over IPv4 (From: /proc/PID/net/tcp)\n", 1024))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/tcp6", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " TCP over IPv6 (From: /proc/PID/net/tcp6)\n", 1024))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/udp", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " UDP over IPv4 (From: /proc/PID/net/udp)\n", 1024))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/udp6", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " UDP over IPv6 (From: /proc/PID/net/udp6)\n", 1024))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/icmp", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " ICMP in IPv4 (From: /proc/PID/net/icmp)\n", 256))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/icmp6", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " ICMP in IPv6 (From: /proc/PID/net/icmp6)\n", 256))) return r;
+
+        xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/net/unix", pid);
+        if(0 != (r = xcc_util_record_sub_section_from(fd, path, " UNIX domain (From: /proc/PID/net/unix)\n", 256))) return r;
+    }
+
+    if(0 != (r = xcc_util_write_str(fd, "\n"))) return r;
+    return 0;
 }
 
 #pragma clang diagnostic pop

@@ -153,6 +153,7 @@ public final class XCrash {
                 params.javaLogcatEventsLines,
                 params.javaLogcatMainLines,
                 params.javaDumpFds,
+                params.javaDumpNetworkInfo,
                 params.javaDumpAllThreads,
                 params.javaDumpAllThreadsCountMax,
                 params.javaDumpAllThreadsWhiteList,
@@ -173,6 +174,7 @@ public final class XCrash {
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
                 params.anrDumpFds,
+                params.anrDumpNetworkInfo,
                 params.anrCallback);
         }
 
@@ -193,6 +195,7 @@ public final class XCrash {
                 params.nativeDumpElfHash,
                 params.nativeDumpMap,
                 params.nativeDumpFds,
+                params.nativeDumpNetworkInfo,
                 params.nativeDumpAllThreads,
                 params.nativeDumpAllThreadsCountMax,
                 params.nativeDumpAllThreadsWhiteList,
@@ -204,6 +207,7 @@ public final class XCrash {
                 params.anrLogcatEventsLines,
                 params.anrLogcatMainLines,
                 params.anrDumpFds,
+                params.anrDumpNetworkInfo,
                 params.anrCallback);
         }
 
@@ -323,6 +327,7 @@ public final class XCrash {
         int            javaLogcatEventsLines       = 50;
         int            javaLogcatMainLines         = 200;
         boolean        javaDumpFds                 = true;
+        boolean        javaDumpNetworkInfo         = true;
         boolean        javaDumpAllThreads          = true;
         int            javaDumpAllThreadsCountMax  = 0;
         String[]       javaDumpAllThreadsWhiteList = null;
@@ -424,6 +429,18 @@ public final class XCrash {
         }
 
         /**
+         * Set if dumping network info when a java crash occurred. (Default: enable)
+         *
+         * @param flag True or false.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setJavaDumpNetworkInfo(boolean flag) {
+            this.javaDumpNetworkInfo = flag;
+            return this;
+        }
+
+        /**
          * Set if dumping threads info (stacktrace) for all threads (not just the thread that has crashed)
          * when a Java exception occurred. (Default: enable)
          *
@@ -488,6 +505,7 @@ public final class XCrash {
         boolean        nativeDumpElfHash             = true;
         boolean        nativeDumpMap                 = true;
         boolean        nativeDumpFds                 = true;
+        boolean        nativeDumpNetworkInfo         = true;
         boolean        nativeDumpAllThreads          = true;
         int            nativeDumpAllThreadsCountMax  = 0;
         String[]       nativeDumpAllThreadsWhiteList = null;
@@ -613,6 +631,18 @@ public final class XCrash {
         }
 
         /**
+         * Set if dumping network info when a native crash occurred. (Default: enable)
+         *
+         * @param flag True or false.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setNativeDumpNetwork(boolean flag) {
+            this.nativeDumpNetworkInfo = flag;
+            return this;
+        }
+
+        /**
          * Set if dumping threads info (registers, backtrace and stack) for all threads (not just the thread that has crashed)
          * when a native crash occurred. (Default: enable)
          *
@@ -680,6 +710,7 @@ public final class XCrash {
         int            anrLogcatEventsLines = 50;
         int            anrLogcatMainLines   = 200;
         boolean        anrDumpFds           = true;
+        boolean        anrDumpNetworkInfo   = true;
         ICrashCallback anrCallback          = null;
 
         /**
@@ -792,6 +823,18 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setAnrDumpFds(boolean flag) {
             this.anrDumpFds = flag;
+            return this;
+        }
+
+        /**
+         * Set if dumping network info when an ANR occurred. (Default: enable)
+         *
+         * @param flag True or false.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrDumpNetwork(boolean flag) {
+            this.anrDumpNetworkInfo = flag;
             return this;
         }
 

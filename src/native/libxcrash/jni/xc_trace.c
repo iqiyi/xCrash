@@ -73,6 +73,7 @@ static unsigned int                     xc_trace_logcat_system_lines;
 static unsigned int                     xc_trace_logcat_events_lines;
 static unsigned int                     xc_trace_logcat_main_lines;
 static int                              xc_trace_dump_fds;
+static int                              xc_trace_dump_network_info;
 
 //callback
 static jmethodID                        xc_trace_cb_method = NULL;
@@ -351,6 +352,8 @@ static void *xc_trace_dumper(void *arg)
         if(0 != xcc_util_record_logcat(fd, xc_common_process_id, xc_common_api_level, xc_trace_logcat_system_lines, xc_trace_logcat_events_lines, xc_trace_logcat_main_lines)) goto end;
         if(xc_trace_dump_fds)
             if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
+        if(xc_trace_dump_network_info)
+            if(0 != xcc_util_record_network_info(fd, xc_common_process_id, xc_common_api_level)) goto end;
         if(0 != xcc_meminfo_record(fd, xc_common_process_id)) goto end;
 
     end:
@@ -405,11 +408,12 @@ static void xc_trace_init_callback(JNIEnv *env)
 }
 
 int xc_trace_init(JNIEnv *env,
-                int rethrow,
-                unsigned int logcat_system_lines,
-                unsigned int logcat_events_lines,
-                unsigned int logcat_main_lines,
-                int dump_fds)
+                  int rethrow,
+                  unsigned int logcat_system_lines,
+                  unsigned int logcat_events_lines,
+                  unsigned int logcat_main_lines,
+                  int dump_fds,
+                  int dump_network_info)
 {
     int r;
     pthread_t thd;
@@ -425,6 +429,7 @@ int xc_trace_init(JNIEnv *env,
     xc_trace_logcat_events_lines = logcat_events_lines;
     xc_trace_logcat_main_lines = logcat_main_lines;
     xc_trace_dump_fds = dump_fds;
+    xc_trace_dump_network_info = dump_network_info;
 
     //init for JNI callback
     xc_trace_init_callback(env);

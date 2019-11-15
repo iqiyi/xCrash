@@ -43,7 +43,8 @@ int xc_fallback_record(int log_fd,
                        unsigned int logcat_system_lines,
                        unsigned int logcat_events_lines,
                        unsigned int logcat_main_lines,
-                       int dump_fds);
+                       int dump_fds,
+                       int dump_network_info);
 
 #ifdef __cplusplus
 }

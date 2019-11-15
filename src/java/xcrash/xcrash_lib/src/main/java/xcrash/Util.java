@@ -204,16 +204,27 @@ class Util {
     }
 
     private static String getFileContent(String pathname) {
+        return getFileContent(pathname, 0);
+    }
+
+    private static String getFileContent(String pathname, int limit) {
         StringBuilder sb = new StringBuilder();
         BufferedReader br = null;
         String line;
+        int n = 0;
         try {
             br = new BufferedReader(new FileReader(pathname));
             while (null != (line = br.readLine())) {
                 String p = line.trim();
                 if (p.length() > 0) {
-                    sb.append("  ").append(p).append("\n");
+                    n++;
+                    if (limit == 0 || n <= limit) {
+                        sb.append("  ").append(p).append("\n");
+                    }
                 }
+            }
+            if (limit > 0 && n > limit) {
+                sb.append("  ......\n").append("  (number of records: ").append(n).append(")\n");
             }
         } catch (Exception e) {
             XCrash.getLogger().i(Util.TAG, "Util getInfo(" + pathname + ") failed", e);
@@ -290,27 +301,56 @@ class Util {
     }
 
     static String getMemoryInfo() {
-        int pid = android.os.Process.myPid();
         return "memory info:\n"
             + " System Summary (From: /proc/meminfo)\n"
             + Util.getFileContent("/proc/meminfo")
             + "-\n"
             + " Process Status (From: /proc/PID/status)\n"
-            + Util.getFileContent("/proc/" + pid + "/status")
+            + Util.getFileContent("/proc/self/status")
             + "-\n"
             + " Process Limits (From: /proc/PID/limits)\n"
-            + Util.getFileContent("/proc/" + pid + "/limits")
+            + Util.getFileContent("/proc/self/limits")
             + "-\n"
             + Util.getProcessMemoryInfo()
             + "\n";
     }
 
+    static String getNetworkInfo() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            return "network info:\n"
+                + "Not supported on Android Q (API level 29) and later.\n"
+                + "\n";
+        } else {
+            return "network info:\n"
+                + " TCP over IPv4 (From: /proc/PID/net/tcp)\n"
+                + Util.getFileContent("/proc/self/net/tcp", 1024)
+                + "-\n"
+                + " TCP over IPv6 (From: /proc/PID/net/tcp6)\n"
+                + Util.getFileContent("/proc/self/net/tcp6", 1024)
+                + "-\n"
+                + " UDP over IPv4 (From: /proc/PID/net/udp)\n"
+                + Util.getFileContent("/proc/self/net/udp", 1024)
+                + "-\n"
+                + " UDP over IPv6 (From: /proc/PID/net/udp6)\n"
+                + Util.getFileContent("/proc/self/net/udp6", 1024)
+                + "-\n"
+                + " ICMP in IPv4 (From: /proc/PID/net/icmp)\n"
+                + Util.getFileContent("/proc/self/net/icmp", 256)
+                + "-\n"
+                + " ICMP in IPv6 (From: /proc/PID/net/icmp6)\n"
+                + Util.getFileContent("/proc/self/net/icmp6", 256)
+                + "-\n"
+                + " UNIX domain (From: /proc/PID/net/unix)\n"
+                + Util.getFileContent("/proc/self/net/unix", 256)
+                + "\n";
+        }
+    }
+
     static String getFds() {
-        int pid = android.os.Process.myPid();
         StringBuilder sb = new StringBuilder("open files:\n");
 
         try {
-            File dir = new File("/proc/" + pid + "/fd");
+            File dir = new File("/proc/self/fd");
             File[] fds = dir.listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {

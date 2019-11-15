@@ -156,6 +156,9 @@ int xcc_util_read_file_line(const char *path, char *buf, size_t len);
 
 void xcc_util_get_process_name(pid_t pid, char *buf, size_t len);
 void xcc_util_get_thread_name(pid_t tid, char *buf, size_t len);
+
+int xcc_util_record_sub_section_from(int log_fd, const char *path, const char *title, size_t limit);
+
 int xcc_util_is_root(void);
 
 size_t xcc_util_get_dump_header(char *buf,
@@ -183,6 +186,8 @@ int xcc_util_record_logcat(int fd,
                            unsigned int logcat_main_lines);
 
 int xcc_util_record_fds(int fd, pid_t pid);
+
+int xcc_util_record_network_info(int fd, pid_t pid, int api_level);
 
 #ifdef __cplusplus
 }

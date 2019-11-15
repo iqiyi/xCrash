@@ -65,6 +65,7 @@ class NativeHandler {
                    boolean crashDumpElfHash,
                    boolean crashDumpMap,
                    boolean crashDumpFds,
+                   boolean crashDumpNetworkInfo,
                    boolean crashDumpAllThreads,
                    int crashDumpAllThreadsCountMax,
                    String[] crashDumpAllThreadsWhiteList,
@@ -76,6 +77,7 @@ class NativeHandler {
                    int anrLogcatEventsLines,
                    int anrLogcatMainLines,
                    boolean anrDumpFds,
+                   boolean anrDumpNetworkInfo,
                    ICrashCallback anrCallback) {
         //load lib
         if (libLoader == null) {
@@ -124,6 +126,7 @@ class NativeHandler {
                 crashDumpElfHash,
                 crashDumpMap,
                 crashDumpFds,
+                crashDumpNetworkInfo,
                 crashDumpAllThreads,
                 crashDumpAllThreadsCountMax,
                 crashDumpAllThreadsWhiteList,
@@ -132,7 +135,8 @@ class NativeHandler {
                 anrLogcatSystemLines,
                 anrLogcatEventsLines,
                 anrLogcatMainLines,
-                anrDumpFds);
+                anrDumpFds,
+                anrDumpNetworkInfo);
             if (r != 0) {
                 XCrash.getLogger().e(Util.TAG, "NativeHandler init failed");
                 return Errno.INIT_LIBRARY_FAILED;
@@ -275,6 +279,7 @@ class NativeHandler {
             boolean crashDumpElfHash,
             boolean crashDumpMap,
             boolean crashDumpFds,
+            boolean crashDumpNetworkInfo,
             boolean crashDumpAllThreads,
             int crashDumpAllThreadsCountMax,
             String[] crashDumpAllThreadsWhiteList,
@@ -283,7 +288,8 @@ class NativeHandler {
             int traceLogcatSystemLines,
             int traceLogcatEventsLines,
             int traceLogcatMainLines,
-            boolean traceDumpFds);
+            boolean traceDumpFds,
+            boolean traceDumpNetworkInfo);
 
     private static native void nativeNotifyJavaCrashed();
 

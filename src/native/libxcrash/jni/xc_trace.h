@@ -37,7 +37,8 @@ int xc_trace_init(JNIEnv *env,
                   unsigned int logcat_system_lines,
                   unsigned int logcat_events_lines,
                   unsigned int logcat_main_lines,
-                  int dump_fds);
+                  int dump_fds,
+                  int dump_network_info);
 
 #ifdef __cplusplus
 }

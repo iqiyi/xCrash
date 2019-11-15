@@ -240,7 +240,8 @@ int xc_fallback_record(int log_fd,
                        unsigned int logcat_system_lines,
                        unsigned int logcat_events_lines,
                        unsigned int logcat_main_lines,
-                       int dump_fds)
+                       int dump_fds,
+                       int dump_network_info)
 {
     int r;
 
@@ -254,6 +255,8 @@ int xc_fallback_record(int log_fd,
     if(0 != (r = xcc_util_record_logcat(log_fd, xc_common_process_id, xc_common_api_level, logcat_system_lines, logcat_events_lines, logcat_main_lines))) return r;
     if(dump_fds)
         if(0 != (r = xcc_util_record_fds(log_fd, xc_common_process_id))) return r;
+    if(dump_network_info)
+        if(0 != (r = xcc_util_record_network_info(log_fd, xc_common_process_id, xc_common_api_level))) return r;
     if(0 != (r = xcc_meminfo_record(log_fd, xc_common_process_id))) return r;
     
     return 0;

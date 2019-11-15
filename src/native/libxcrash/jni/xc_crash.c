@@ -548,7 +548,8 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
                                        xc_crash_spot.logcat_system_lines,
                                        xc_crash_spot.logcat_events_lines,
                                        xc_crash_spot.logcat_main_lines,
-                                       xc_crash_spot.dump_fds))
+                                       xc_crash_spot.dump_fds,
+                                       xc_crash_spot.dump_network_info))
             {
                 close(xc_crash_log_fd);
                 xc_crash_log_fd = -1;
@@ -668,6 +669,7 @@ int xc_crash_init(JNIEnv *env,
                   int dump_elf_hash,
                   int dump_map,
                   int dump_fds,
+                  int dump_network_info,
                   int dump_all_threads,
                   unsigned int dump_all_threads_count_max,
                   const char **dump_all_threads_whitelist,
@@ -696,6 +698,7 @@ int xc_crash_init(JNIEnv *env,
     xc_crash_spot.dump_elf_hash = dump_elf_hash;
     xc_crash_spot.dump_map = dump_map;
     xc_crash_spot.dump_fds = dump_fds;
+    xc_crash_spot.dump_network_info = dump_network_info;
     xc_crash_spot.dump_all_threads = dump_all_threads;
     xc_crash_spot.dump_all_threads_count_max = dump_all_threads_count_max;
     xc_crash_spot.os_version_len = strlen(xc_common_os_version);
