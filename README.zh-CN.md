@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.4.7-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.4.8-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -22,7 +22,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的不同平台（手机，�
 * 支持 Android 4.0 - 10（API level 14 - 29）。
 * 支持 armeabi，armeabi-v7a，arm64-v8a，x86 和 x86_64。
 * 捕获 java 崩溃，native 崩溃和 ANR。
-* 获取详细的内存使用统计信息。
+* 获取详细的进程、线程、内存、FD、网络统计信息。
 * 通过正则表达式设置需要获取哪些线程的信息。
 * 不需要 root 权限或任何系统权限。
 
@@ -62,7 +62,7 @@ xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的不同平台（手机，�
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.7'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.8'
 }
 ```
 

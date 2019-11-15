@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.4.7-red.svg?style=flat)
+![](https://img.shields.io/badge/release-2.4.8-red.svg?style=flat)
 ![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
 ![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
@@ -22,7 +22,7 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 * Support Android 4.0 - 10 (API level 14 - 29).
 * Support armeabi, armeabi-v7a, arm64-v8a, x86 and x86_64.
 * Capturing java crash, native crash and ANR.
-* Dumping detailed memory usage statistics.
+* Dumping detailed statistics about process, threads, memory, FD and network.
 * Setting which thread's info should be dumped via regular expressions.
 * Do not require root permission or any system permissions.
 
@@ -62,7 +62,7 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.7'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.8'
 }
 ```
 
