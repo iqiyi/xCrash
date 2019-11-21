@@ -20,6 +20,12 @@ android {
             minifyEnabled false
         }
     }
+
+    externalNativeBuild {
+        ndkBuild {
+            path '../../../native/libxcrash/jni/Android.mk'
+        }
+    }
 }
 
 apply from: rootProject.file('gradle/check.gradle')
