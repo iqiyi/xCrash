@@ -1,0 +1,39 @@
+SET(lzma_sources
+        7zAlloc.c
+        7zCrc.c
+        7zCrcOpt.c
+        Alloc.c
+        Bra.c
+        Bra86.c
+        BraIA64.c
+        CpuArch.c
+        Delta.c
+        Lzma2Dec.c
+        LzmaDec.c
+        Sha256.c
+        Xz.c
+        XzCrc64.c
+        XzCrc64Opt.c
+        XzDec.c)
+ADD_LIBRARY(lzma STATIC ${lzma_sources})
+TARGET_INCLUDE_DIRECTORIES(lzma PUBLIC .)
+TARGET_COMPILE_OPTIONS(lzma
+        PRIVATE
+        -std=c11
+        -Weverything
+        -Werror
+        -Wno-enum-conversion
+        -Wno-reserved-id-macro
+        -Wno-undef
+        -Wno-missing-prototypes
+        -Wno-missing-variable-declarations
+        -Wno-cast-align
+        -Wno-sign-conversion
+        -Wno-assign-enum
+        -Wno-unused-macros
+        -Wno-padded
+        -Wno-cast-qual
+        -Wno-strict-prototypes
+        -fPIC
+        -D_7ZIP_ST)
+TARGET_LINK_LIBRARIES(lzma)

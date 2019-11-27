@@ -10,3 +10,4 @@ build/
 *.log
 *.so
 local.properties
+.cxx
