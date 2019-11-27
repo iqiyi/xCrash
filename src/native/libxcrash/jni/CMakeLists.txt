@@ -15,4 +15,4 @@ TARGET_COMPILE_OPTIONS(xcrash
         -Weverything
         -Werror
         -fvisibility=hidden)
-TARGET_LINK_LIBRARIES(xcrash xcrash_common ${android-dl} ${android-log})
+TARGET_LINK_LIBRARIES(xcrash xcrash_common ${libdl} ${liblog})

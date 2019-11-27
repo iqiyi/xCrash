@@ -30,4 +30,4 @@ TARGET_COMPILE_OPTIONS(xcrash_dumper
         -Weverything
         -Werror
         -fvisibility=hidden)
-TARGET_LINK_LIBRARIES(xcrash_dumper PRIVATE xcrash_common lzma ${android-dl} ${android-log})
+TARGET_LINK_LIBRARIES(xcrash_dumper PRIVATE xcrash_common lzma ${libdl} ${liblog})
