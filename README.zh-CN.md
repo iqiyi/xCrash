@@ -1,3 +1,5 @@
+<p align="center"><img src="doc/xcrash_logo.png" alt="xCrash Logo" width="450px"></p>
+
 # xCrash
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
@@ -8,9 +10,9 @@
 
 xCrash 能为安卓 app 提供捕获 java 崩溃，native 崩溃和 ANR 的能力。不需要 root 权限或任何系统权限。
 
-xCrash 能在 app 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
-
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
+
+xCrash 能在 app 进程崩溃或 ANR 时，在你指定的目录中生成一个 tombstone 文件（格式与安卓系统的 tombstone 文件类似）。
 
 xCrash 已经在 [爱奇艺](http://www.iqiyi.com/) 的不同平台（手机，平板，电视）的很多安卓 app（包括爱奇艺视频）中被使用了很多年。
 

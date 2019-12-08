@@ -1,3 +1,5 @@
+<p align="center"><img src="doc/xcrash_logo.png" alt="xCrash Logo" width="450px"></p>
+
 # xCrash
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
@@ -8,9 +10,9 @@
 
 xCrash provides the Android app with the ability to capture java crash, native crash and ANR. No root permission or any system permissions are required.
 
-xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANRs.
-
 <p align="left"><img src="doc/intro.png" alt="intro" width="320px"></p>
+
+xCrash can generate a tombstone file (similar format as Android system's tombstone file) in the directory you specified when the app process crashes or ANRs.
 
 xCrash has been used in many Android apps (including iQIYI video) on different platforms (mobile, tablet, TV) of [iQIYI](http://www.iqiyi.com/) for many years.
 
