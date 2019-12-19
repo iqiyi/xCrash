@@ -26,6 +26,7 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Debug;
+import android.system.Os;
 import android.text.TextUtils;
 
 import java.io.BufferedReader;
@@ -363,11 +364,15 @@ class Util {
                 for (File fd : fds) {
                     String path = null;
                     try {
-                        path = fd.getCanonicalPath();
+                        if (Build.VERSION.SDK_INT >= 21) {
+                            path = Os.readlink(fd.getAbsolutePath());
+                        } else {
+                            path = fd.getCanonicalPath();
+                        }
                     } catch (Exception ignored) {
                     }
                     sb.append("    fd ").append(fd.getName()).append(": ")
-                        .append(TextUtils.isEmpty(path) ? "???" : path).append('\n');
+                        .append(TextUtils.isEmpty(path) ? "???" : path.trim()).append('\n');
 
                     count++;
                     if (count > 1024) {
