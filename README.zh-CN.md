@@ -118,7 +118,7 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 如果你想编译 xCrash 的源码。请按以下步骤进行：
 
-#### 1. 下载 [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。
+#### 1. 下载 [Android NDK r20b](https://developer.android.com/ndk/downloads/revision_history.html)，设置 PATH 环境变量。
 
 #### 2. 编译和复制 native 库。
 
