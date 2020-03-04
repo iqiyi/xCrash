@@ -2,14 +2,15 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE           := test
-LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -O0
+LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -O0 -flto
 LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
 LOCAL_SRC_FILES        := xc_test.c
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE           := xcrash
-LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden
+LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden -Oz -flto
+LOCAL_LDFLAGS          := -flto
 LOCAL_LDLIBS           := -ldl -llog
 LOCAL_STATIC_LIBRARIES := test
 LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
