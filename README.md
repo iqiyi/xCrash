@@ -118,7 +118,7 @@ There is a more practical and complex sample app in the [src/java/xcrash/xcrash_
 
 If you want to build xCrash from source code. Follow this guide:
 
-#### 1. Download [Android NDK r16b](https://developer.android.com/ndk/downloads/revision_history.html), set PATH environment. 
+#### 1. Download [Android NDK r20b](https://developer.android.com/ndk/downloads/revision_history.html), set PATH environment.
 
 #### 2. Build and copy the native libraries.
 
