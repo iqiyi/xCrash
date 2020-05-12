@@ -31,10 +31,13 @@ import android.text.TextUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -150,6 +153,34 @@ class Util {
                 return abi + "," + abi2;
             }
         }
+    }
+
+    static String getFileMD5(File file) {
+        String s = null;
+
+        if (!file.exists()) {
+            return null;
+        }
+
+        FileInputStream in = null;
+        byte[] buffer = new byte[1024];
+        int len;
+
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            in = new FileInputStream(file);
+            while ((len = in.read(buffer, 0, 1024)) != -1) {
+                md.update(buffer, 0, len);
+            }
+            in.close();
+            BigInteger bigInt = new BigInteger(1, md.digest());
+            s = String.format("%032x", bigInt);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return s;
     }
 
     static String getAppVersion(Context ctx) {

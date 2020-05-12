@@ -38,6 +38,7 @@ public final class XCrash {
     private static String appVersion = null;
     private static String logDir = null;
     private static ILogger logger = new DefaultLogger();
+    public static  String nativeLibDir = null;
 
     private XCrash() {
     }
@@ -69,8 +70,10 @@ public final class XCrash {
         if (XCrash.initialized) {
             return Errno.OK;
         }
+
         XCrash.initialized = true;
 
+        nativeLibDir = ctx.getApplicationInfo().nativeLibraryDir;
         if (ctx == null) {
             return Errno.CONTEXT_IS_NULL;
         }

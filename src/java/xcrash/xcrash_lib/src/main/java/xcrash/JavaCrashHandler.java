@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
@@ -203,6 +204,42 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         }
     }
 
+    private String getBuildId(String stktrace) {
+        String buildId = "";
+        if (stktrace.contains("UnsatisfiedLinkError")) {
+            String libInfo = "    No lib info\n";
+            String[] tempLibPathStr;
+            tempLibPathStr = stktrace.split("\""); // " is the delimiter
+            for (String libPathStr :  tempLibPathStr) {
+                if (libPathStr.isEmpty() || !libPathStr.endsWith(".so")) continue;
+                String[] libNameStr;
+                libNameStr = libPathStr.split("/");
+                for(String libName : libNameStr) {
+                    if(libName.isEmpty() || !libName.endsWith(".so")) continue;
+                    String libPath = XCrash.nativeLibDir + "/" + libName;
+                    File libFile = new File(libPath);
+                    if (libFile.exists() && libFile.isFile()) {
+                        String md5 = Util.getFileMD5(libFile);
+
+                        long lastTime = libFile.lastModified();
+                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd: HH.mm.ss");
+                        Date date = new Date(lastTime);
+                        simpleDateFormat.format(date);
+
+                        libInfo = "    " + libPathStr + "(FileSize: " + libFile.length() + ". LastModified: " + simpleDateFormat.format(date) + ". MD5: " + md5 + ")\n";
+                    }
+                }
+            }
+
+            buildId = "build id:"
+                    + "\n"
+                    + libInfo
+                    + "\n";
+        }
+
+        return buildId;
+    }
+
     private String getEmergency(Date crashTime, Thread thread, Throwable throwable) {
 
         //stack stace
@@ -216,7 +253,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 + "\n"
                 + "java stacktrace:\n"
                 + stacktrace
-                + "\n";
+                + "\n"
+                + getBuildId(stacktrace);
     }
 
     private String getOtherThreadsInfo(Thread crashedThread) {

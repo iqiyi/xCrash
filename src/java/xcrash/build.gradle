@@ -30,12 +30,12 @@ ext {
 
     POM_GROUP_ID = "com.iqiyi.xcrash"
     POM_ARTIFACT_ID = "xcrash-android-lib"
-    POM_VERSION_NAME = "2.5.0"
+    POM_VERSION_NAME = "2.5.1"
 
     POM_NAME = "xCrash Android Lib"
     POM_DESCRIPTION = "xCrash provides the Android app with the ability to capture java crash, native crash and ANR."
     POM_URL = "https://github.com/iqiyi/xCrash"
-    POM_INCEPTION_YEAR = "2019"
+    POM_INCEPTION_YEAR = "2020"
     POM_PACKAGING = "aar"
 
     POM_SCM_CONNECTION = "https://github.com/iqiyi/xCrash.git"
