@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -221,12 +222,11 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                     if (libFile.exists() && libFile.isFile()) {
                         String md5 = Util.getFileMD5(libFile);
 
-                        long lastTime = libFile.lastModified();
-                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd: HH.mm.ss");
-                        Date date = new Date(lastTime);
-                        simpleDateFormat.format(date);
+                        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+                        Date lastTime = new Date(libFile.lastModified());
 
-                        libInfo = "    " + libPathStr + "(FileSize: " + libFile.length() + ". LastModified: " + simpleDateFormat.format(date) + ". MD5: " + md5 + ")\n";
+                        libInfo = "    " + libPathStr + "(BuildId: unknown. FileSize: " + libFile.length() + ". LastModified: "
+                                + timeFormatter.format(lastTime) + ". MD5: " + md5 + ")\n";
                     }
                 }
             }

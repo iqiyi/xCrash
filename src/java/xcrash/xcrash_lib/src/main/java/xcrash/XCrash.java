@@ -73,7 +73,6 @@ public final class XCrash {
 
         XCrash.initialized = true;
 
-        nativeLibDir = ctx.getApplicationInfo().nativeLibraryDir;
         if (ctx == null) {
             return Errno.CONTEXT_IS_NULL;
         }
@@ -106,6 +105,8 @@ public final class XCrash {
             params.appVersion = Util.getAppVersion(ctx);
         }
         XCrash.appVersion = params.appVersion;
+
+        XCrash.nativeLibDir = ctx.getApplicationInfo().nativeLibraryDir;
 
         //save log dir
         if (TextUtils.isEmpty(params.logDir)) {
