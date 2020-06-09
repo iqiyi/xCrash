@@ -32,6 +32,8 @@
 extern "C" {
 #endif
 
+extern int xc_trace_file_fd;
+
 int xc_trace_init(JNIEnv *env,
                   int rethrow,
                   unsigned int logcat_system_lines,
@@ -40,6 +42,7 @@ int xc_trace_init(JNIEnv *env,
                   int dump_fds,
                   int dump_network_info);
 
+void xc_trace_dumper_bottom_half(int fd);
 #ifdef __cplusplus
 }
 #endif

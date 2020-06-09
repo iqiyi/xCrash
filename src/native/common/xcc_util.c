@@ -39,6 +39,7 @@
 #include "xcc_util.h"
 #include "xcc_errno.h"
 #include "xcc_fmt.h"
+#include "xc_common.h"
 #include "xcc_version.h"
 #include "xcc_libc_support.h"
 
@@ -682,6 +683,64 @@ int xcc_util_record_fds(int fd, pid_t pid)
     if(fd2 >= 0) close(fd2);
     return r;
 }
+
+int xcc_util_check_if_trace_xcrash_file_opened(pid_t pid)
+{
+    int                fd2 = -1;
+    char               path[128];
+    char               fd_path[512];
+    char               buf[512];
+    long               n, i;
+    int                fd_num;
+    size_t             total = 0;
+    xcc_util_dirent_t *ent;
+    ssize_t            len;
+
+    xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+    if((fd2 = XCC_UTIL_TEMP_FAILURE_RETRY(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC))) < 0) goto end;
+
+    while((n = syscall(XCC_UTIL_SYSCALL_GETDENTS, fd2, buf, sizeof(buf))) > 0)
+    {
+        for(i = 0; i < n;)
+        {
+            ent = (xcc_util_dirent_t *)(buf + i);
+
+            //get the fd
+            if('\0' == ent->d_name[0]) goto next;
+            if(0 == memcmp(ent->d_name, ".", 1)) goto next;
+            if(0 == memcmp(ent->d_name, "..", 2)) goto next;
+            if(0 != xcc_util_atoi(ent->d_name, &fd_num)) goto next;
+            if(fd_num < 0) goto next;
+
+            //count
+            total++;
+            if(total > 1024) goto end;
+
+            //read link of the path
+            xcc_fmt_snprintf(path, sizeof(path), "/proc/%d/fd/%d", pid, fd_num);
+            len = readlink(path, fd_path, sizeof(fd_path) - 1);
+            if(len <= 0 || len > (ssize_t)(sizeof(fd_path) - 1))
+            {
+                goto next;
+            }
+            else
+            {
+                fd_path[len] = '\0';
+                unsigned int suffix_len = strlen(XC_COMMON_LOG_SUFFIX_TRACE);
+                if((len > (ssize_t)suffix_len) && (0 == memcmp(fd_path + len - suffix_len, XC_COMMON_LOG_SUFFIX_TRACE, suffix_len)))
+                    return 1;
+            }
+
+        next:
+            i += ent->d_reclen;
+        }
+    }
+
+ end:
+    if(fd2 >= 0) close(fd2);
+    return 0;
+}
+
 
 int xcc_util_record_network_info(int fd, pid_t pid, int api_level)
 {

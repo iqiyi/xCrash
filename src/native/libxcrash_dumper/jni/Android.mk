@@ -6,7 +6,7 @@ LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden -fPI
 LOCAL_LDFLAGS          := -pie -flto
 LOCAL_LDLIBS           := -ldl -llog
 LOCAL_STATIC_LIBRARIES := lzma
-LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
+LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common $(LOCAL_PATH)/../../libxcrash/jni
 LOCAL_SRC_FILES        := $(wildcard $(LOCAL_PATH)/*.c) $(wildcard $(LOCAL_PATH)/../../common/*.c)
 include $(BUILD_EXECUTABLE)
 include $(LOCAL_PATH)/lzma/Android.mk

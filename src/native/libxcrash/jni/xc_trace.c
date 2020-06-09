@@ -79,6 +79,8 @@ static int                              xc_trace_dump_network_info;
 static jmethodID                        xc_trace_cb_method = NULL;
 static int                              xc_trace_notifier = -1;
 
+int                                     xc_trace_file_fd = -1;
+
 static void xc_trace_load_signal_catcher_tid()
 {
     char           buf[256];
@@ -316,6 +318,7 @@ static void *xc_trace_dumper(void *arg)
 
         //create and open log file
         if((fd = xc_common_open_trace_log(pathname, sizeof(pathname), trace_time)) < 0) continue;
+        xc_trace_file_fd = fd;
 
         //write header info
         if(0 != xc_trace_write_header(fd, trace_time)) goto end;
@@ -378,6 +381,27 @@ static void *xc_trace_dumper(void *arg)
     xc_trace_notifier = -1;
     close(xc_trace_notifier);
     return NULL;
+}
+
+void xc_trace_dumper_bottom_half(int fd)
+{
+    fflush(NULL);
+    dup2(xc_common_fd_null, STDERR_FILENO);
+
+    if(0 != xcc_util_write_str(fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
+
+    //write other info
+    if(0 != xcc_util_record_logcat(fd, xc_common_process_id, xc_common_api_level, xc_trace_logcat_system_lines,
+                            xc_trace_logcat_events_lines, xc_trace_logcat_main_lines)) goto end;
+    if(xc_trace_dump_fds)
+        if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
+    if(xc_trace_dump_network_info)
+        if(0 != xcc_util_record_network_info(fd, xc_common_process_id, xc_common_api_level)) goto end;
+    if(0 != xcc_meminfo_record(fd, xc_common_process_id)) goto end;
+
+  end:
+    //close log file
+    xc_common_close_trace_log(fd);
 }
 
 static void xc_trace_handler(int sig, siginfo_t *si, void *uc)

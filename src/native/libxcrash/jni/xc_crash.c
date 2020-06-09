@@ -52,11 +52,13 @@
 #include "xcc_b64.h"
 #include "xcc_util.h"
 #include "xc_crash.h"
+#include "xc_trace.h"
 #include "xc_common.h"
 #include "xc_dl.h"
 #include "xc_util.h"
 #include "xc_jni.h"
 #include "xc_fallback.h"
+#include "xcd_log.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
@@ -409,6 +411,16 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
     else
     {
         if(0 != xcc_signal_crash_ignore()) goto exit;
+    }
+
+    if(sig == 6) //SIGABRT
+    {
+        if(xcc_util_check_if_trace_xcrash_file_opened(xc_common_process_id))
+        {
+            XCD_LOG_WARN("get SIGABRT while dumping trace to trace.xcrash file\n");
+            xc_trace_dumper_bottom_half(xc_trace_file_fd);
+            goto exit;
+        }
     }
 
     //save crash time

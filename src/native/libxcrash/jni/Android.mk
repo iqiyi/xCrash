@@ -13,7 +13,7 @@ LOCAL_CFLAGS           := -std=c11 -Weverything -Werror -fvisibility=hidden -Oz 
 LOCAL_LDFLAGS          := -flto
 LOCAL_LDLIBS           := -ldl -llog
 LOCAL_STATIC_LIBRARIES := test
-LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common
+LOCAL_C_INCLUDES       := $(LOCAL_PATH) $(LOCAL_PATH)/../../common $(LOCAL_PATH)/../../libxcrash_dumper/jni
 LOCAL_SRC_FILES        := xc_jni.c      \
                           xc_common.c   \
                           xc_crash.c    \
