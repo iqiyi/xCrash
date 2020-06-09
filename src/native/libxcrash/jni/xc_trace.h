@@ -33,6 +33,7 @@ extern "C" {
 #endif
 
 extern int xc_trace_file_fd;
+extern char xc_trace_file_pathname[];
 
 int xc_trace_init(JNIEnv *env,
                   int rethrow,
@@ -42,7 +43,7 @@ int xc_trace_init(JNIEnv *env,
                   int dump_fds,
                   int dump_network_info);
 
-void xc_trace_dumper_bottom_half(int fd);
+void xc_trace_callback(void);
 #ifdef __cplusplus
 }
 #endif

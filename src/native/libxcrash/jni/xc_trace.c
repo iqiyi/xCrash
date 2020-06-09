@@ -80,6 +80,7 @@ static jmethodID                        xc_trace_cb_method = NULL;
 static int                              xc_trace_notifier = -1;
 
 int                                     xc_trace_file_fd = -1;
+char                                    xc_trace_file_pathname[1024];
 
 static void xc_trace_load_signal_catcher_tid()
 {
@@ -319,6 +320,8 @@ static void *xc_trace_dumper(void *arg)
         //create and open log file
         if((fd = xc_common_open_trace_log(pathname, sizeof(pathname), trace_time)) < 0) continue;
         xc_trace_file_fd = fd;
+        memcpy(xc_trace_file_pathname, pathname, strlen(pathname) + 1);
+        
 
         //write header info
         if(0 != xc_trace_write_header(fd, trace_time)) goto end;
@@ -383,25 +386,69 @@ static void *xc_trace_dumper(void *arg)
     return NULL;
 }
 
-void xc_trace_dumper_bottom_half(int fd)
+static void *xc_trace_callback_th(void *arg)
 {
+    JNIEnv         *env = NULL;
+    jstring         j_pathname;
+    
+    (void)arg;
+    
+    pthread_detach(pthread_self());
+
+    JavaVMAttachArgs attach_args = {
+        .version = XC_JNI_VERSION,
+        .name    = "xcrash_trace_cb",
+        .group   = NULL
+    };
+    if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, &attach_args)) goto exit;
+
+    //check if process already crashed
+    if(xc_common_java_crashed) goto exit;
+
     fflush(NULL);
     dup2(xc_common_fd_null, STDERR_FILENO);
 
-    if(0 != xcc_util_write_str(fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
+    if(0 != xcc_util_write_str(xc_trace_file_fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
 
     //write other info
-    if(0 != xcc_util_record_logcat(fd, xc_common_process_id, xc_common_api_level, xc_trace_logcat_system_lines,
-                            xc_trace_logcat_events_lines, xc_trace_logcat_main_lines)) goto end;
+    if(0 != xcc_util_record_logcat(xc_trace_file_fd, xc_common_process_id, xc_common_api_level, xc_trace_logcat_system_lines, xc_trace_logcat_events_lines, xc_trace_logcat_main_lines)) goto end;
     if(xc_trace_dump_fds)
-        if(0 != xcc_util_record_fds(fd, xc_common_process_id)) goto end;
+        if(0 != xcc_util_record_fds(xc_trace_file_fd, xc_common_process_id)) goto end;
     if(xc_trace_dump_network_info)
-        if(0 != xcc_util_record_network_info(fd, xc_common_process_id, xc_common_api_level)) goto end;
-    if(0 != xcc_meminfo_record(fd, xc_common_process_id)) goto end;
+        if(0 != xcc_util_record_network_info(xc_trace_file_fd, xc_common_process_id, xc_common_api_level)) goto end;
+    if(0 != xcc_meminfo_record(xc_trace_file_fd, xc_common_process_id)) goto end;
 
-  end:
+end:
     //close log file
-    xc_common_close_trace_log(fd);
+    xc_common_close_trace_log(xc_trace_file_fd);
+
+    //rethrow SIGQUIT to ART Signal Catcher
+    //if(xc_trace_rethrow) xc_trace_send_sigquit();
+
+    //JNI callback
+    //Do we need to implement an emergency buffer for disk exhausted?
+    if(NULL == xc_trace_cb_method) goto exit;
+    if(NULL == (j_pathname = (*env)->NewStringUTF(env, xc_trace_file_pathname))) goto exit;
+    (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_trace_cb_method, j_pathname, NULL);
+    XC_JNI_IGNORE_PENDING_EXCEPTION();
+    (*env)->DeleteLocalRef(env, j_pathname);
+    
+    (*xc_common_vm)->DetachCurrentThread(xc_common_vm);
+
+ exit:
+    return NULL;
+}
+
+void xc_trace_callback()
+{
+    pthread_t thd;
+
+    if(NULL == xc_common_cb_class || NULL == xc_trace_cb_method) return;
+
+    //create thread for trace callback
+    if(0 != pthread_create(&thd, NULL, xc_trace_callback_th, NULL)) return;    
+
+    pthread_join(thd, NULL);
 }
 
 static void xc_trace_handler(int sig, siginfo_t *si, void *uc)

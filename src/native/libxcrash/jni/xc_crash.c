@@ -418,7 +418,7 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
         if(xcc_util_check_if_trace_xcrash_file_opened(xc_common_process_id))
         {
             XCD_LOG_WARN("get SIGABRT while dumping trace to trace.xcrash file\n");
-            xc_trace_dumper_bottom_half(xc_trace_file_fd);
+            xc_trace_callback();
             goto exit;
         }
     }
