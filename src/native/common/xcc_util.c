@@ -728,7 +728,10 @@ int xcc_util_check_if_trace_xcrash_file_opened(pid_t pid)
                 fd_path[len] = '\0';
                 unsigned int suffix_len = strlen(XC_COMMON_LOG_SUFFIX_TRACE);
                 if((len > (ssize_t)suffix_len) && (0 == memcmp(fd_path + len - suffix_len, XC_COMMON_LOG_SUFFIX_TRACE, suffix_len)))
+                {
+                    if(fd2 >= 0) close(fd2);
                     return 1;
+                }
             }
 
         next:
