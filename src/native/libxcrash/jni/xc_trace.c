@@ -393,7 +393,11 @@ static void *xc_trace_callback_th(void *arg)
     
     (void)arg;
     
-    pthread_detach(pthread_self());
+    fflush(NULL);
+    dup2(xc_common_fd_null, STDERR_FILENO);
+
+    //check if process already crashed
+    if(xc_common_java_crashed) goto exit;
 
     JavaVMAttachArgs attach_args = {
         .version = XC_JNI_VERSION,
@@ -401,12 +405,6 @@ static void *xc_trace_callback_th(void *arg)
         .group   = NULL
     };
     if(JNI_OK != (*xc_common_vm)->AttachCurrentThread(xc_common_vm, &env, &attach_args)) goto exit;
-
-    //check if process already crashed
-    if(xc_common_java_crashed) goto exit;
-
-    fflush(NULL);
-    dup2(xc_common_fd_null, STDERR_FILENO);
 
     if(0 != xcc_util_write_str(xc_trace_file_fd, "\n"XCC_UTIL_THREAD_END"\n")) goto end;
 
