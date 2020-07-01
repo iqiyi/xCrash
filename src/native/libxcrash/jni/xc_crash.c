@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sched.h>
+#include <setjmp.h>
 #include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
@@ -415,11 +416,10 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
 
     if(sig == 6) //SIGABRT
     {
-        if(xcc_util_check_if_trace_xcrash_file_opened(xc_common_process_id))
+        if(1 == xc_trace_dumping) 
         {
-            XCD_LOG_WARN("get SIGABRT while dumping trace to trace.xcrash file\n");
-            xc_trace_callback();
-            goto exit;
+            XCD_LOG_WARN("get SIGABRT while ART dumping trace\n");
+            siglongjmp(jmpenv, 1);
         }
     }
 

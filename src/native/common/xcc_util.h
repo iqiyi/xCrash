@@ -186,7 +186,6 @@ int xcc_util_record_logcat(int fd,
                            unsigned int logcat_main_lines);
 
 int xcc_util_record_fds(int fd, pid_t pid);
-int xcc_util_check_if_trace_xcrash_file_opened(pid_t pid);
 
 int xcc_util_record_network_info(int fd, pid_t pid, int api_level);
 

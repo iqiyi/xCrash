@@ -25,6 +25,7 @@
 #define XC_TRACE_H 1
 
 #include <stdint.h>
+#include <setjmp.h>
 #include <sys/types.h>
 #include <jni.h>
 
@@ -32,8 +33,8 @@
 extern "C" {
 #endif
 
-extern int xc_trace_file_fd;
-extern char xc_trace_file_pathname[];
+extern unsigned char   xc_trace_dumping;
+extern sigjmp_buf      jmpenv;
 
 int xc_trace_init(JNIEnv *env,
                   int rethrow,
@@ -43,7 +44,6 @@ int xc_trace_init(JNIEnv *env,
                   int dump_fds,
                   int dump_network_info);
 
-void xc_trace_callback(void);
 #ifdef __cplusplus
 }
 #endif
