@@ -414,11 +414,12 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
         if(0 != xcc_signal_crash_ignore()) goto exit;
     }
 
-    if(sig == 6) //SIGABRT
+    if(6 == sig || 11 == sig) //SIGABRT(6), SIGSEGV(11)
     {
         if(1 == xc_trace_dumping) 
         {
-            XCD_LOG_WARN("get SIGABRT while ART dumping trace\n");
+            //xc_trace_dumping = 0;
+            XCD_LOG_WARN("meet error sig(%d) while calling ART dump trace\n", sig);
             siglongjmp(jmpenv, 1);
         }
     }
