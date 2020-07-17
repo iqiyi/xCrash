@@ -18,7 +18,7 @@ cp -f ./libxcrash_dumper/libs/arm64-v8a/xcrash_dumper   ../java/xcrash/xcrash_li
 cp -f ./libxcrash_dumper/libs/x86/xcrash_dumper         ../java/xcrash/xcrash_lib/src/main/jniLibs/x86/libxcrash_dumper.so
 cp -f ./libxcrash_dumper/libs/x86_64/xcrash_dumper      ../java/xcrash/xcrash_lib/src/main/jniLibs/x86_64/libxcrash_dumper.so
 
-version=$1
+version=`strings ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper | grep 'Tombstone maker' | awk -F "\'" '{print $2}' | awk '{print $2}'`
 mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/armeabi-v7a
 mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/arm64-v8a
 mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/x86
