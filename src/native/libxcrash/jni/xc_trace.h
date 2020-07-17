@@ -33,7 +33,14 @@
 extern "C" {
 #endif
 
-extern unsigned char   xc_trace_dumping;
+typedef enum {
+    XC_TRACE_DUMP_NOT_START = 0,
+    XC_TRACE_DUMP_ON_GOING,
+    XC_TRACE_DUMP_ART_CRASH,
+    XC_TRACE_DUMP_END
+} xc_trace_dump_status_t;
+
+extern xc_trace_dump_status_t xc_trace_dump_status;
 extern sigjmp_buf      jmpenv;
 
 int xc_trace_init(JNIEnv *env,

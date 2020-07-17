@@ -416,9 +416,9 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
 
     if(6 == sig || 11 == sig) //SIGABRT(6), SIGSEGV(11)
     {
-        if(1 == xc_trace_dumping) 
+        if(XC_TRACE_DUMP_NOT_START == xc_trace_dump_status) 
         {
-            //xc_trace_dumping = 0;
+            xc_trace_dump_status = XC_TRACE_DUMP_ART_CRASH;
             XCD_LOG_WARN("meet error sig(%d) while calling ART dump trace\n", sig);
             siglongjmp(jmpenv, 1);
         }

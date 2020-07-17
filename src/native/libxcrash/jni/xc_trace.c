@@ -81,7 +81,7 @@ static int                              xc_trace_dump_network_info;
 static jmethodID                        xc_trace_cb_method = NULL;
 static int                              xc_trace_notifier = -1;
 
-unsigned char                           xc_trace_dumping = 0;
+xc_trace_dump_status_t                  xc_trace_dump_status = XC_TRACE_DUMP_NOT_START;
 sigjmp_buf                              jmpenv;
 
 static void xc_trace_load_signal_catcher_tid()
@@ -344,7 +344,7 @@ static void *xc_trace_dumper(void *arg)
             goto skip;
         }
 
-        xc_trace_dumping = 1;
+        xc_trace_dump_status = XC_TRACE_DUMP_ON_GOING;
         if(sigsetjmp(jmpenv, 1) == 0) 
         {
             if(xc_trace_is_lollipop)
@@ -358,7 +358,6 @@ static void *xc_trace_dumper(void *arg)
             fflush(NULL);
             XCD_LOG_WARN("longjmp to skip dumping trace\n");
         }
-        xc_trace_dumping = 0;
 
         dup2(xc_common_fd_null, STDERR_FILENO);
                             
@@ -378,7 +377,8 @@ static void *xc_trace_dumper(void *arg)
         xc_common_close_trace_log(fd);
 
         //rethrow SIGQUIT to ART Signal Catcher
-        if(xc_trace_rethrow) xc_trace_send_sigquit();
+        if(xc_trace_rethrow && (XC_TRACE_DUMP_ART_CRASH != xc_trace_dump_status)) xc_trace_send_sigquit();
+        xc_trace_dump_status = XC_TRACE_DUMP_END;
 
         //JNI callback
         //Do we need to implement an emergency buffer for disk exhausted?
@@ -441,7 +441,7 @@ int xc_trace_init(JNIEnv *env,
     //is Android Lollipop (5.x)?
     xc_trace_is_lollipop = ((21 == xc_common_api_level || 22 == xc_common_api_level) ? 1 : 0);
 
-    xc_trace_dumping = 0;
+    xc_trace_dump_status = XC_TRACE_DUMP_NOT_START;
     xc_trace_rethrow = rethrow;
     xc_trace_logcat_system_lines = logcat_system_lines;
     xc_trace_logcat_events_lines = logcat_events_lines;
