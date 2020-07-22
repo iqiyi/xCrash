@@ -36,6 +36,8 @@ import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.DateFormat;
@@ -328,7 +330,7 @@ class Util {
             + "ABI list: '" + Util.getAbiList() + "'\n"
             + "Manufacturer: '" + Build.MANUFACTURER + "'\n"
             + "Brand: '" + Build.BRAND + "'\n"
-            + "Model: '" + Build.MODEL + "'\n"
+            + "Model: '" + Util.getMobileModel() + "'\n"
             + "Build fingerprint: '" + Build.FINGERPRINT + "'\n";
     }
 
@@ -492,5 +494,63 @@ class Util {
                 }
             }
         }
+    }
+
+
+    public static String getSystemProperty(String key, String defaultValue) {
+        try {
+            Class<?> clz = Class.forName("android.os.SystemProperties");
+            Method get = clz.getMethod("get", String.class, String.class);
+            return (String)get.invoke(clz, key, defaultValue);
+        } catch (NoSuchMethodException var4) {
+            var4.printStackTrace();
+        } catch (IllegalAccessException var5) {
+            var5.printStackTrace();
+        } catch (InvocationTargetException var6) {
+            var6.printStackTrace();
+        } catch (ClassNotFoundException var7) {
+            var7.printStackTrace();
+        }
+
+        return defaultValue;
+    }
+
+    public static boolean isMIUI() {
+        String property = getSystemProperty("ro.miui.ui.version.name", "");
+        return !TextUtils.isEmpty(property);
+    }
+
+    public static String getMobileModel() {
+        String mobileModel = null;
+        if (isMIUI()) {
+            String deviceName = "";
+
+            try {
+                Class SystemProperties = Class.forName("android.os.SystemProperties");
+                Method get = SystemProperties.getDeclaredMethod("get", String.class, String.class);
+                deviceName = (String) get.invoke(SystemProperties, "ro.product.marketname", "");
+                if (TextUtils.isEmpty(deviceName)) {
+                    deviceName = (String) get.invoke(SystemProperties, "ro.product.model", "");
+                }
+            } catch (InvocationTargetException var3) {
+                var3.printStackTrace();
+            } catch (NoSuchMethodException var4) {
+                var4.printStackTrace();
+            } catch (IllegalAccessException var5) {
+                var5.printStackTrace();
+            } catch (ClassNotFoundException var6) {
+                var6.printStackTrace();
+            }
+
+            mobileModel = deviceName;
+        } else {
+            mobileModel = Build.MODEL;
+        }
+
+        if (mobileModel == null) {
+            mobileModel = "";
+        }
+
+        return mobileModel;
     }
 }

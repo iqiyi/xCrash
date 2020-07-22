@@ -510,7 +510,7 @@ public class TombstoneParser {
         }
 
         if (TextUtils.isEmpty(map.get(keyModel))) {
-            map.put(keyModel, Build.MODEL);
+            map.put(keyModel, Util.getMobileModel());
         }
 
         if (TextUtils.isEmpty(map.get(keyAbiList))) {

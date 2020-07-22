@@ -112,7 +112,7 @@ class NativeHandler {
                 Util.getAbiList(),
                 Build.MANUFACTURER,
                 Build.BRAND,
-                Build.MODEL,
+                Util.getMobileModel(),
                 Build.FINGERPRINT,
                 appId,
                 appVersion,
