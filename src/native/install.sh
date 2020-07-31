@@ -19,17 +19,24 @@ cp -f ./libxcrash_dumper/libs/x86/xcrash_dumper         ../java/xcrash/xcrash_li
 cp -f ./libxcrash_dumper/libs/x86_64/xcrash_dumper      ../java/xcrash/xcrash_lib/src/main/jniLibs/x86_64/libxcrash_dumper.so
 
 version=`strings ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper | grep 'Tombstone maker' | awk -F "\'" '{print $2}' | awk '{print $2}'`
-mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/armeabi-v7a
-mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/arm64-v8a
-mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/x86
-mkdir -p ~/xcrash_libs_backup/$version/jniLibs_Debug/x86_64
+folder=version
+tarfile=v${version}.tar.gz
+rm -rf $folder $tarfile
+mkdir -p ./$folder/armeabi-v7a
+mkdir -p ./$folder/arm64-v8a
 
-cp -f ./libxcrash/obj/local/armeabi-v7a/libxcrash.so ~/xcrash_libs_backup/$version/jniLibs_Debug/armeabi-v7a/libxcrash.so
-cp -f ./libxcrash/obj/local/arm64-v8a/libxcrash.so   ~/xcrash_libs_backup/$version/jniLibs_Debug/arm64-v8a/libxcrash.so
-cp -f ./libxcrash/obj/local/x86/libxcrash.so         ~/xcrash_libs_backup/$version/jniLibs_Debug/x86/libxcrash.so
-cp -f ./libxcrash/obj/local/x86_64/libxcrash.so      ~/xcrash_libs_backup/$version/jniLibs_Debug/x86_64/libxcrash.so
 
-cp -f ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper ~/xcrash_libs_backup/$version/jniLibs_Debug/armeabi-v7a/libxcrash_dumper.so
-cp -f ./libxcrash_dumper/obj/local/arm64-v8a/xcrash_dumper   ~/xcrash_libs_backup/$version/jniLibs_Debug/arm64-v8a/libxcrash_dumper.so
-cp -f ./libxcrash_dumper/obj/local/x86/xcrash_dumper         ~/xcrash_libs_backup/$version/jniLibs_Debug/x86/libxcrash_dumper.so
-cp -f ./libxcrash_dumper/obj/local/x86_64/xcrash_dumper      ~/xcrash_libs_backup/$version/jniLibs_Debug/x86_64/libxcrash_dumper.so
+cp -f ./libxcrash/obj/local/armeabi-v7a/libxcrash.so ./$folder/armeabi-v7a/libxcrash.so
+cp -f ./libxcrash/obj/local/arm64-v8a/libxcrash.so   ./$folder/arm64-v8a/libxcrash.so
+cp -f ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper ./$folder/armeabi-v7a/libxcrash_dumper.so
+cp -f ./libxcrash_dumper/obj/local/arm64-v8a/xcrash_dumper   ./$folder/arm64-v8a/libxcrash_dumper.so
+
+tar cvzf $tarfile $folder
+md5=`md5sum $tarfile | awk '{print $1}'`
+sha1=`sha1sum $tarfile | awk '{print $1}'`
+
+#download
+#curl -u iqiyi-generic-android-nativelib-debug:hr3QySAENz7u -o $tarfile "http://jfrog.cloud.qiyi.domain/iqiyi-generic-android-nativelib-debug/xcrash/$tarfile"
+
+#upload
+curl -X PUT -u  iqiyi-generic-android-nativelib-debug:hr3QySAENz7u "http://jfrog.cloud.qiyi.domain/iqiyi-generic-android-nativelib-debug/xcrash/$tarfile" -H "X-Checksum-Sha1:$sha1" -H "X-Checksum-Md5:$md5" -T $tarfile
