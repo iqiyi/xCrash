@@ -19,7 +19,7 @@ cp -f ./libxcrash_dumper/libs/x86/xcrash_dumper         ../java/xcrash/xcrash_li
 cp -f ./libxcrash_dumper/libs/x86_64/xcrash_dumper      ../java/xcrash/xcrash_lib/src/main/jniLibs/x86_64/libxcrash_dumper.so
 
 version=`strings ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper | grep 'Tombstone maker' | awk -F "\'" '{print $2}' | awk '{print $2}'`
-folder=version
+folder=$version
 tarfile=v${version}.tar.gz
 rm -rf $folder $tarfile
 mkdir -p ./$folder/armeabi-v7a
