@@ -32,11 +32,4 @@ cp -f ./libxcrash_dumper/obj/local/armeabi-v7a/xcrash_dumper ./$folder/armeabi-v
 cp -f ./libxcrash_dumper/obj/local/arm64-v8a/xcrash_dumper   ./$folder/arm64-v8a/libxcrash_dumper.so
 
 tar cvzf $tarfile $folder
-md5=`md5sum $tarfile | awk '{print $1}'`
-sha1=`sha1sum $tarfile | awk '{print $1}'`
 
-#download
-#curl -u iqiyi-generic-android-nativelib-debug:hr3QySAENz7u -o $tarfile "http://jfrog.cloud.qiyi.domain/iqiyi-generic-android-nativelib-debug/xcrash/$tarfile"
-
-#upload
-curl -X PUT -u  iqiyi-generic-android-nativelib-debug:hr3QySAENz7u "http://jfrog.cloud.qiyi.domain/iqiyi-generic-android-nativelib-debug/xcrash/$tarfile" -H "X-Checksum-Sha1:$sha1" -H "X-Checksum-Md5:$md5" -T $tarfile
