@@ -31,6 +31,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -205,8 +206,8 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         }
     }
 
-    private String getLibInfo(ArrayList<String> libPathList) {
-        String libInfo = null;
+    private String getLibInfo(List<String> libPathList) {
+        StringBuilder sb = new StringBuilder();
         for(String libPath : libPathList) {
             File libFile = new File(libPath);
             if (libFile.exists() && libFile.isFile()) {
@@ -215,17 +216,20 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
                 DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
                 Date lastTime = new Date(libFile.lastModified());
 
-                libInfo += "    " + libPath + "(BuildId: unknown. FileSize: " + libFile.length() + ". LastModified: "
-                        + timeFormatter.format(lastTime) + ". MD5: " + md5 + ")\n";
+                sb.append("    ").append(libPath).append("(BuildId: unknown. FileSize: ").append(libFile.length()).append(". LastModified: ")
+                        .append(timeFormatter.format(lastTime)).append(". MD5: ").append(md5).append(")\n");
+            } else {
+                sb.append("    ").append(libPath).append(" (Not found)\n");
             }
         }
 
+        String libInfo = sb.toString();
         return libInfo;
     }
 
     private String getBuildId(String stktrace) {
         String buildId = "";
-        ArrayList<String> libPathList = new ArrayList<String>();
+        List<String> libPathList = new ArrayList<String>();
         if (stktrace.contains("UnsatisfiedLinkError")) {
             String libInfo = null;
             String[] tempLibPathStr;
@@ -235,7 +239,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
                 libPathList.add(libPathStr);
 
-                String libName = libPathStr.substring(libPathStr.lastIndexOf('/'));
+                String libName = libPathStr.substring(libPathStr.lastIndexOf('/') + 1);
 
                 libPathList.add(XCrash.nativeLibDir + "/" + libName);
                 libPathList.add("/vendor/lib/" + libName);
@@ -245,9 +249,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
                 libInfo = getLibInfo(libPathList);
             }
-
-            if(libInfo == null)
-                libInfo = "    No lib info\n";
 
             buildId = "build id:"
                     + "\n"
