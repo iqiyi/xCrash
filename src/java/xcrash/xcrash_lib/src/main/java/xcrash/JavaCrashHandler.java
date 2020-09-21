@@ -208,7 +208,7 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
 
     private String getLibInfo(List<String> libPathList) {
         StringBuilder sb = new StringBuilder();
-        for(String libPath : libPathList) {
+        for (String libPath : libPathList) {
             File libFile = new File(libPath);
             if (libFile.exists() && libFile.isFile()) {
                 String md5 = Util.getFileMD5(libFile);
@@ -236,7 +236,6 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
             tempLibPathStr = stktrace.split("\""); // " is the delimiter
             for (String libPathStr :  tempLibPathStr) {
                 if (libPathStr.isEmpty() || !libPathStr.endsWith(".so")) continue;
-
                 libPathList.add(libPathStr);
 
                 String libName = libPathStr.substring(libPathStr.lastIndexOf('/') + 1);
