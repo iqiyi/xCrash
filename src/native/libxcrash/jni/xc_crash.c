@@ -458,7 +458,8 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
         if(EINVAL == errno)
         {
             //this kernel does not support PR_SET_PTRACER_ANY, or Yama is not enabled
-            errno = errno;
+            //errno = errno;
+            (void)errno;
         }
         else
         {
