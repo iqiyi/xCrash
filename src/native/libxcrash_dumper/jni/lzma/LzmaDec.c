@@ -17,26 +17,26 @@
 
 #define RC_INIT_SIZE 5
 
-#define NORMALIZE if (range < kTopValue) { range <<= 8; code = (code << 8) | (*buf++); }
+#define NORMALIZE do { if (range < kTopValue) { range <<= 8; code = (code << 8) | (*buf++); } } while(0)
 
 #define IF_BIT_0(p) ttt = *(p); NORMALIZE; bound = (range >> kNumBitModelTotalBits) * ttt; if (code < bound)
-#define UPDATE_0(p) range = bound; *(p) = (CLzmaProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits));
-#define UPDATE_1(p) range -= bound; code -= bound; *(p) = (CLzmaProb)(ttt - (ttt >> kNumMoveBits));
+#define UPDATE_0(p) do { range = bound; *(p) = (CLzmaProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits)); } while(0)
+#define UPDATE_1(p) do { range -= bound; code -= bound; *(p) = (CLzmaProb)(ttt - (ttt >> kNumMoveBits)); } while(0)
 #define GET_BIT2(p, i, A0, A1) IF_BIT_0(p) \
   { UPDATE_0(p); i = (i + i); A0; } else \
   { UPDATE_1(p); i = (i + i) + 1; A1; }
 
-#define TREE_GET_BIT(probs, i) { GET_BIT2(probs + i, i, ;, ;); }
+#define TREE_GET_BIT(probs, i) do { GET_BIT2(probs + i, i, ;, ;); } while(0)
 
-#define REV_BIT(p, i, A0, A1) IF_BIT_0(p + i) \
+#define REV_BIT(p, i, A0, A1) do { IF_BIT_0(p + i) \
   { UPDATE_0(p + i); A0; } else \
-  { UPDATE_1(p + i); A1; }
+  { UPDATE_1(p + i); A1; } } while(0)
 #define REV_BIT_VAR(  p, i, m) REV_BIT(p, i, i += m; m += m, m += m; i += m; )
 #define REV_BIT_CONST(p, i, m) REV_BIT(p, i, i += m;       , i += m * 2; )
 #define REV_BIT_LAST( p, i, m) REV_BIT(p, i, i -= m        , ; )
 
 #define TREE_DECODE(probs, limit, i) \
-  { i = 1; do { TREE_GET_BIT(probs, i); } while (i < limit); i -= limit; }
+  do { i = 1; do { TREE_GET_BIT(probs, i); } while (i < limit); i -= limit; } while(0)
 
 /* #define _LZMA_SIZE_OPT */
 
@@ -44,17 +44,17 @@
 #define TREE_6_DECODE(probs, i) TREE_DECODE(probs, (1 << 6), i)
 #else
 #define TREE_6_DECODE(probs, i) \
-  { i = 1; \
+  do { i = 1; \
   TREE_GET_BIT(probs, i); \
   TREE_GET_BIT(probs, i); \
   TREE_GET_BIT(probs, i); \
   TREE_GET_BIT(probs, i); \
   TREE_GET_BIT(probs, i); \
   TREE_GET_BIT(probs, i); \
-  i -= 0x40; }
+  i -= 0x40; } while(0)
 #endif
 
-#define NORMAL_LITER_DEC TREE_GET_BIT(prob, symbol)
+#define NORMAL_LITER_DEC TREE_GET_BIT(prob, symbol);
 #define MATCHED_LITER_DEC \
   matchByte += matchByte; \
   bit = offs; \
@@ -64,22 +64,22 @@
 
 
 
-#define NORMALIZE_CHECK if (range < kTopValue) { if (buf >= bufLimit) return DUMMY_ERROR; range <<= 8; code = (code << 8) | (*buf++); }
+#define NORMALIZE_CHECK do { if (range < kTopValue) { if (buf >= bufLimit) return DUMMY_ERROR; range <<= 8; code = (code << 8) | (*buf++); } } while(0)
 
 #define IF_BIT_0_CHECK(p) ttt = *(p); NORMALIZE_CHECK; bound = (range >> kNumBitModelTotalBits) * ttt; if (code < bound)
-#define UPDATE_0_CHECK range = bound;
-#define UPDATE_1_CHECK range -= bound; code -= bound;
+#define UPDATE_0_CHECK do { range = bound; } while(0)
+#define UPDATE_1_CHECK do { range -= bound; code -= bound; } while(0)
 #define GET_BIT2_CHECK(p, i, A0, A1) IF_BIT_0_CHECK(p) \
   { UPDATE_0_CHECK; i = (i + i); A0; } else \
   { UPDATE_1_CHECK; i = (i + i) + 1; A1; }
 #define GET_BIT_CHECK(p, i) GET_BIT2_CHECK(p, i, ; , ;)
 #define TREE_DECODE_CHECK(probs, limit, i) \
-  { i = 1; do { GET_BIT_CHECK(probs + i, i) } while (i < limit); i -= limit; }
+  do { i = 1; do { GET_BIT_CHECK(probs + i, i) } while (i < limit); i -= limit; } while(0)
 
 
-#define REV_BIT_CHECK(p, i, m) IF_BIT_0_CHECK(p + i) \
+#define REV_BIT_CHECK(p, i, m) do { IF_BIT_0_CHECK(p + i) \
   { UPDATE_0_CHECK; i += m; m += m; } else \
-  { UPDATE_1_CHECK; m += m; i += m; }
+  { UPDATE_1_CHECK; m += m; i += m; } } while(0)
 
 
 #define kNumPosBitsMax 4
@@ -472,7 +472,7 @@ int MY_FAST_CALL LZMA_DECODE_REAL(CLzmaDec *p, SizeT limit, const Byte *bufLimit
             numDirectBits -= kNumAlignBits;
             do
             {
-              NORMALIZE
+              NORMALIZE;
               range >>= 1;
               
               {
@@ -675,7 +675,7 @@ static ELzmaDummy LzmaDec_TryDummy(const CLzmaDec *p, const Byte *buf, SizeT inS
     prob = probs + IsMatch + COMBINED_PS_STATE;
     IF_BIT_0_CHECK(prob)
     {
-      UPDATE_0_CHECK
+      UPDATE_0_CHECK;
 
       /* if (bufLimit - buf >= 7) return DUMMY_LIT; */
 
@@ -823,7 +823,7 @@ static ELzmaDummy LzmaDec_TryDummy(const CLzmaDec *p, const Byte *buf, SizeT inS
             numDirectBits -= kNumAlignBits;
             do
             {
-              NORMALIZE_CHECK
+              NORMALIZE_CHECK;
               range >>= 1;
               code -= range & (((code - range) >> 31) - 1);
               /* if (code >= range) code -= range; */
@@ -1137,8 +1137,8 @@ SRes LzmaDec_Allocate(CLzmaDec *p, const Byte *props, unsigned propsSize, ISzAll
   {
     UInt32 dictSize = propNew.dicSize;
     SizeT mask = ((UInt32)1 << 12) - 1;
-         if (dictSize >= ((UInt32)1 << 30)) mask = ((UInt32)1 << 22) - 1;
-    else if (dictSize >= ((UInt32)1 << 22)) mask = ((UInt32)1 << 20) - 1;;
+    if (dictSize >= ((UInt32)1 << 30)) mask = ((UInt32)1 << 22) - 1;
+    else if (dictSize >= ((UInt32)1 << 22)) mask = ((UInt32)1 << 20) - 1;
     dicBufSize = ((SizeT)dictSize + mask) & ~mask;
     if (dicBufSize < dictSize)
       dicBufSize = dictSize;

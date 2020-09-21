@@ -73,7 +73,7 @@ typedef struct
   Byte tempBuf[LZMA_REQUIRED_INPUT_MAX];
 } CLzmaDec;
 
-#define LzmaDec_Construct(p) { (p)->dic = NULL; (p)->probs = NULL; }
+#define LzmaDec_Construct(p) do { (p)->dic = NULL; (p)->probs = NULL; } while(0)
 
 void LzmaDec_Init(CLzmaDec *p);
 

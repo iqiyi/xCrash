@@ -22,7 +22,7 @@
 #ifdef SHOW_DEBUG_INFO
 #define PRF(x) x
 #else
-#define PRF(x)
+#define PRF(x) do {} while(0)
 #endif
 
 #define PRF_STR(s) PRF(printf("\n" s "\n"))
@@ -771,8 +771,8 @@ static Bool Xz_CheckFooter(CXzStreamFlags flags, UInt64 indexSize, const Byte *b
 }
 
 #define READ_VARINT_AND_CHECK(buf, pos, size, res) \
-  { unsigned s = Xz_ReadVarInt(buf + pos, size - pos, res); \
-  if (s == 0) return SZ_ERROR_ARCHIVE; pos += s; }
+  do { unsigned s = Xz_ReadVarInt(buf + pos, size - pos, res); \
+  if (s == 0) return SZ_ERROR_ARCHIVE; pos += s; } while(0)
 
 
 static Bool XzBlock_AreSupportedFilters(const CXzBlock *p)
