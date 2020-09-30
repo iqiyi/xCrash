@@ -147,7 +147,10 @@ static int xc_trace_load_symbols()
     if(NULL == libcpp && NULL == (libcpp = xc_dl_create(XCC_UTIL_LIBCPP))) goto end;
     if(NULL == (xc_trace_libcpp_cerr = xc_dl_sym(libcpp, XCC_UTIL_LIBCPP_CERR))) goto end;
 
-    if(xc_common_api_level >= 29) libart = xc_dl_create(XCC_UTIL_LIBART_APEX);
+    if(xc_common_api_level >= 30) 
+        libart = xc_dl_create(XCC_UTIL_LIBART_APEX_30);
+    else if(xc_common_api_level == 29) 
+        libart = xc_dl_create(XCC_UTIL_LIBART_APEX_29);
     if(NULL == libart && NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (xc_trace_libart_runtime_instance = (void **)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_INSTANCE))) goto end;
     if(NULL == (xc_trace_libart_runtime_dump = (xcc_util_libart_runtime_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_RUNTIME_DUMP))) goto end;
@@ -180,7 +183,6 @@ static int xc_trace_check_address_valid()
     int        r = XCC_ERRNO_INVAL;
 
     if(NULL == (f = fopen("/proc/self/maps", "r"))) return XCC_ERRNO_SYS;
-    
     while(fgets(line, sizeof(line), f))
     {
         if(2 != sscanf(line, "%"SCNxPTR"-%"SCNxPTR" r", &start, &end)) continue;
@@ -207,6 +209,7 @@ static int xc_trace_check_address_valid()
         }
     }
     if(0 != r) goto end;
+    if(xc_common_api_level >= 30) goto end;
 
     r = XCC_ERRNO_INVAL;
     rewind(f);
@@ -221,7 +224,6 @@ static int xc_trace_check_address_valid()
             break;
         }
     }
-    
  end:
     fclose(f);
     return r;

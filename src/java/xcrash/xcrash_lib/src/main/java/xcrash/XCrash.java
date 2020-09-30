@@ -863,7 +863,7 @@ public final class XCrash {
         return appVersion;
     }
 
-    static String getLogDir() {
+    public static String getLogDir() {
         return logDir;
     }
 

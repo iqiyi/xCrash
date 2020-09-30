@@ -89,6 +89,7 @@ public class MyCustomApplication extends Application {
             .setAnrCallback(callback)
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
+            .setLogDir(getExternalFilesDir("xcrash").toString())
             .setLogFileMaintainDelayMs(1000));
 
         Log.d(TAG, "xCrash SDK init: end");
@@ -124,7 +125,7 @@ public class MyCustomApplication extends Application {
         // Parse and save the crash info to a JSON file for debugging.
         FileWriter writer = null;
         try {
-            File debug = new File(getApplicationContext().getFilesDir() + "/tombstones/debug.json");
+            File debug = new File(XCrash.getLogDir() + "/debug.json");
             debug.createNewFile();
             writer = new FileWriter(debug, false);
             writer.write(new JSONObject(TombstoneParser.parse(logPath, emergency)).toString());

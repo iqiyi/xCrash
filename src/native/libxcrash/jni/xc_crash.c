@@ -257,7 +257,10 @@ static void xc_xcrash_record_java_stacktrace()
     if(NULL == (cerr = xc_dl_sym(libcpp, XCC_UTIL_LIBCPP_CERR))) goto end;
 
     //peek libart.so
-    if(xc_common_api_level >= 29) libart = xc_dl_create(XCC_UTIL_LIBART_APEX);
+    if(xc_common_api_level >= 30) 
+        libart = xc_dl_create(XCC_UTIL_LIBART_APEX_30);
+    else if(xc_common_api_level == 29) 
+        libart = xc_dl_create(XCC_UTIL_LIBART_APEX_29);
     if(NULL == libart && NULL == (libart = xc_dl_create(XCC_UTIL_LIBART))) goto end;
     if(NULL == (current = (xcc_util_libart_thread_current_t)xc_dl_sym(libart, XCC_UTIL_LIBART_THREAD_CURRENT))) goto end;
     if(NULL == (dump = (xcc_util_libart_thread_dump_t)xc_dl_sym(libart, XCC_UTIL_LIBART_THREAD_DUMP)))
