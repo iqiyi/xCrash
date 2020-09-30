@@ -501,7 +501,7 @@ class Util {
         try {
             Class<?> clz = Class.forName("android.os.SystemProperties");
             Method get = clz.getMethod("get", String.class, String.class);
-            return (String)get.invoke(clz, key, defaultValue);
+            return (String) get.invoke(clz, key, defaultValue);
         } catch (NoSuchMethodException var4) {
             var4.printStackTrace();
         } catch (IllegalAccessException var5) {
@@ -526,11 +526,11 @@ class Util {
             String deviceName = "";
 
             try {
-                Class SystemProperties = Class.forName("android.os.SystemProperties");
-                Method get = SystemProperties.getDeclaredMethod("get", String.class, String.class);
-                deviceName = (String) get.invoke(SystemProperties, "ro.product.marketname", "");
+                Class systemProperties = Class.forName("android.os.SystemProperties");
+                Method get = systemProperties.getDeclaredMethod("get", String.class, String.class);
+                deviceName = (String) get.invoke(systemProperties, "ro.product.marketname", "");
                 if (TextUtils.isEmpty(deviceName)) {
-                    deviceName = (String) get.invoke(SystemProperties, "ro.product.model", "");
+                    deviceName = (String) get.invoke(systemProperties, "ro.product.model", "");
                 }
             } catch (InvocationTargetException var3) {
                 var3.printStackTrace();

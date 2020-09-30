@@ -203,7 +203,7 @@ MY_CPU_LE_UNALIGN means that CPU is LITTLE ENDIAN and CPU supports unaligned mem
 #define GetUi64(p) (*(const UInt64 *)(const void *)(p))
 
 #define SetUi16(p, v) { *(UInt16 *)(p) = (v); }
-#define SetUi32(p, v) { *(UInt32 *)(p) = (v); }
+#define SetUi32(p, v) do { *(UInt32 *)(p) = (v); } while(0)
 #define SetUi64(p, v) { *(UInt64 *)(p) = (v); }
 
 #else
@@ -224,11 +224,11 @@ MY_CPU_LE_UNALIGN means that CPU is LITTLE ENDIAN and CPU supports unaligned mem
     _ppp_[0] = (Byte)_vvv_; \
     _ppp_[1] = (Byte)(_vvv_ >> 8); }
 
-#define SetUi32(p, v) { Byte *_ppp_ = (Byte *)(p); UInt32 _vvv_ = (v); \
+#define SetUi32(p, v) do { Byte *_ppp_ = (Byte *)(p); UInt32 _vvv_ = (v); \
     _ppp_[0] = (Byte)_vvv_; \
     _ppp_[1] = (Byte)(_vvv_ >> 8); \
     _ppp_[2] = (Byte)(_vvv_ >> 16); \
-    _ppp_[3] = (Byte)(_vvv_ >> 24); }
+    _ppp_[3] = (Byte)(_vvv_ >> 24); } while(0);
 
 #define SetUi64(p, v) { Byte *_ppp2_ = (Byte *)(p); UInt64 _vvv2_ = (v); \
     SetUi32(_ppp2_    , (UInt32)_vvv2_); \

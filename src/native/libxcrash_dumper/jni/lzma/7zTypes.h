@@ -60,7 +60,7 @@ typedef int WRes;
 
 
 #ifndef RINOK
-#define RINOK(x) { int __result__ = (x); if (__result__ != 0) return __result__; }
+#define RINOK(x) do { int __result__ = (x); if (__result__ != 0) return __result__; } while(0)
 #endif
 
 typedef unsigned char Byte;

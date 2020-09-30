@@ -51,7 +51,7 @@ in CALL instructions to increase the compression ratio.
     }
 */
 
-#define x86_Convert_Init(state) { state = 0; }
+#define x86_Convert_Init(state) do { state = 0; } while(0)
 SizeT x86_Convert(Byte *data, SizeT size, UInt32 ip, UInt32 *state, int encoding);
 SizeT ARM_Convert(Byte *data, SizeT size, UInt32 ip, int encoding);
 SizeT ARMT_Convert(Byte *data, SizeT size, UInt32 ip, int encoding);

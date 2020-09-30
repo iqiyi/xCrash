@@ -31,6 +31,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -205,30 +206,47 @@ class JavaCrashHandler implements UncaughtExceptionHandler {
         }
     }
 
+    private String getLibInfo(List<String> libPathList) {
+        StringBuilder sb = new StringBuilder();
+        for (String libPath : libPathList) {
+            File libFile = new File(libPath);
+            if (libFile.exists() && libFile.isFile()) {
+                String md5 = Util.getFileMD5(libFile);
+
+                DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
+                Date lastTime = new Date(libFile.lastModified());
+
+                sb.append("    ").append(libPath).append("(BuildId: unknown. FileSize: ").append(libFile.length()).append(". LastModified: ")
+                        .append(timeFormatter.format(lastTime)).append(". MD5: ").append(md5).append(")\n");
+            } else {
+                sb.append("    ").append(libPath).append(" (Not found)\n");
+            }
+        }
+
+        String libInfo = sb.toString();
+        return libInfo;
+    }
+
     private String getBuildId(String stktrace) {
         String buildId = "";
+        List<String> libPathList = new ArrayList<String>();
         if (stktrace.contains("UnsatisfiedLinkError")) {
-            String libInfo = "    No lib info\n";
+            String libInfo = null;
             String[] tempLibPathStr;
             tempLibPathStr = stktrace.split("\""); // " is the delimiter
             for (String libPathStr :  tempLibPathStr) {
                 if (libPathStr.isEmpty() || !libPathStr.endsWith(".so")) continue;
-                String[] libNameStr;
-                libNameStr = libPathStr.split("/");
-                for(String libName : libNameStr) {
-                    if(libName.isEmpty() || !libName.endsWith(".so")) continue;
-                    String libPath = XCrash.nativeLibDir + "/" + libName;
-                    File libFile = new File(libPath);
-                    if (libFile.exists() && libFile.isFile()) {
-                        String md5 = Util.getFileMD5(libFile);
+                libPathList.add(libPathStr);
 
-                        DateFormat timeFormatter = new SimpleDateFormat(Util.timeFormatterStr, Locale.US);
-                        Date lastTime = new Date(libFile.lastModified());
+                String libName = libPathStr.substring(libPathStr.lastIndexOf('/') + 1);
 
-                        libInfo = "    " + libPathStr + "(BuildId: unknown. FileSize: " + libFile.length() + ". LastModified: "
-                                + timeFormatter.format(lastTime) + ". MD5: " + md5 + ")\n";
-                    }
-                }
+                libPathList.add(XCrash.nativeLibDir + "/" + libName);
+                libPathList.add("/vendor/lib/" + libName);
+                libPathList.add("/vendor/lib64/" + libName);
+                libPathList.add("/system/lib/" + libName);
+                libPathList.add("/system/lib64/" + libName);
+
+                libInfo = getLibInfo(libPathList);
             }
 
             buildId = "build id:"
