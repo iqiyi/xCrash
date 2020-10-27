@@ -4,9 +4,9 @@
 
 ![](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)
 ![](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
-![](https://img.shields.io/badge/release-2.4.9-red.svg?style=flat)
-![](https://img.shields.io/badge/Android-4.0%20--%2010-blue.svg?style=flat)
-![](https://img.shields.io/badge/arch-armeabi%20%7C%20armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
+![](https://img.shields.io/badge/release-3.0.0-red.svg?style=flat)
+![](https://img.shields.io/badge/Android-4.1%20--%2011-blue.svg?style=flat)
+![](https://img.shields.io/badge/armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86%20%7C%20x86__64-blue.svg?style=flat)
 
 xCrash provides the Android app with the ability to capture java crash, native crash and ANR. No root permission or any system permissions are required.
 
@@ -21,8 +21,8 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 
 ## Features
 
-* Support Android 4.0 - 10 (API level 14 - 29).
-* Support armeabi, armeabi-v7a, arm64-v8a, x86 and x86_64.
+* Support Android 4.1 - 11 (API level 16 - 30).
+* Support armeabi-v7a, arm64-v8a, x86 and x86_64.
 * Capturing java crash, native crash and ANR.
 * Dumping detailed statistics about process, threads, memory, FD and network.
 * Setting which thread's info should be dumped via regular expressions.
@@ -32,12 +32,10 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 ## Tombstone File Previews
 
 * [java crash](doc/tombstone_java.txt)
-* [native crash (armeabi)](doc/tombstone_native_armeabi.txt)
 * [native crash (armeabi-v7a)](doc/tombstone_native_armeabi-v7a.txt)
 * [native crash (arm64-v8a)](doc/tombstone_native_arm64-v8a.txt)
 * [native crash (x86)](doc/tombstone_native_x86.txt)
 * [native crash (x86_64)](doc/tombstone_native_x86_64.txt)
-* [ANR (armeabi)](doc/tombstone_anr_armeabi.txt)
 * [ANR (armeabi-v7a)](doc/tombstone_anr_armeabi-v7a.txt)
 * [ANR (arm64-v8a)](doc/tombstone_anr_arm64-v8a.txt)
 * [ANR (x86)](doc/tombstone_anr_x86.txt)
@@ -64,7 +62,7 @@ xCrash has been used in many Android apps (including iQIYI video) on different p
 
 ```Gradle
 dependencies {
-    implementation 'com.iqiyi.xcrash:xcrash-android-lib:2.4.9'
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:3.0.0'
 }
 ```
 
@@ -74,7 +72,7 @@ dependencies {
 android {
     defaultConfig {
         ndk {
-            abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
 }
@@ -111,36 +109,26 @@ class MyCustomApplication : Application() {
 
 Tombstone files will be written to `Context#getFilesDir() + "/tombstones"` directory by default. (usually in: `/data/data/PACKAGE_NAME/files/tombstones`)
 
-There is a more practical and complex sample app in the [src/java/xcrash/xcrash_sample](src/java/xcrash/xcrash_sample) folder.
+There is a more practical and complex sample app in the [xcrash_sample](xcrash_sample) folder.
 
 
 ## Build
 
 If you want to build xCrash from source code. Follow this guide:
 
-#### 1. Download [Android NDK r20b](https://developer.android.com/ndk/downloads/revision_history.html), set PATH environment.
 
-#### 2. Build and copy the native libraries.
-
-```
-cd ./src/native/
-./build.sh
-./install.sh
-```
-
-#### 3. Build AAR library.
+#### Build AAR library.
 
 ```
-cd ./src/java/xcrash/
 ./gradlew :xcrash_lib:build
 ```
 
 
 ## Support
 
-1. Check the [xcrash-sample](src/java/xcrash/xcrash_sample).
+1. Check the [xcrash-sample](xcrash_sample).
 2. Communicate on [GitHub issues](https://github.com/iqiyi/xCrash/issues).
-3. Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>
+3. Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a> &nbsp; <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
 4. QQ group: 603635869. QR code:
 
 <p align="left"><img src="doc/qq_group.jpg" alt="qq group" width="300px"></p>

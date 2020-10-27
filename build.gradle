@@ -1,0 +1,60 @@
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:4.1.0'
+        classpath 'digital.wup:android-maven-publish:3.6.2'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+ext {
+    minSdkVersion = 16
+    compileSdkVersion = 30
+    targetSdkVersion = 30
+    buildToolsVersion = '30.0.2'
+    javaVersion = JavaVersion.VERSION_1_6
+    ndkVersion = "21.3.6528147"
+    cmakeVersion = "3.10.2"
+    abiFilters = "armeabi-v7a,arm64-v8a,x86,x86_64"
+    useASAN = false
+
+    POM_GROUP_ID = "com.iqiyi.xcrash"
+    POM_ARTIFACT_ID = "xcrash-android-lib"
+    POM_VERSION_NAME = "3.0.0"
+
+    POM_NAME = "xCrash Android Lib"
+    POM_DESCRIPTION = "xCrash provides the Android app with the ability to capture java crash, native crash and ANR."
+    POM_URL = "https://github.com/iqiyi/xCrash"
+    POM_INCEPTION_YEAR = "2020"
+    POM_PACKAGING = "aar"
+
+    POM_SCM_CONNECTION = "https://github.com/iqiyi/xCrash.git"
+
+    POM_ISSUE_SYSTEM = "github"
+    POM_ISSUE_URL = "https://github.com/iqiyi/xCrash/issues"
+
+    POM_LICENCE_NAME = "The MIT License"
+    POM_LICENCE_URL = "https://opensource.org/licenses/MIT"
+    POM_LICENCE_DIST = "repo"
+
+    POM_DEVELOPER_ID = "iQIYI"
+    POM_DEVELOPER_NAME = "iQIYI, Inc."
+
+    BINTRAY_REPO = "maven"
+    BINTRAY_ORGANIZATION = "xcrash"
+    BINTRAY_LICENCE = ['MIT']
+}

@@ -1,0 +1,60 @@
+project.afterEvaluate {
+
+    preBuild.doFirst {
+        if (rootProject.ext.useASAN) {
+            def ndkLibDir = android.ndkDirectory.absolutePath + "/toolchains/llvm/prebuilt/"
+            def ABIs = rootProject.ext.abiFilters.split(",")
+
+            for (String abi : ABIs) {
+                def arch = abi
+                if (abi == 'armeabi-v7a') {
+                    arch = "arm"
+                } else if (abi == "arm64-v8a") {
+                    arch = "aarch64"
+                } else if (abi == "x86") {
+                    arch = "i686"
+                } else if (abi == "x86_64") {
+                    arch = "x86_64"
+                }
+
+                // create ASAN wrap.sh
+                def resDir = new File("src/main/resources/lib/" + abi)
+                resDir.mkdirs()
+                def wrapFile = new File(resDir, "wrap.sh")
+                wrapFile.withWriter { writer ->
+                    writer.write('#!/system/bin/sh\n')
+                    writer.write('HERE="$(cd "$(dirname "$0")" && pwd)"\n')
+                    writer.write('export ASAN_OPTIONS=log_to_syslog=false,allow_user_segv_handler=1,detect_stack_use_after_return=1,check_initialization_order=true,quarantine_size_mb=64,color=never,new_delete_type_mismatch=0,sleep_before_dying=5,use_sigaltstack=0\n')
+                    writer.write("ASAN_LIB=\$(ls \$HERE/libclang_rt.asan-${arch}-android.so)\n")
+                    writer.write('if [ -f "$HERE/libc++_shared.so" ]; then\n')
+                    writer.write('  export LD_PRELOAD="$ASAN_LIB $HERE/libc++_shared.so"\n')
+                    writer.write('else\n')
+                    writer.write('  export LD_PRELOAD="$ASAN_LIB"\n')
+                    writer.write('fi\n')
+                    writer.write('"\$@"\n')
+                }
+                println "sanitizer: [${abi}] create wrap.sh: " + wrapFile.absolutePath
+
+                // copy ASAN libs
+                def libDir = new File("src/main/jniLibs/" + abi)
+                libDir.mkdirs()
+                FileTree tree = fileTree(dir: ndkLibDir).include("**/libclang_rt.asan-${arch}-android.so")
+                tree.each { File file ->
+                    copy {
+                        from file
+                        into libDir.absolutePath
+                    }
+                    println "sanitizer: [${abi}] copy lib: ${file.absolutePath} -> ${libDir.absolutePath}"
+                }
+            }
+        } else {
+            delete 'src/main/resources/'
+            delete 'src/main/jniLibs/'
+        }
+    }
+}
+
+clean.doFirst {
+    delete 'src/main/resources/'
+    delete 'src/main/jniLibs/'
+}

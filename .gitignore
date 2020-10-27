@@ -1,12 +1,11 @@
 .DS_Store
 
-libs/
-obj/
-
 build/
+.cxx/
 .gradle/
 .idea/
 *.iml
 *.log
 *.so
+wrap.sh
 local.properties

@@ -1,0 +1,42 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    ndkVersion rootProject.ext.ndkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        consumerProguardFiles 'proguard-rules.pro'
+        externalNativeBuild {
+            cmake {
+                abiFilters rootProject.ext.abiFilters.split(",")
+                if(rootProject.ext.useASAN) {
+                    arguments "-DANDROID_ARM_MODE=arm"
+                    arguments "-DUSEASAN=ON"
+                }
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version rootProject.ext.cmakeVersion
+        }
+    }
+    compileOptions {
+        sourceCompatibility rootProject.ext.javaVersion
+        targetCompatibility rootProject.ext.javaVersion
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+apply from: rootProject.file('gradle/check.gradle')
+apply from: rootProject.file('gradle/publish.gradle')
