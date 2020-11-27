@@ -59,10 +59,10 @@ typedef struct
     int          dump_all_threads;
     unsigned int dump_all_threads_count_max;
 
-    //set when crashed (content lenghts after this struct)
+    //set when crashed (content lengths after this struct)
     size_t       log_pathname_len;
     
-    //set when inited (content lenghts after this struct)
+    //set when inited (content lengths after this struct)
     size_t       os_version_len;
     size_t       kernel_version_len;
     size_t       abi_list_len;
