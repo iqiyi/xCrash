@@ -221,14 +221,14 @@ class Util {
                 sb.append(String.format(Locale.US, memInfoFmt2, "TOTAL:", mi.getMemoryStat("summary.total-pss"), "TOTAL SWAP:", mi.getMemoryStat("summary.total-swap")));
             } else {
                 sb.append(String.format(Locale.US, memInfoFmt, "Java Heap:", "~ " + mi.dalvikPrivateDirty));
-                sb.append(String.format(Locale.US, memInfoFmt, "Native Heap:", String.valueOf(mi.nativePrivateDirty)));
+                sb.append(String.format(Locale.US, memInfoFmt, "Native Heap:", mi.nativePrivateDirty));
                 sb.append(String.format(Locale.US, memInfoFmt, "Private Other:", "~ " + mi.otherPrivateDirty));
                 if (Build.VERSION.SDK_INT >= 19) {
-                    sb.append(String.format(Locale.US, memInfoFmt, "System:", String.valueOf(mi.getTotalPss() - mi.getTotalPrivateDirty() - mi.getTotalPrivateClean())));
+                    sb.append(String.format(Locale.US, memInfoFmt, "System:", (mi.getTotalPss() - mi.getTotalPrivateDirty() - mi.getTotalPrivateClean())));
                 } else {
                     sb.append(String.format(Locale.US, memInfoFmt, "System:", "~ " + (mi.getTotalPss() - mi.getTotalPrivateDirty())));
                 }
-                sb.append(String.format(Locale.US, memInfoFmt, "TOTAL:", String.valueOf(mi.getTotalPss())));
+                sb.append(String.format(Locale.US, memInfoFmt, "TOTAL:", mi.getTotalPss()));
             }
         } catch (Exception e) {
             XCrash.getLogger().i(Util.TAG, "Util getProcessMemoryInfo failed", e);
