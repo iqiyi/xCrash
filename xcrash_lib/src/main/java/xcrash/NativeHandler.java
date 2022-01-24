@@ -26,6 +26,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.File;
 import java.util.Map;
@@ -33,8 +34,9 @@ import java.util.Map;
 @SuppressLint("StaticFieldLeak")
 class NativeHandler {
 
+    private static final String TAG = "xcrash";
     private static final NativeHandler instance = new NativeHandler();
-    private long anrTimeoutMs = 15 * 1000;
+    private long anrTimeoutMs = 25 * 1000;
 
     private Context ctx;
     private boolean crashRethrow;
@@ -42,6 +44,7 @@ class NativeHandler {
     private boolean anrEnable;
     private boolean anrCheckProcessState;
     private ICrashCallback anrCallback;
+    private ICrashCallback anrFastCallback;
 
     private boolean initNativeLibOk = false;
 
@@ -78,7 +81,8 @@ class NativeHandler {
                    int anrLogcatMainLines,
                    boolean anrDumpFds,
                    boolean anrDumpNetworkInfo,
-                   ICrashCallback anrCallback) {
+                   ICrashCallback anrCallback,
+                   ICrashCallback anrFastCallback) {
         //load lib
         if (libLoader == null) {
             try {
@@ -102,7 +106,8 @@ class NativeHandler {
         this.anrEnable = anrEnable;
         this.anrCheckProcessState = anrCheckProcessState;
         this.anrCallback = anrCallback;
-        this.anrTimeoutMs = anrRethrow ? 15 * 1000 : 30 * 1000; //setting rethrow to "false" is NOT recommended
+        this.anrFastCallback = anrFastCallback;
+        this.anrTimeoutMs = anrRethrow ? 25 * 1000 : 45 * 1000; //setting rethrow to "false" is NOT recommended
 
         //init native lib
         try {
@@ -216,7 +221,23 @@ class NativeHandler {
 
     // do NOT obfuscate this method
     @SuppressWarnings("unused")
+    private static void traceCallbackBeforeDump() {
+        Log.i(TAG, "trace fast callback time: " + System.currentTimeMillis());
+        ICrashCallback anrFastCallback = NativeHandler.getInstance().anrFastCallback;
+        if (anrFastCallback != null) {
+            try {
+                anrFastCallback.onCrash(null, null);
+            } catch (Exception e) {
+                XCrash.getLogger().w(Util.TAG, "NativeHandler ANR callback.onCrash failed", e);
+            }
+        }
+    }
+
+    // do NOT obfuscate this method
+    @SuppressWarnings("unused")
     private static void traceCallback(String logPath, String emergency) {
+        Log.i(TAG, "trace slow callback time: " + System.currentTimeMillis());
+
         if (TextUtils.isEmpty(logPath)) {
             return;
         }

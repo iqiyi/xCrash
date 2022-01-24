@@ -28,6 +28,7 @@ import android.os.Build;
 import android.os.Debug;
 import android.system.Os;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -76,20 +77,20 @@ class Util {
     static String getProcessName(Context ctx, int pid) {
 
         //get from ActivityManager
-        try {
-            ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
-            if (manager != null) {
-                List<ActivityManager.RunningAppProcessInfo> processInfoList = manager.getRunningAppProcesses();
-                if (processInfoList != null) {
-                    for (ActivityManager.RunningAppProcessInfo processInfo : processInfoList) {
-                        if (processInfo.pid == pid && !TextUtils.isEmpty(processInfo.processName)) {
-                            return processInfo.processName; //OK
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
+//        try {
+//            ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+//            if (manager != null) {
+//                List<ActivityManager.RunningAppProcessInfo> processInfoList = manager.getRunningAppProcesses();
+//                if (processInfoList != null) {
+//                    for (ActivityManager.RunningAppProcessInfo processInfo : processInfoList) {
+//                        if (processInfo.pid == pid && !TextUtils.isEmpty(processInfo.processName)) {
+//                            return processInfo.processName; //OK
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (Exception ignored) {
+//        }
 
         //get from /proc/PID/cmdline
         BufferedReader br = null;
@@ -298,11 +299,15 @@ class Util {
         for (int i = 0; i < poll; i++) {
             List<ActivityManager.ProcessErrorStateInfo> processErrorList = am.getProcessesInErrorState();
             if (processErrorList != null) {
+                XCrash.getLogger().e(Util.TAG, "processErrorList is NOT null !!!!" + ", i = " + i);
                 for (ActivityManager.ProcessErrorStateInfo errorStateInfo : processErrorList) {
+                    XCrash.getLogger().e(Util.TAG, "errorStateInfo.pid = " + errorStateInfo.pid + ", my pid = " + pid + ", errorStateInfo.condition = " + errorStateInfo.condition);
                     if (errorStateInfo.pid == pid && errorStateInfo.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) {
                         return true;
                     }
                 }
+            } else {
+                XCrash.getLogger().e(Util.TAG, "processErrorList is null !!!!" + " poll = " + poll + ", i = " + i);
             }
 
             try {
@@ -515,14 +520,9 @@ class Util {
         return defaultValue;
     }
 
-    public static boolean isMIUI() {
-        String property = getSystemProperty("ro.miui.ui.version.name", "");
-        return !TextUtils.isEmpty(property);
-    }
-
     public static String getMobileModel() {
         String mobileModel = null;
-        if (isMIUI()) {
+        if (Rom.isMiui()) {
             String deviceName = "";
 
             try {
@@ -552,5 +552,119 @@ class Util {
         }
 
         return mobileModel;
+    }
+
+
+    public static class Rom {
+        private static final String TAG = "Rom";
+
+        public static final String ROM_MIUI = "MIUI";
+        public static final String ROM_EMUI = "EMUI";
+        public static final String ROM_FLYME = "FLYME";
+        public static final String ROM_OPPO = "OPPO";
+        public static final String ROM_SMARTISAN = "SMARTISAN";
+        public static final String ROM_VIVO = "VIVO";
+        public static final String ROM_QIKU = "QIKU";
+
+        private static final String KEY_VERSION_MIUI = "ro.miui.ui.version.name";
+        private static final String KEY_VERSION_EMUI = "ro.build.version.emui";
+        private static final String KEY_VERSION_OPPO = "ro.build.version.opporom";
+        private static final String KEY_VERSION_SMARTISAN = "ro.smartisan.version";
+        private static final String KEY_VERSION_VIVO = "ro.vivo.os.version";
+
+        private static String sName;
+        private static String sVersion;
+
+        public static boolean isEmui() {
+            return check(ROM_EMUI);
+        }
+
+        public static boolean isMiui() {
+            return check(ROM_MIUI);
+        }
+
+        public static boolean isVivo() {
+            return check(ROM_VIVO);
+        }
+
+        public static boolean isOppo() {
+            return check(ROM_OPPO);
+        }
+
+        public static boolean isFlyme() {
+            return check(ROM_FLYME);
+        }
+
+        public static boolean is360() {
+            return check(ROM_QIKU) || check("360");
+        }
+
+        public static boolean isSmartisan() {
+            return check(ROM_SMARTISAN);
+        }
+
+        public static String getName() {
+            if (sName == null) {
+                check("");
+            }
+            return sName;
+        }
+
+        public static String getVersion() {
+            if (sVersion == null) {
+                check("");
+            }
+            return sVersion;
+        }
+
+        public static boolean check(String rom) {
+            if (sName != null) {
+                return sName.equals(rom);
+            }
+
+            if (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_MIUI))) {
+                sName = ROM_MIUI;
+            } else if (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_EMUI))) {
+                sName = ROM_EMUI;
+            } else if (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_OPPO))) {
+                sName = ROM_OPPO;
+            } else if (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_VIVO))) {
+                sName = ROM_VIVO;
+            } else if (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_SMARTISAN))) {
+                sName = ROM_SMARTISAN;
+            } else {
+                sVersion = Build.DISPLAY;
+                if (sVersion.toUpperCase().contains(ROM_FLYME)) {
+                    sName = ROM_FLYME;
+                } else {
+                    sVersion = Build.UNKNOWN;
+                    sName = Build.MANUFACTURER.toUpperCase();
+                }
+            }
+            return sName.equals(rom);
+        }
+
+        public static String getProp(String name) {
+            String line = null;
+            BufferedReader input = null;
+            try {
+                Process p = Runtime.getRuntime().exec("getprop " + name);
+                input = new BufferedReader(new InputStreamReader(p.getInputStream()), 1024);
+                line = input.readLine();
+                input.close();
+            } catch (IOException ex) {
+                Log.e(TAG, "Unable to read prop " + name, ex);
+                return null;
+            } finally {
+                if (input != null) {
+                    try {
+                        input.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return line;
+        }
     }
 }

@@ -179,7 +179,8 @@ public final class XCrash {
                 params.anrLogcatMainLines,
                 params.anrDumpFds,
                 params.anrDumpNetworkInfo,
-                params.anrCallback);
+                params.anrCallback,
+                params.anrFastCallback);
         }
 
         //init native crash handler / ANR handler (API level >= 21)
@@ -212,7 +213,8 @@ public final class XCrash {
                 params.anrLogcatMainLines,
                 params.anrDumpFds,
                 params.anrDumpNetworkInfo,
-                params.anrCallback);
+                params.anrCallback,
+                params.anrFastCallback);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -716,6 +718,7 @@ public final class XCrash {
         boolean        anrDumpFds           = true;
         boolean        anrDumpNetworkInfo   = true;
         ICrashCallback anrCallback          = null;
+        ICrashCallback anrFastCallback      = null;
 
         /**
          * Enable the ANR capture feature. (Default: enable)
@@ -759,7 +762,7 @@ public final class XCrash {
         /**
          * Set whether the process error state (from "ActivityManager#getProcessesInErrorState()") is a necessary condition for ANR.  (Default: true)
          *
-         * <p>Note: On some Android TV box devices, the ANR is not reflected by process error state. In this case, set this option to false.
+         * <p>Note: On some Android TV box devices and on most Oppo phones, the ANR is not reflected by process error state. In this case, set this option to false.
          *
          * @param checkProcessState If <code>true</code>, process state error will be a necessary condition for ANR.
          * @return The InitParameters object.
@@ -851,6 +854,20 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setAnrCallback(ICrashCallback callback) {
             this.anrCallback = callback;
+            return this;
+        }
+
+        /**
+         * Set a fast callback to be executed when an ANR occurred.
+         * This callback is called before ANR trace dump
+         * (If not set, nothing will be happened.)
+         *
+         * @param fastCallback An instance of {@link xcrash.ICrashCallback}.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrFastCallback(ICrashCallback fastCallback) {
+            this.anrFastCallback = fastCallback;
             return this;
         }
     }

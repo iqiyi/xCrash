@@ -62,6 +62,7 @@ class AnrHandler {
     private boolean dumpFds;
     private boolean dumpNetworkInfo;
     private ICrashCallback callback;
+    private ICrashCallback anrFastCallback;
     private long lastTime = 0;
     private FileObserver fileObserver = null;
 
@@ -75,7 +76,7 @@ class AnrHandler {
     @SuppressWarnings("deprecation")
     void initialize(Context ctx, int pid, String processName, String appId, String appVersion, String logDir,
                     boolean checkProcessState, int logcatSystemLines, int logcatEventsLines, int logcatMainLines,
-                    boolean dumpFds, boolean dumpNetworkInfo, ICrashCallback callback) {
+                    boolean dumpFds, boolean dumpNetworkInfo, ICrashCallback callback, ICrashCallback anrFastCallback) {
 
         //check API level
         if (Build.VERSION.SDK_INT >= 21) {
@@ -95,6 +96,7 @@ class AnrHandler {
         this.dumpFds = dumpFds;
         this.dumpNetworkInfo = dumpNetworkInfo;
         this.callback = callback;
+        this.anrFastCallback = anrFastCallback;
 
         fileObserver = new FileObserver("/data/anr/", CLOSE_WRITE) {
             public void onEvent(int event, String path) {
@@ -137,6 +139,13 @@ class AnrHandler {
         //check ANR time interval
         if (anrTime.getTime() - lastTime < anrTimeoutMs) {
             return;
+        }
+
+        if(anrFastCallback != null) {
+            try {
+                anrFastCallback.onCrash(null, null);
+            } catch (Exception ignored) {
+            }
         }
 
         //check process error state

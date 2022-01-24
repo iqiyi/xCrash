@@ -69,6 +69,13 @@ public class MyCustomApplication extends Application {
             }
         };
 
+        ICrashCallback anrFastCallback = new ICrashCallback() {
+            @Override
+            public void onCrash(String logPath, String emergency) throws Exception {
+                Log.d(TAG, "anrFastCallback is called");
+            }
+        };
+
         Log.d(TAG, "xCrash SDK init: start");
 
         // Initialize xCrash.
@@ -84,12 +91,14 @@ public class MyCustomApplication extends Application {
             .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
             .setNativeDumpAllThreadsCountMax(10)
             .setNativeCallback(callback)
+//          .setAnrCheckProcessState(false)
             .setAnrRethrow(true)
             .setAnrLogCountMax(10)
             .setAnrCallback(callback)
+            .setAnrFastCallback(anrFastCallback)
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
-            .setLogDir(getExternalFilesDir("xcrash").toString())
+//          .setLogDir(getExternalFilesDir("xcrash").toString())
             .setLogFileMaintainDelayMs(1000));
 
         Log.d(TAG, "xCrash SDK init: end");

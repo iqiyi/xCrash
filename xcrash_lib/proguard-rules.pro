@@ -2,4 +2,5 @@
     native <methods>;
     void crashCallback(...);
     void traceCallback(...);
+    void traceCallbackBeforeDump(...);
 }

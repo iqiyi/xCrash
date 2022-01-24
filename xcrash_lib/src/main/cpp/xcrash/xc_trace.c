@@ -49,6 +49,10 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
+
+#define XC_TRACE_FAST_CALLBACK_METHOD_NAME         "traceCallbackBeforeDump"
+#define XC_TRACE_FAST_CALLBACK_METHOD_SIGNATURE    "()V"
+
 #define XC_TRACE_CALLBACK_METHOD_NAME         "traceCallback"
 #define XC_TRACE_CALLBACK_METHOD_SIGNATURE    "(Ljava/lang/String;Ljava/lang/String;)V"
 
@@ -78,6 +82,7 @@ static int                              xc_trace_dump_fds;
 static int                              xc_trace_dump_network_info;
 
 //callback
+static jmethodID                        xc_trace_fast_cb_method = NULL;
 static jmethodID                        xc_trace_cb_method = NULL;
 static int                              xc_trace_notifier = -1;
 
@@ -314,6 +319,10 @@ static void *xc_trace_dumper(void *arg)
         //check if process already crashed
         if(xc_common_native_crashed || xc_common_java_crashed) break;
 
+        if(NULL == xc_trace_fast_cb_method) continue;
+        (*env)->CallStaticVoidMethod(env, xc_common_cb_class, xc_trace_fast_cb_method);
+        XC_JNI_IGNORE_PENDING_EXCEPTION();
+
         //trace time
         if(0 != gettimeofday(&tv, NULL)) break;
         trace_time = (uint64_t)(tv.tv_sec) * 1000 * 1000 + (uint64_t)tv.tv_usec;
@@ -417,12 +426,16 @@ static void xc_trace_handler(int sig, siginfo_t *si, void *uc)
 static void xc_trace_init_callback(JNIEnv *env)
 {
     if(NULL == xc_common_cb_class) return;
-    
+
+    xc_trace_fast_cb_method = (*env)->GetStaticMethodID(env, xc_common_cb_class, XC_TRACE_FAST_CALLBACK_METHOD_NAME, XC_TRACE_FAST_CALLBACK_METHOD_SIGNATURE);
+    XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_trace_fast_cb_method, err);
+
     xc_trace_cb_method = (*env)->GetStaticMethodID(env, xc_common_cb_class, XC_TRACE_CALLBACK_METHOD_NAME, XC_TRACE_CALLBACK_METHOD_SIGNATURE);
     XC_JNI_CHECK_NULL_AND_PENDING_EXCEPTION(xc_trace_cb_method, err);
     return;
 
  err:
+    xc_trace_fast_cb_method = NULL;
     xc_trace_cb_method = NULL;
 }
 

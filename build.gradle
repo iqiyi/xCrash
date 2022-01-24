@@ -25,10 +25,10 @@ task clean(type: Delete) {
 
 ext {
     minSdkVersion = 16
-    compileSdkVersion = 30
-    targetSdkVersion = 30
+    compileSdkVersion = 31
+    targetSdkVersion = 31
     buildToolsVersion = '30.0.2'
-    javaVersion = JavaVersion.VERSION_1_6
+    javaVersion = JavaVersion.VERSION_1_8
     ndkVersion = "21.3.6528147"
     cmakeVersion = "3.10.2"
     abiFilters = "armeabi-v7a,arm64-v8a,x86,x86_64"
@@ -36,7 +36,7 @@ ext {
 
     POM_GROUP_ID = "com.iqiyi.xcrash"
     POM_ARTIFACT_ID = "xcrash-android-lib"
-    POM_VERSION_NAME = "3.0.0"
+    POM_VERSION_NAME = "3.1.0"
 
     POM_NAME = "xCrash Android Lib"
     POM_DESCRIPTION = "xCrash provides the Android app with the ability to capture java crash, native crash and ANR."
