@@ -1,38 +1,29 @@
-apply plugin: 'digital.wup.android-maven-publish'
-apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
-def readPropertyFromLocalProperties(String key) {
-    Properties properties = new Properties()
-    try {
-        properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    } catch (Exception e) {
-        println("load local.properties failed. msg: ${e.message}")
+ext["signing.keyId"] = ''
+ext["signing.password"] = ''
+ext["signing.secretKeyRingFile"] = ''
+ext["ossrhUsername"] = ''
+ext["ossrhPassword"] = ''
+
+File secretPropsFile = project.rootProject.file('local.properties')
+if (secretPropsFile.exists()) {
+    Properties p = new Properties()
+    p.load(new FileInputStream(secretPropsFile))
+    p.each { name, value ->
+        ext[name] = value
     }
-    return properties.getProperty(key)
-}
-
-def getCustomMavenRepo() {
-    return readPropertyFromLocalProperties('CUSTOM_MAVEN_REPO')
-}
-
-def getCustomMavenUsername() {
-    return readPropertyFromLocalProperties('CUSTOM_MAVEN_USERNAME')
-}
-
-def getCustomMavenPassword() {
-    return readPropertyFromLocalProperties('CUSTOM_MAVEN_PASSWORD')
-}
-
-def getBintrayUser() {
-    return readPropertyFromLocalProperties('BINTRAY_USER')
-}
-
-def getBintrayApikey() {
-    return readPropertyFromLocalProperties('BINTRAY_APIKEY')
+} else {
+    ext["signing.keyId"] = System.getenv('SIGNING_KEY_ID')
+    ext["signing.password"] = System.getenv('SIGNING_PASSWORD')
+    ext["signing.secretKeyRingFile"] = System.getenv('SIGNING_SECRET_KEY_RING_FILE')
+    ext["ossrhUsername"] = System.getenv('OSSRH_USERNAME')
+    ext["ossrhPassword"] = System.getenv('OSSRH_PASSWORD')
 }
 
 task sourcesJar(type: Jar) {
-    classifier = 'sources'
+    archiveClassifier.set("sources")
     from android.sourceSets.main.java.srcDirs
 }
 
@@ -42,88 +33,70 @@ task javadoc(type: Javadoc) {
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
+    archiveClassifier.set("javadoc")
     from javadoc.destinationDir
 }
 
-publishing.publications {
-    mavenAar(MavenPublication) {
-        from components.android
+project.afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
 
-        artifact sourcesJar
-        artifact javadocJar
+                artifact sourcesJar
+                artifact javadocJar
 
-        artifactId POM_ARTIFACT_ID
-        groupId POM_GROUP_ID
-        version POM_VERSION_NAME
+                artifactId POM_ARTIFACT_ID
+                groupId POM_GROUP_ID
+                version POM_VERSION_NAME
 
-        pom {
-            name = POM_NAME
-            description = POM_DESCRIPTION
-            url = POM_URL
-            inceptionYear = POM_INCEPTION_YEAR
-            packaging = POM_PACKAGING
-            scm {
-                connection = POM_SCM_CONNECTION
-                url = POM_URL
-            }
-            issueManagement {
-                system = POM_ISSUE_SYSTEM
-                url = POM_ISSUE_URL
-            }
-            licenses {
-                license {
-                    name = POM_LICENCE_NAME
-                    url = POM_LICENCE_URL
-                    distribution = POM_LICENCE_DIST
+                pom {
+                    name = POM_NAME
+                    description = POM_DESCRIPTION
+                    url = POM_URL
+                    inceptionYear = POM_INCEPTION_YEAR
+                    packaging = POM_PACKAGING
+                    scm {
+                        connection = POM_SCM_CONNECTION
+                        url = POM_URL
+                    }
+                    issueManagement {
+                        system = POM_ISSUE_SYSTEM
+                        url = POM_ISSUE_URL
+                    }
+                    licenses {
+                        license {
+                            name = POM_LICENCE_NAME
+                            url = POM_LICENCE_URL
+                            distribution = POM_LICENCE_DIST
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = POM_DEVELOPER_ID
+                            name = POM_DEVELOPER_NAME
+                        }
+                    }
                 }
             }
-            developers {
-                developer {
-                    id = POM_DEVELOPER_ID
-                    name = POM_DEVELOPER_NAME
+        }
+        repositories {
+            maven {
+                name = "sonatype"
+
+                def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+                credentials {
+                    username ossrhUsername
+                    password ossrhPassword
                 }
             }
         }
     }
 }
 
-// custom maven repo
-publishing.repositories {
-    maven {
-        url getCustomMavenRepo()
-        credentials {
-            username getCustomMavenUsername()
-            password getCustomMavenPassword()
-        }
-    }
-}
-
-// bintray maven repo
-bintray {
-    user = getBintrayUser()
-    key = getBintrayApikey()
-    publications = ['mavenAar']
-    pkg {
-        repo = BINTRAY_REPO
-        name = "${POM_GROUP_ID}:${POM_ARTIFACT_ID}"
-        userOrg = BINTRAY_ORGANIZATION
-        desc = POM_DESCRIPTION
-        websiteUrl = POM_URL
-        issueTrackerUrl = POM_ISSUE_URL
-        vcsUrl = POM_SCM_CONNECTION
-        licenses = BINTRAY_LICENCE
-        publicDownloadNumbers = true
-        publish = true
-        dryRun = false
-
-        version {
-            name = POM_VERSION_NAME
-            released = new Date()
-            vcsTag = POM_VERSION_NAME
-            gpg {
-                sign = true
-            }
-        }
-    }
+signing {
+    sign publishing.publications
 }

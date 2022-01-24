@@ -1,19 +1,21 @@
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
+
     dependencies {
         classpath 'com.android.tools.build:gradle:4.1.0'
-        classpath 'digital.wup:android-maven-publish:3.6.2'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
     }
 }
 
 allprojects {
     repositories {
         google()
-        jcenter()
+//      mavenLocal()
+        mavenCentral()
+        maven {url "https://s01.oss.sonatype.org/content/groups/public"}
+        maven {url "https://s01.oss.sonatype.org/content/repositories/releases"}
     }
 }
 
@@ -53,8 +55,4 @@ ext {
 
     POM_DEVELOPER_ID = "iQIYI"
     POM_DEVELOPER_NAME = "iQIYI, Inc."
-
-    BINTRAY_REPO = "maven"
-    BINTRAY_ORGANIZATION = "xcrash"
-    BINTRAY_LICENCE = ['MIT']
 }

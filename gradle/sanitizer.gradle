@@ -1,6 +1,8 @@
 project.afterEvaluate {
 
     preBuild.doFirst {
+        def projectDir = project.projectDir.toString()
+
         if (rootProject.ext.useASAN) {
             def ndkLibDir = android.ndkDirectory.absolutePath + "/toolchains/llvm/prebuilt/"
             def ABIs = rootProject.ext.abiFilters.split(",")
@@ -18,7 +20,7 @@ project.afterEvaluate {
                 }
 
                 // create ASAN wrap.sh
-                def resDir = new File("src/main/resources/lib/" + abi)
+                def resDir = new File(projectDir + "/src/main/resources/lib/" + abi)
                 resDir.mkdirs()
                 def wrapFile = new File(resDir, "wrap.sh")
                 wrapFile.withWriter { writer ->
@@ -36,7 +38,7 @@ project.afterEvaluate {
                 println "sanitizer: [${abi}] create wrap.sh: " + wrapFile.absolutePath
 
                 // copy ASAN libs
-                def libDir = new File("src/main/jniLibs/" + abi)
+                def libDir = new File(projectDir + "/src/main/jniLibs/" + abi)
                 libDir.mkdirs()
                 FileTree tree = fileTree(dir: ndkLibDir).include("**/libclang_rt.asan-${arch}-android.so")
                 tree.each { File file ->
@@ -48,13 +50,14 @@ project.afterEvaluate {
                 }
             }
         } else {
-            delete 'src/main/resources/'
-            delete 'src/main/jniLibs/'
+            delete projectDir + '/src/main/resources/'
+            delete projectDir + '/src/main/jniLibs/'
         }
     }
 }
 
 clean.doFirst {
-    delete 'src/main/resources/'
-    delete 'src/main/jniLibs/'
+    def projectDir = project.projectDir.toString()
+    delete projectDir + '/src/main/resources/'
+    delete projectDir + '/src/main/jniLibs/'
 }
