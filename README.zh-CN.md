@@ -123,12 +123,10 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 ## 技术支持
 
-1. 查看 [xcrash-sample](xcrash_sample)。
-2. 在 [GitHub issues](https://github.com/iqiyi/xCrash/issues) 交流。
-3. 邮件: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a> &nbsp; <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
-4. QQ 群: 603635869。二维码:
-
-<p align="left"><img src="doc/qq_group.jpg" alt="qq group" width="300px"></p>
+* [GitHub Issues](https://github.com/iqiyi/xCrash/issues)
+* [GitHub Discussions](https://github.com/iqiyi/xCrash/discussions)
+* [Telegram Public Group](https://t.me/android_native_geeks)
+* Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>, <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
 
 
 ## 贡献

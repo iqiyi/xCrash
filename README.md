@@ -126,12 +126,10 @@ If you want to build xCrash from source code. Follow this guide:
 
 ## Support
 
-1. Check the [xcrash-sample](xcrash_sample).
-2. Communicate on [GitHub issues](https://github.com/iqiyi/xCrash/issues).
-3. Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a> &nbsp; <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
-4. QQ group: 603635869. QR code:
-
-<p align="left"><img src="doc/qq_group.jpg" alt="qq group" width="300px"></p>
+* [GitHub Issues](https://github.com/iqiyi/xCrash/issues)
+* [GitHub Discussions](https://github.com/iqiyi/xCrash/discussions)
+* [Telegram Public Group](https://t.me/android_native_geeks)
+* Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>, <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
 
 
 ## Contributing
