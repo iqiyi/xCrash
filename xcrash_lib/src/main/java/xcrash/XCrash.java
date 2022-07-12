@@ -269,7 +269,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setLogFileMaintainDelayMs(int logFileMaintainDelayMs) {
-            this.logFileMaintainDelayMs = (logFileMaintainDelayMs < 0 ? 0 : logFileMaintainDelayMs);
+            this.logFileMaintainDelayMs = (Math.max(logFileMaintainDelayMs, 0));
             return this;
         }
 
@@ -309,7 +309,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setPlaceholderCountMax(int countMax) {
-            this.placeholderCountMax = (countMax < 0 ? 0 : countMax);
+            this.placeholderCountMax = (Math.max(countMax, 0));
             return this;
         }
 
@@ -321,7 +321,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setPlaceholderSizeKb(int sizeKb) {
-            this.placeholderSizeKb = (sizeKb < 0 ? 0 : sizeKb);
+            this.placeholderSizeKb = (Math.max(sizeKb, 0));
             return this;
         }
 
@@ -382,7 +382,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setJavaLogCountMax(int countMax) {
-            this.javaLogCountMax = (countMax < 1 ? 1 : countMax);
+            this.javaLogCountMax = (Math.max(countMax, 1));
             return this;
         }
 
@@ -470,7 +470,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setJavaDumpAllThreadsCountMax(int countMax) {
-            this.javaDumpAllThreadsCountMax = (countMax < 0 ? 0 : countMax);
+            this.javaDumpAllThreadsCountMax = (Math.max(countMax, 0));
             return this;
         }
 
@@ -560,7 +560,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setNativeLogCountMax(int countMax) {
-            this.nativeLogCountMax = (countMax < 1 ? 1 : countMax);
+            this.nativeLogCountMax = (Math.max(countMax, 1));
             return this;
         }
 
@@ -672,7 +672,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setNativeDumpAllThreadsCountMax(int countMax) {
-            this.nativeDumpAllThreadsCountMax = (countMax < 0 ? 0 : countMax);
+            this.nativeDumpAllThreadsCountMax = (Math.max(countMax, 0));
             return this;
         }
 
@@ -781,7 +781,7 @@ public final class XCrash {
          */
         @SuppressWarnings("unused")
         public InitParameters setAnrLogCountMax(int countMax) {
-            this.anrLogCountMax = (countMax < 1 ? 1 : countMax);
+            this.anrLogCountMax = (Math.max(countMax, 1));
             return this;
         }
 
