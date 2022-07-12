@@ -93,9 +93,7 @@ class Util {
 //        }
 
         //get from /proc/PID/cmdline
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader("/proc/" + pid + "/cmdline"));
+        try (BufferedReader br = new BufferedReader(new FileReader("/proc/" + pid + "/cmdline"))) {
             String processName = br.readLine();
             if (!TextUtils.isEmpty(processName)) {
                 processName = processName.trim();
@@ -104,13 +102,6 @@ class Util {
                 }
             }
         } catch (Exception ignored) {
-        } finally {
-            try {
-                if (br != null) {
-                    br.close();
-                }
-            } catch (Exception ignored) {
-            }
         }
 
         //failed
@@ -244,11 +235,9 @@ class Util {
 
     private static String getFileContent(String pathname, int limit) {
         StringBuilder sb = new StringBuilder();
-        BufferedReader br = null;
         String line;
         int n = 0;
-        try {
-            br = new BufferedReader(new FileReader(pathname));
+        try (BufferedReader br = new BufferedReader(new FileReader(pathname))) {
             while (null != (line = br.readLine())) {
                 String p = line.trim();
                 if (p.length() > 0) {
@@ -263,13 +252,6 @@ class Util {
             }
         } catch (Exception e) {
             XCrash.getLogger().i(Util.TAG, "Util getInfo(" + pathname + ") failed", e);
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (Exception ignored) {
-                }
-            }
         }
         return sb.toString();
     }
