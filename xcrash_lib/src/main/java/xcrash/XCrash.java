@@ -214,7 +214,9 @@ public final class XCrash {
                 params.anrDumpFds,
                 params.anrDumpNetworkInfo,
                 params.anrCallback,
-                params.anrFastCallback);
+                params.anrFastCallback,
+                params.nativeLibPath,
+                params.loadNativeWithLinker);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -517,6 +519,9 @@ public final class XCrash {
         String[]       nativeDumpAllThreadsWhiteList = null;
         ICrashCallback nativeCallback                = null;
 
+        String         nativeLibPath                 = null;
+        boolean        loadNativeWithLinker          = false;
+
         /**
          * Enable the native crash capture feature. (Default: enable)
          *
@@ -704,6 +709,24 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setNativeCallback(ICrashCallback callback) {
             this.nativeCallback = callback;
+            return this;
+        }
+
+        /**
+         * Set native library path
+         * @param nativeLibPath native library path
+         */
+        public InitParameters setNativeLibPath(String nativeLibPath) {
+            this.nativeLibPath = nativeLibPath;
+            return this;
+        }
+
+        /**
+         * Set whether load native library with linker
+         * @param loadNativeWithLinker load native library with linker
+         */
+        public InitParameters setLoadNativeWithLinker(boolean loadNativeWithLinker) {
+            this.loadNativeWithLinker = loadNativeWithLinker;
             return this;
         }
 

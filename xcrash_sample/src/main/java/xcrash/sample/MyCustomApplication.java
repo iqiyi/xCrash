@@ -25,12 +25,14 @@ package xcrash.sample;
 import android.app.Application;
 import android.content.Context;
 import android.util.Log;
+import android.util.Pair;
 
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
 
+import xcrash.AbiPathProvider;
 import xcrash.TombstoneManager;
 import xcrash.TombstoneParser;
 import xcrash.XCrash;
@@ -78,6 +80,10 @@ public class MyCustomApplication extends Application {
 
         Log.d(TAG, "xCrash SDK init: start");
 
+        Pair<String, Boolean> abiPath = AbiPathProvider.getAbiPath(this, AbiPathProvider.XCRASH_DUMPER_LIB_NAME);
+        String nativeLibraryDir = abiPath.first;
+        boolean loadNativeWithLinker = abiPath.second;
+
         // Initialize xCrash.
         XCrash.init(this, new XCrash.InitParameters()
             .setAppVersion("1.2.3-beta456-patch789")
@@ -91,6 +97,8 @@ public class MyCustomApplication extends Application {
             .setNativeDumpAllThreadsWhiteList(new String[]{"^xcrash\\.sample$", "^Signal Catcher$", "^Jit thread pool$", ".*(R|r)ender.*", ".*Chrome.*"})
             .setNativeDumpAllThreadsCountMax(10)
             .setNativeCallback(callback)
+//          .setNativeLibPath(nativeLibraryDir)
+//          .setLoadNativeWithLinker(loadNativeWithLinker)
 //          .setAnrCheckProcessState(false)
             .setAnrRethrow(true)
             .setAnrLogCountMax(10)

@@ -55,6 +55,7 @@ static jint xc_jni_init(JNIEnv       *env,
                         jstring       app_id,
                         jstring       app_version,
                         jstring       app_lib_dir,
+                        jboolean      use_linker,
                         jstring       log_dir,
                         jboolean      crash_enable,
                         jboolean      crash_rethrow,
@@ -133,6 +134,7 @@ static jint xc_jni_init(JNIEnv       *env,
                            c_app_id,
                            c_app_version,
                            c_app_lib_dir,
+                           use_linker ? 1 : 0,
                            c_log_dir)) goto clean;
     
     r_crash = 0;
@@ -243,6 +245,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "Ljava/lang/String;"
         "Ljava/lang/String;"
         "Ljava/lang/String;"
+        "Z"
         "Ljava/lang/String;"
         "Z"
         "Z"
