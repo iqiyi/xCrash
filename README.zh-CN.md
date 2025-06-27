@@ -125,7 +125,6 @@ Tombstone 文件默认将被写入到 `Context#getFilesDir() + "/tombstones"` �
 
 * [GitHub Issues](https://github.com/iqiyi/xCrash/issues)
 * [GitHub Discussions](https://github.com/iqiyi/xCrash/discussions)
-* [Telegram Public Group](https://t.me/android_native_geeks)
 * Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>, <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
 
 
