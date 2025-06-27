@@ -27,6 +27,7 @@ import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 
 import java.io.File;
 import java.util.Map;
@@ -82,7 +83,9 @@ class NativeHandler {
                    boolean anrDumpFds,
                    boolean anrDumpNetworkInfo,
                    ICrashCallback anrCallback,
-                   ICrashCallback anrFastCallback) {
+                   ICrashCallback anrFastCallback,
+                   String nativeLibPath,
+                   boolean loadNativeWithLinker) {
         //load lib
         if (libLoader == null) {
             try {
@@ -109,6 +112,17 @@ class NativeHandler {
         this.anrFastCallback = anrFastCallback;
         this.anrTimeoutMs = anrRethrow ? 25 * 1000 : 45 * 1000; //setting rethrow to "false" is NOT recommended
 
+        String nativeLibraryDir;
+        boolean useLinker;
+        if (!TextUtils.isEmpty(nativeLibPath)) {
+            nativeLibraryDir = nativeLibPath;
+            useLinker = loadNativeWithLinker;
+        } else {
+            Pair<String, Boolean> abiPath = AbiPathProvider.getAbiPath(ctx, AbiPathProvider.XCRASH_DUMPER_LIB_NAME);
+            nativeLibraryDir = abiPath.first;
+            useLinker = abiPath.second;
+        }
+
         //init native lib
         try {
             int r = nativeInit(
@@ -121,7 +135,8 @@ class NativeHandler {
                 Build.FINGERPRINT,
                 appId,
                 appVersion,
-                ctx.getApplicationInfo().nativeLibraryDir,
+                nativeLibraryDir,
+                useLinker,
                 logDir,
                 crashEnable,
                 crashRethrow,
@@ -291,6 +306,7 @@ class NativeHandler {
             String appId,
             String appVersion,
             String appLibDir,
+            boolean useLinker,
             String logDir,
             boolean crashEnable,
             boolean crashRethrow,

@@ -67,6 +67,14 @@ extern "C" {
 #define XCC_UTIL_SYSCALL_GETDENTS SYS_getdents64
 #endif
 
+#if defined(__LP64__)
+#define LINKER_PATH "/system/bin/linker64"
+#define LINKER_NAME "linker64"
+#else
+#define LINKER_PATH "/system/bin/linker"
+#define LINKER_NAME "linker"
+#endif
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
 typedef struct

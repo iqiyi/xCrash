@@ -64,6 +64,7 @@ char         *xc_common_app_id            = NULL;
 char         *xc_common_app_version       = NULL;
 char         *xc_common_app_lib_dir       = NULL;
 char         *xc_common_log_dir           = NULL;
+int           xc_use_linker               = 0;
 
 //process info
 pid_t         xc_common_process_id        = 0;
@@ -130,6 +131,7 @@ int xc_common_init(int         api_level,
                    const char *app_id,
                    const char *app_version,
                    const char *app_lib_dir,
+                   int use_linker,
                    const char *log_dir)
 {
     int             r = 0;
@@ -179,6 +181,8 @@ int xc_common_init(int         api_level,
     XC_COMMON_DUP_STR(app_version);
     XC_COMMON_DUP_STR(app_lib_dir);
     XC_COMMON_DUP_STR(log_dir);
+
+    xc_use_linker = use_linker;
     
     //save kernel version
     xc_util_get_kernel_version(buf, sizeof(buf));

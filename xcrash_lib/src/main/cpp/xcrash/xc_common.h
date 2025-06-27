@@ -61,6 +61,7 @@ extern char         *xc_common_app_id;
 extern char         *xc_common_app_version;
 extern char         *xc_common_app_lib_dir;
 extern char         *xc_common_log_dir;
+extern int           xc_use_linker;
 
 //process info
 extern pid_t         xc_common_process_id;
@@ -86,6 +87,7 @@ int xc_common_init(int         api_level,
                    const char *app_id,
                    const char *app_version,
                    const char *app_lib_dir,
+                   int use_linker,
                    const char *log_dir);
 
 int xc_common_open_crash_log(char *pathname, size_t pathname_len, int *from_placeholder);
