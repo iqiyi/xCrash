@@ -128,7 +128,6 @@ If you want to build xCrash from source code. Follow this guide:
 
 * [GitHub Issues](https://github.com/iqiyi/xCrash/issues)
 * [GitHub Discussions](https://github.com/iqiyi/xCrash/discussions)
-* [Telegram Public Group](https://t.me/android_native_geeks)
 * Email: <a href="mailto:caikelun@gmail.com">caikelun@gmail.com</a>, <a href="mailto:xuqnqn@qq.com">xuqnqn@qq.com</a>
 
 
