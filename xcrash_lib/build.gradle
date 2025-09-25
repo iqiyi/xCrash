@@ -15,6 +15,8 @@ android {
                     arguments "-DANDROID_ARM_MODE=arm"
                     arguments "-DUSEASAN=ON"
                 }
+                // 启用 16KB 页面支持
+                arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
     }

@@ -4,10 +4,21 @@ cmake_minimum_required(VERSION 3.4.1)
 # global
 #######################################
 
+# 启用 16KB 页面支持
+add_compile_definitions(ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=1)
+
 add_compile_options(
         -std=c11
         -Weverything
-        -Werror)
+        -Werror
+        -Wno-unsafe-buffer-usage
+        -Wno-declaration-after-statement
+        -Wno-implicit-int-float-conversion
+        -Wno-reserved-identifier
+        -Wno-switch-default
+        -Wno-strict-prototypes
+        -Wno-implicit-fallthrough
+        -Wno-unused-but-set-variable)
 
 #######################################
 # libxcrash.so
@@ -55,6 +66,7 @@ set_target_properties(xcrash PROPERTIES
         -flto \
         -Wl,--exclude-libs,ALL \
         -Wl,--gc-sections \
+        -Wl,-z,max-page-size=16384 \
         -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/xcrash.exports")
 
 endif()
@@ -136,7 +148,8 @@ set_target_properties(xcrash_dumper PROPERTIES
         -O3 \
         -flto \
         -Wl,--exclude-libs,ALL \
-        -Wl,--gc-sections")
+        -Wl,--gc-sections \
+        -Wl,-z,max-page-size=16384")
 
 endif()
 
