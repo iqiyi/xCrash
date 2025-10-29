@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.4.1)
+cmake_minimum_required(VERSION 3.10.2)
+project(xcrash_lib VERSION 1.0 LANGUAGES C CXX)
 
 #######################################
 # global
@@ -30,6 +31,11 @@ target_include_directories(xcrash PUBLIC
 target_link_libraries(xcrash
         log
         dl)
+
+target_link_options(xcrash PRIVATE
+        -Wl
+        -z
+        max-page-size=16384)
 
 if(USEASAN)
 
@@ -112,6 +118,11 @@ target_include_directories(xcrash_dumper PUBLIC
 target_link_libraries(xcrash_dumper
         log
         dl)
+
+target_link_options(xcrash_dumper PRIVATE
+        -Wl
+        -z
+        max-page-size=16384)
 
 if(USEASAN)
 

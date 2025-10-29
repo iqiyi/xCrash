@@ -1,0 +1,13 @@
+[versions]
+agp = "8.13.0"
+min-sdk = "21"
+compile-sdk = "36"
+target-sdk = "36"
+build-tools = "36.1.0"
+ndk = "23.2.8568313"
+cmake = "3.22.1"
+java = "21"
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }

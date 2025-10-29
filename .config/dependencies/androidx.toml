@@ -1,0 +1,7 @@
+[versions]
+appcompat = "1.2.0"
+constraint-layout = "2.0.1"
+
+[libraries]
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+constraint-layout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraint-layout" }

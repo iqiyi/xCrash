@@ -410,9 +410,12 @@ static void xcc_meminfo_load(FILE *fp, xcc_meminfo_t *stats, int *found_swap_pss
                 sharing_proportion = 0.0;
                 if((shared_clean > 0) || (shared_dirty > 0))
                 {
-                    sharing_proportion = (pss - private_clean - private_dirty) / (shared_clean + shared_dirty);
+                    float remained = (float) (pss - private_clean - private_dirty);
+                    float total = (float) (shared_clean + shared_dirty);
+                    sharing_proportion = remained / total;
                 }
-                swappable_pss = (size_t)((sharing_proportion * shared_clean) + private_clean);
+                swappable_pss = (size_t) ((sharing_proportion * (float) shared_clean) +
+                                          (float) private_clean);
             }
             else
             {

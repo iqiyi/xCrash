@@ -252,12 +252,13 @@ static int xcd_elf_interface_read_section_headers(xcd_elf_interface_t *self, Elf
                 if(shdr.sh_name >= sec_size) continue;
                 if(0 != xcd_memory_read_string(self->memory, sec_offset + shdr.sh_name, name, sizeof(name), UINTPTR_MAX))
                     continue;
-                
+
                 if(0 == strcmp(name, ".note.gnu.build-id"))
                 {
                     self->build_id_offset = shdr.sh_offset;
                     self->build_id_size = shdr.sh_size;
                 }
+                        __attribute__((fallthrough));
             }
         case SHT_SYMTAB:
         case SHT_DYNSYM:

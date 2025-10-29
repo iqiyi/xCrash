@@ -1,0 +1,5 @@
+[versions]
+xcrash = "3.1.0"
+
+[libraries]
+xcrash = { module = "com.iqiyi.xcrash:xcrash-android-lib", version.ref = "xcrash" }
