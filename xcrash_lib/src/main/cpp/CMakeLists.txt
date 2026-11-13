@@ -59,6 +59,10 @@ set_target_properties(xcrash PROPERTIES
 
 endif()
 
+# 16KB page size
+set_property(TARGET xcrash APPEND_STRING PROPERTY LINK_FLAGS
+        " -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -fuse-ld=lld")
+
 #######################################
 # libxcrash_dumper.so
 #######################################
@@ -139,6 +143,10 @@ set_target_properties(xcrash_dumper PROPERTIES
         -Wl,--gc-sections")
 
 endif()
+
+# 16KB page size
+set_property(TARGET xcrash_dumper APPEND_STRING PROPERTY LINK_FLAGS
+        " -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -fuse-ld=lld")
 
 set_target_properties(xcrash_dumper PROPERTIES
         PREFIX "lib"
